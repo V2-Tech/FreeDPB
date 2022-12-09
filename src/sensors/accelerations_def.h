@@ -1,0 +1,4 @@
+#ifndef INC_ACCELERATIONS_DEF_H
+#define INC_ACCELERATIONS_DEF_H
+
+#endif
