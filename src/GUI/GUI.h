@@ -142,6 +142,7 @@ void lv_tick_task(void *arg);
 extern void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p);
 extern void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data);
 extern void btn_event_cb(lv_event_t *e);
+extern void btn_test_event_cb(lv_event_t *e);
 
 void lv_example_get_started_1(void);
 
@@ -151,4 +152,5 @@ void slider_x_event_cb(lv_event_t *e);
 void slider_y_event_cb(lv_event_t *e);
 
 void gui_chart_update(void);
+void gui_testvalue_increment(void);
 #endif

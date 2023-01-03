@@ -15,10 +15,8 @@
 #include "esp_system.h"
 #include "driver/gpio.h"
 
-#include "accelerations_def.h"
 #include "../../main/common_def.h"
 
-/**********************************************/
 #ifdef USE_BMX055
 #include "drivers/BMX055.h"
 #include "drivers/BMX055_defs.h"
@@ -32,17 +30,15 @@
 #endif
 
 #define MAX_COMMAND_COUNT 10
-/****************************
- *      SHARED VARIABLES
- ****************************/
 
 /****************************
  *  FUNCTIONS DECLARATIONS  *
  ****************************/
 uint8_t acceleration_init(QueueHandle_t xQueueAcc2GUI_handle, QueueHandle_t xQueueCommandTo_handle, QueueHandle_t xQueueCommandFrom_handle);
 uint8_t acceleration_update(void);
-uint8_t acceleration_retrive_data(void);
+uint8_t acceleration_read_data(void);
 uint8_t acceleration_send2gui(void);
-uint8_t acceleration_send2filter(void);
-
+uint8_t acceleration_FIFOFlush(void);
+uint8_t acceleration_start_read(void);
+uint8_t acceleration_stop_read(void);
 #endif

@@ -1,28 +1,5 @@
+#include "tasks_def.h"
 #include "tasks.h"
-
-/*********************
- *      VARIABLES
- *********************/
-static lv_disp_draw_buf_t draw_buf;
-static lv_color_t buf[screenWidth * 10];
-
-static StaticQueue_t xStaticQueueAcc2gui;
-uint8_t ucQueueAcc2guiStorageArea[QUEUE_ACC2GUI_LENGTH * ITEM_ACC2GUI_SIZE];
-QueueHandle_t xQueueAcc2guiHandle;
-
-static StaticQueue_t xStaticQueueAcc2guiCommands;
-uint8_t ucQueueAcc2guiCommandsStorageArea[QUEUE_COMMANDS_LENGTH * ITEM_COMMANDS_SIZE];
-QueueHandle_t xQueueAcc2guiCommandsHandle;
-
-static StaticQueue_t xStaticQueueGui2AccCommand;
-uint8_t ucQueueGui2AccCommandStorageArea[QUEUE_COMMANDS_LENGTH * ITEM_COMMANDS_SIZE];
-QueueHandle_t xQueueGui2AccCommandsHandle;
-
-static StaticQueue_t xStaticQueueGui2SysCommand;
-uint8_t ucQueueGui2SysCommandStorageArea[QUEUE_COMMANDS_LENGTH * ITEM_COMMANDS_SIZE];
-QueueHandle_t xQueueGui2SysCommandsHandle;
-
-static Motor esc(4, DSHOT300);
 
 /******************************************
  *              GUI TASK
@@ -69,18 +46,18 @@ void guiTask(void *pvParameter)
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, LV_TICK_PERIOD_MS * 1000));
 
     /* Create queue to send command to system task */
-    xQueueGui2SysCommandsHandle = xQueueCreateStatic(QUEUE_COMMANDS_LENGTH,
+    xQueueComp2SysCommandsHandle = xQueueCreateStatic(QUEUE_COMMANDS_LENGTH,
                                                      ITEM_COMMANDS_SIZE,
-                                                     ucQueueGui2SysCommandStorageArea,
-                                                     &xStaticQueueGui2SysCommand);
-    configASSERT(xQueueGui2SysCommandsHandle);
+                                                     ucQueueComp2SysCommandStorageArea,
+                                                     &xStaticQueueComp2SysCommand);
+    configASSERT(xQueueComp2SysCommandsHandle);
 
     /* Wait until queues have been created */
-    while ((xQueueAcc2guiHandle == NULL) && (xQueueGui2AccCommandsHandle == NULL) && (xQueueAcc2guiCommandsHandle == NULL) && (xQueueGui2SysCommandsHandle == NULL))
+    while ((xQueueAcc2guiHandle == NULL) || (xQueueGui2AccCommandsHandle == NULL) || (xQueueAcc2guiCommandsHandle == NULL) || (xQueueComp2SysCommandsHandle == NULL))
         ;
 
     /* Create DPB first page interface */
-    gui_init(xQueueAcc2guiHandle, xQueueGui2AccCommandsHandle, xQueueAcc2guiCommandsHandle, xQueueGui2SysCommandsHandle);
+    gui_init(xQueueAcc2guiHandle, xQueueGui2AccCommandsHandle, xQueueAcc2guiCommandsHandle, xQueueComp2SysCommandsHandle);
 
     while (1)
     {
@@ -107,7 +84,7 @@ void IRAM_ATTR lv_tick_task(void *arg)
 }
 
 /****************************************
- *          ACCELERATIONS TASK          *
+ *          ACCELEROMETER TASK          *
  ****************************************/
 void accelTask(void *pvParameter)
 {
@@ -132,7 +109,7 @@ void accelTask(void *pvParameter)
                                                      &xStaticQueueAcc2guiCommands);
     configASSERT(xQueueAcc2guiCommandsHandle);
 
-    acceleration_init(xQueueAcc2guiHandle, xQueueAcc2guiCommandsHandle, xQueueGui2AccCommandsHandle);
+    acceleration_init(xQueueAcc2guiHandle, xQueueComp2SysCommandsHandle, xQueueGui2AccCommandsHandle);
 
     while (1)
     {
@@ -144,12 +121,21 @@ void accelTask(void *pvParameter)
 }
 
 /********************************
- *          FILTER TASK         *
+ *        POSITION TASK         *
  ********************************/
-void filterTask(void *pvParameter)
+void senseTask(void *pvParameter)
 {
+    uint32_t ulInterruptStatus;
+
     while (1)
     {
+        ulTaskNotifyTakeIndexed(0,      /* Use the 0th notification */
+                                pdTRUE, /* Clear the notification value
+                                           before exiting. */
+                                portMAX_DELAY);
+        acceleration_start_read();
+        gui_testvalue_increment();
+        gpio_intr_disable(GPIO_OPT_SENSOR);
         vTaskDelay(pdMS_TO_TICKS(1));
     }
 
@@ -157,66 +143,28 @@ void filterTask(void *pvParameter)
 }
 
 /****************************
- *          ESC TASK        *
+ *          APP TASK        *
  ****************************/
-void motorTask(void *pvParameter)
+void application(void *pvParameter)
 {
-    static uint16_t thro = 0;
-    command_data command;
+    /* Create queue to send command from system app to app components */
+    xQueueSys2CompCommandsHandle = xQueueCreateStatic(QUEUE_COMMANDS_LENGTH,
+                                                     ITEM_COMMANDS_SIZE,
+                                                     ucQueueSys2CompCommandStorageArea,
+                                                     &xStaticQueueSys2CompCommand);
+    configASSERT(xQueueSys2CompCommandsHandle);
 
-    while ((xQueueGui2SysCommandsHandle == NULL))
+    while ((xQueueComp2SysCommandsHandle == NULL) || (xQueueSys2CompCommandsHandle == NULL))
         ;
+
+    ESP_ERROR_CHECK(app_init(&esc, GPIO_OPT_SENSOR, xQueueComp2SysCommandsHandle, xQueueSys2CompCommandsHandle, &accDataBuffer));
 
     esc.arm();
 
     while (1)
     {
-        static uint8_t status = 0;
-        static uint8_t rev = 0;
-
-        if (xQueueReceive(xQueueGui2SysCommandsHandle,
-                          &command,
-                          0) == pdPASS)
-        {
-            if (command.value == 0x0A)
-            {
-                status = 1;
-            }
-            else
-            {
-                status = 0;
-            }
-        }
-
-        if (status == 1)
-        {
-            if (rev == 1)
-            {
-                thro -= 10;
-            }
-            else
-            {
-                thro += 10;
-            }
-
-            if (thro > 1000)
-            {
-                rev = 1;
-            }
-            if (thro < 100)
-            {
-                rev = 0;
-            }
-
-            esc.set_throttle(thro);
-        }
-        else
-        {
-            esc.set_throttle(0);
-            thro = 0;
-        }
-        
-        vTaskDelay(pdMS_TO_TICKS(100));
+        app_loop();
+        vTaskDelay(pdMS_TO_TICKS(1));
     }
 
     vTaskDelete(NULL);

@@ -9,15 +9,18 @@ lv_obj_t *gui_AccelChart = NULL;
 lv_chart_series_t *serAccX = NULL;
 lv_chart_series_t *serAccY = NULL;
 lv_chart_series_t *serAccZ = NULL;
+lv_obj_t *gui_TestLabel = NULL;
 
 uint16_t accX_sample[3000] = {0};
 uint16_t accY_sample[3000] = {0};
 uint16_t accZ_sample[3000] = {0};
 
-static QueueHandle_t xQueueData2GUI = NULL;
+static QueueHandle_t _xQueueData2GUI = NULL;
 static QueueHandle_t xQueueComTo = NULL;
-static QueueHandle_t xQueueComFrom = NULL;
+static QueueHandle_t _xQueueSys2Acc = NULL;
 static QueueHandle_t xQueueCom2Sys = NULL;
+
+static int16_t testCnt = 0;
 
 /************************************************************************/
 /* Display flushing */
@@ -35,7 +38,7 @@ void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color
     lv_disp_flush_ready(disp);
 }
 
-/*Read the touchpad*/
+/* Read the touchpad */
 void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
 {
     uint16_t touchX, touchY;
@@ -72,16 +75,8 @@ void btn_event_cb(lv_event_t *e)
         lv_label_set_text_fmt(label, cnt ? "RUN" : "STOP");
 
         command_data command;
-        command.command = 0x01;
-
-        if (cnt == 0)
-        {
-            command.value = 0x01;
-        }
-        else
-        {
-            command.value = 0x0A;
-        }
+        command.command = APP_CMD;
+        command.value = POS_SEARCH;
 
         xQueueSend(xQueueCom2Sys, &command, portMAX_DELAY);
     }
@@ -106,13 +101,27 @@ void lv_example_get_started_1(void)
     lv_obj_center(label);
 }
 
+void btn_test_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *btn = lv_event_get_target(e);
+    if (code == LV_EVENT_CLICKED)
+    {
+        /*Get the first child of the button which is the label and change its text*/
+        lv_obj_t *label = lv_obj_get_child(btn, 0);
+        testCnt = 0;
+        lv_label_set_text_fmt(gui_TestLabel, "%d", testCnt);
+        gpio_intr_enable(GPIO_OPT_SENSOR);
+    }
+}
+
 uint8_t gui_init(QueueHandle_t xQueueData2GUI_handle, QueueHandle_t xQueueComTo_handle, QueueHandle_t xQueueComFrom_handle, QueueHandle_t xQueueCom2Sys_handle)
 {
     uint8_t ret = 0;
 
     if (xQueueData2GUI_handle != NULL)
     {
-        xQueueData2GUI = xQueueData2GUI_handle;
+        _xQueueData2GUI = xQueueData2GUI_handle;
     }
     else
     {
@@ -128,7 +137,7 @@ uint8_t gui_init(QueueHandle_t xQueueData2GUI_handle, QueueHandle_t xQueueComTo_
     }
     if (xQueueComFrom_handle != NULL)
     {
-        xQueueComFrom = xQueueComFrom_handle;
+        _xQueueSys2Acc = xQueueComFrom_handle;
     }
     else
     {
@@ -203,13 +212,23 @@ void gui_MainScreen_init(void)
 
     /* Create start-stop button */
     lv_obj_t *btn = lv_btn_create(gui_MainScreen); /*Add a button the current screen*/
-    lv_obj_align_to(btn, gui_AccelChart_Slider, LV_ALIGN_OUT_RIGHT_BOTTOM, 20, 0);
+    lv_obj_align_to(btn, gui_AccelChart_Slider, LV_ALIGN_OUT_RIGHT_TOP, 20, 0);
     lv_obj_set_size(btn, 50, 50);                               /*Set its size*/
     lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_ALL, NULL); /*Assign a callback to the button*/
 
     lv_obj_t *label = lv_label_create(btn); /*Add a label to the button*/
     lv_label_set_text(label, "STOP");       /*Set the labels text*/
     lv_obj_center(label);
+
+    /* Create interrupt count button */
+    btn = lv_btn_create(gui_MainScreen); /*Add a button the current screen*/
+    lv_obj_align_to(btn, gui_AccelChart_Slider, LV_ALIGN_OUT_RIGHT_BOTTOM, 20, 0);
+    lv_obj_set_size(btn, 50, 50);                                    /*Set its size*/
+    lv_obj_add_event_cb(btn, btn_test_event_cb, LV_EVENT_ALL, NULL); /*Assign a callback to the button*/
+
+    gui_TestLabel = lv_label_create(btn); /*Add a label to the button*/
+    lv_label_set_text_fmt(gui_TestLabel, "%d", testCnt);
+    lv_obj_center(gui_TestLabel);
 }
 
 void slider_x_event_cb(lv_event_t *e)
@@ -230,9 +249,9 @@ void gui_chart_update(void)
 {
     int16_t chartData[3] = {0};
 
-    while (uxQueueMessagesWaiting(xQueueData2GUI) != 0)
+    while (uxQueueMessagesWaiting(_xQueueData2GUI) != 0)
     {
-        if (xQueueReceive(xQueueData2GUI,
+        if (xQueueReceive(_xQueueData2GUI,
                           chartData,
                           (TickType_t)0) == pdPASS)
         {
@@ -241,4 +260,10 @@ void gui_chart_update(void)
             lv_chart_set_next_value(gui_AccelChart, serAccZ, (lv_coord_t)chartData[2]);
         }
     }
+}
+
+void gui_testvalue_increment(void)
+{
+    testCnt++;
+    lv_label_set_text_fmt(gui_TestLabel, "%d", testCnt);
 }

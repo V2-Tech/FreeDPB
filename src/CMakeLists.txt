@@ -5,6 +5,7 @@ file(GLOB SRCS
     sensors/drivers/*.cpp
     motor/*.cpp
     motor/dshot/*.c
+    app/*.cpp
     )
 
 file(GLOB INCL
@@ -14,6 +15,7 @@ file(GLOB INCL
     sensors/drivers
     motor
     motor/dshot
+    app
     )
 
 idf_component_register(SRCS ${SRCS}

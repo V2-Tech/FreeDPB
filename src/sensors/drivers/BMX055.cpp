@@ -60,7 +60,7 @@ bmx_error BMX055::init(spi_device_handle_t spiHandle)
 
             /* Set FIFO configuration required value*/
             _fifo_conf.fifo_data_select = BMX_XYZ_AXES;
-            _fifo_conf.fifo_mode_select = BMX_MODE_FIFO;
+            _fifo_conf.fifo_mode_select = BMX_MODE_BYPASS;
             _fifo_conf.length = BMX_FIFO_BUFFER_SIZE;
             _fifo_conf.wm_level = BMX_FIFO_WM_LEVEL;
             status += set_fifo_config(&_fifo_conf);

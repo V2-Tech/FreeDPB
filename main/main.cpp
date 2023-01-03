@@ -8,20 +8,20 @@ void app_main()
     /* Creating tasks
     * ! GUI task: 
     */
-    xTaskCreatePinnedToCore(guiTask, "gui", 4096*2, NULL, 0, NULL, 1);
+    xTaskCreatePinnedToCore(guiTask, "gui", 1024*4, NULL, 0, &guiTaskHandle, 1);
 
     /* Creating tasks
-    * ! Sensor task: 
+    * ! Accelerometer task: 
     */
-    xTaskCreatePinnedToCore(accelTask, "accel", 4096*2, NULL, 1, NULL, 0);
+    xTaskCreatePinnedToCore(accelTask, "accel", 1024*4, NULL, 1, &accelTaskHandle, 0);
 
     /* Creating tasks
-    * ! Filter task: 
+    * ! Position sensor task: 
     */
-    //xTaskCreatePinnedToCore(filterTask, "filter", 4096*2, NULL, 1, NULL, 0);
+    xTaskCreatePinnedToCore(senseTask, "sense", 1024*4, NULL, 2, &senseTaskHandle, 0);
 
     /* Creating tasks
-    * ! ESC task: 
+    * ! DPB app task: 
     */
-    xTaskCreatePinnedToCore(motorTask, "motor", 4096*2, NULL, 1, NULL, 0);
+    xTaskCreatePinnedToCore(application, "app", 1024*4, NULL, 0, &appTaskHandle, 0);
 }
