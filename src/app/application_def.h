@@ -18,17 +18,10 @@ extern app_steps _app_step;
 /************************************/
 /*      VARIABLES DECLARATIONS      */
 /************************************/
-static QueueHandle_t _xQueueSysInput;
-static QueueHandle_t _xQueueSysOutput;
-static FIFOBuffer<acc_sensor_data> *_pDataBuffer;
-static fft_chart_data *_pFFTOuput;
 
-Motor *_pMotor;
-
-TimerHandle_t _vibeRecTimer;
 /************************************/
 /*      FUNCTION DECLARATIONS       */
 /************************************/
-static void IRAM_ATTR opto_isr_handler(void* arg);
 
+static void _vibeTimerCallback(TimerHandle_t pxTimer);
 #endif

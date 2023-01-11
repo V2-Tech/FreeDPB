@@ -139,13 +139,13 @@ void application(void *pvParameter)
     while ((xQueueComp2SysCommandsHandle == NULL) || (xQueueSys2CompCommandsHandle == NULL))
         ;
 
-    ESP_ERROR_CHECK(app_init(&esc, GPIO_OPT_SENSOR, xQueueComp2SysCommandsHandle, xQueueSys2CompCommandsHandle, &accDataBuffer, FFTOuput));
+    ESP_ERROR_CHECK(app.init(&esc, GPIO_OPT_SENSOR, xQueueComp2SysCommandsHandle, xQueueSys2CompCommandsHandle, &accDataBuffer, FFTOuput));
 
     esc.arm();
 
     while (1)
     {
-        app_loop();
+        //app.loop();
         vTaskDelay(pdMS_TO_TICKS(1));
     }
 

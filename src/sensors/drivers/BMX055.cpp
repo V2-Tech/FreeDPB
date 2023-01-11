@@ -43,7 +43,7 @@ bmx_error BMX055::init(spi_device_handle_t spiHandle)
             }
 
             /* Set accelerometer configuration required value */
-            _acc_conf.bw = BMX_ACC_BW_250_HZ;
+            _acc_conf.bw = BMX_ACC_BW_1000_HZ;
             _acc_conf.range = BMX_ACC_RANGE_4G;
 
             /* Set accelerometer actual configuration */
@@ -106,7 +106,7 @@ bmx_error BMX055::init(spi_device_handle_t spiHandle)
             }
 
             /* Enable desired interrupts */
-            status += set_interrupt_source(BMX_INT_EN_FIFO_WM | BMX_INT_EN_FIFO_FULL);
+            status += set_interrupt_source(BMX_INT_EN_DATA_READY);
             if (status != 0)
             {
                 printf("* ACTIVATION OF FIFO WM and FULL INTERRUPT FAILED *\n");

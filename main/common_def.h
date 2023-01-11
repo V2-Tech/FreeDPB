@@ -18,6 +18,7 @@
 
 #include "esp_system.h"
 #include "driver/gpio.h"
+#include "driver/gptimer.h"
 
 #include "esp_dsp.h"
 

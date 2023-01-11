@@ -34,6 +34,7 @@ uint8_t ucQueueSys2CompCommandStorageArea[QUEUE_COMMANDS_LENGTH * ITEM_COMMANDS_
 QueueHandle_t xQueueSys2CompCommandsHandle;
 
 static Motor esc(4, DSHOT300);
+static DPB app;
 
 __attribute__((aligned(16)))
 static FIFOBuffer<acc_sensor_data> accDataBuffer(ACC_DATA_BUFFER_SIZE);
