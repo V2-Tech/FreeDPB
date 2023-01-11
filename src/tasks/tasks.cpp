@@ -45,19 +45,12 @@ void guiTask(void *pvParameter)
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, LV_TICK_PERIOD_MS * 1000));
 
-    /* Create queue to send command to system task */
-    xQueueComp2SysCommandsHandle = xQueueCreateStatic(QUEUE_COMMANDS_LENGTH,
-                                                     ITEM_COMMANDS_SIZE,
-                                                     ucQueueComp2SysCommandStorageArea,
-                                                     &xStaticQueueComp2SysCommand);
-    configASSERT(xQueueComp2SysCommandsHandle);
-
     /* Wait until queues have been created */
-    while ((xQueueAcc2guiHandle == NULL) || (xQueueGui2AccCommandsHandle == NULL) || (xQueueAcc2guiCommandsHandle == NULL) || (xQueueComp2SysCommandsHandle == NULL))
+    while ((xQueueComp2SysCommandsHandle == NULL))
         ;
 
     /* Create DPB first page interface */
-    gui_init(xQueueAcc2guiHandle, xQueueGui2AccCommandsHandle, xQueueAcc2guiCommandsHandle, xQueueComp2SysCommandsHandle);
+    ESP_ERROR_CHECK(gui_init(xQueueComp2SysCommandsHandle, FFTOuput));
 
     while (1)
     {
@@ -88,28 +81,24 @@ void IRAM_ATTR lv_tick_task(void *arg)
  ****************************************/
 void accelTask(void *pvParameter)
 {
-    /* Create queue to share acceleration value to gui */
-    xQueueAcc2guiHandle = xQueueCreateStatic(QUEUE_ACC2GUI_LENGTH,
-                                             ITEM_ACC2GUI_SIZE,
-                                             ucQueueAcc2guiStorageArea,
-                                             &xStaticQueueAcc2gui);
-    configASSERT(xQueueAcc2guiHandle);
+    /* Create queue to send command from system app to app components */
+    xQueueSys2CompCommandsHandle = xQueueCreateStatic(QUEUE_COMMANDS_LENGTH,
+                                                      ITEM_COMMANDS_SIZE,
+                                                      ucQueueSys2CompCommandStorageArea,
+                                                      &xStaticQueueSys2CompCommand);
+    configASSERT(xQueueSys2CompCommandsHandle);
+    /* Create queue to send command from components to system */
+    xQueueComp2SysCommandsHandle = xQueueCreateStatic(QUEUE_COMMANDS_LENGTH,
+                                                      ITEM_COMMANDS_SIZE,
+                                                      ucQueueComp2SysCommandStorageArea,
+                                                      &xStaticQueueComp2SysCommand);
+    configASSERT(xQueueComp2SysCommandsHandle);
 
-    /* Create queue to recive command from gui */
-    xQueueGui2AccCommandsHandle = xQueueCreateStatic(QUEUE_COMMANDS_LENGTH,
-                                                     ITEM_COMMANDS_SIZE,
-                                                     ucQueueGui2AccCommandStorageArea,
-                                                     &xStaticQueueGui2AccCommand);
-    configASSERT(xQueueGui2AccCommandsHandle);
+    /* Wait until queues have been created */
+    while ((xQueueComp2SysCommandsHandle == NULL) || (xQueueSys2CompCommandsHandle == NULL))
+        ;
 
-    /* Create queue to seend command to gui */
-    xQueueAcc2guiCommandsHandle = xQueueCreateStatic(QUEUE_COMMANDS_LENGTH,
-                                                     ITEM_COMMANDS_SIZE,
-                                                     ucQueueAcc2guiCommandsStorageArea,
-                                                     &xStaticQueueAcc2guiCommands);
-    configASSERT(xQueueAcc2guiCommandsHandle);
-
-    acceleration_init(xQueueAcc2guiHandle, xQueueComp2SysCommandsHandle, xQueueGui2AccCommandsHandle);
+    acceleration_init(&accDataBuffer, xQueueComp2SysCommandsHandle, xQueueSys2CompCommandsHandle);
 
     while (1)
     {
@@ -147,17 +136,10 @@ void senseTask(void *pvParameter)
  ****************************/
 void application(void *pvParameter)
 {
-    /* Create queue to send command from system app to app components */
-    xQueueSys2CompCommandsHandle = xQueueCreateStatic(QUEUE_COMMANDS_LENGTH,
-                                                     ITEM_COMMANDS_SIZE,
-                                                     ucQueueSys2CompCommandStorageArea,
-                                                     &xStaticQueueSys2CompCommand);
-    configASSERT(xQueueSys2CompCommandsHandle);
-
     while ((xQueueComp2SysCommandsHandle == NULL) || (xQueueSys2CompCommandsHandle == NULL))
         ;
 
-    ESP_ERROR_CHECK(app_init(&esc, GPIO_OPT_SENSOR, xQueueComp2SysCommandsHandle, xQueueSys2CompCommandsHandle, &accDataBuffer));
+    ESP_ERROR_CHECK(app_init(&esc, GPIO_OPT_SENSOR, xQueueComp2SysCommandsHandle, xQueueSys2CompCommandsHandle, &accDataBuffer, FFTOuput));
 
     esc.arm();
 

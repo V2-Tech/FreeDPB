@@ -19,25 +19,11 @@
 #define QUEUE_COMMANDS_LENGTH   MAX_COMMAND_COUNT
 #define ITEM_COMMANDS_SIZE      sizeof( command_data )
 
-#define ACC_DATA_BUFFER_SIZE    4000
-
 /************************************/
 /*      VARIABLES DECLARATIONS      */
 /************************************/
 static lv_disp_draw_buf_t draw_buf;
 static lv_color_t buf[screenWidth * 10];
-
-static StaticQueue_t xStaticQueueAcc2gui;
-uint8_t ucQueueAcc2guiStorageArea[QUEUE_ACC2GUI_LENGTH * ITEM_ACC2GUI_SIZE];
-QueueHandle_t xQueueAcc2guiHandle;
-
-static StaticQueue_t xStaticQueueAcc2guiCommands;
-uint8_t ucQueueAcc2guiCommandsStorageArea[QUEUE_COMMANDS_LENGTH * ITEM_COMMANDS_SIZE];
-QueueHandle_t xQueueAcc2guiCommandsHandle;
-
-static StaticQueue_t xStaticQueueGui2AccCommand;
-uint8_t ucQueueGui2AccCommandStorageArea[QUEUE_COMMANDS_LENGTH * ITEM_COMMANDS_SIZE];
-QueueHandle_t xQueueGui2AccCommandsHandle;
 
 static StaticQueue_t xStaticQueueComp2SysCommand;
 uint8_t ucQueueComp2SysCommandStorageArea[QUEUE_COMMANDS_LENGTH * ITEM_COMMANDS_SIZE];
@@ -49,7 +35,10 @@ QueueHandle_t xQueueSys2CompCommandsHandle;
 
 static Motor esc(4, DSHOT300);
 
+__attribute__((aligned(16)))
 static FIFOBuffer<acc_sensor_data> accDataBuffer(ACC_DATA_BUFFER_SIZE);
+
+static fft_chart_data FFTOuput[3];
 
 /*********************
  *      CLASSES

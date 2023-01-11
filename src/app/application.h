@@ -21,12 +21,14 @@
 /************************************/
 /*      FUNCTION DECLARATIONS       */
 /************************************/
-uint8_t app_init(Motor *motor, gpio_num_t opto_gpio_num, QueueHandle_t xQueueSysInput_handle, QueueHandle_t xQueueSysOutput_handle, FIFOBuffer<acc_sensor_data> *pDataBuffer);
+uint8_t app_init(Motor *motor, gpio_num_t opto_gpio_num, QueueHandle_t xQueueSysInput_handle, QueueHandle_t xQueueSysOutput_handle, FIFOBuffer<acc_sensor_data> *pDataBuffer, fft_chart_data *pFFTOuput);
 void app_loop(void);
 void app_exe(command_data command);
 void app_start(void);
 void app_reset(void);
 void app_rec_timer_start(void);
+void app_fft(void);
+void app_filtering(void);
 
 void vibeTimerCallback(TimerHandle_t pxTimer);
 #endif

@@ -22,8 +22,9 @@ uint16_t acc_index;
 
 static sensor_3D_data accel_data[BMX_FIFO_DATA_FRAME_COUNT] = {{0, 0, 0}};
 
-static QueueHandle_t _xQueueData2GUI = NULL;
 static QueueHandle_t _xQueueAcc2Sys = NULL;
 static QueueHandle_t _xQueueSys2Acc = NULL;
+
+static FIFOBuffer<acc_sensor_data> *_pDataBuffer = NULL;
 
 #endif

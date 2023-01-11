@@ -15,10 +15,8 @@ uint16_t accX_sample[3000] = {0};
 uint16_t accY_sample[3000] = {0};
 uint16_t accZ_sample[3000] = {0};
 
-static QueueHandle_t _xQueueData2GUI = NULL;
-static QueueHandle_t xQueueComTo = NULL;
-static QueueHandle_t _xQueueSys2Acc = NULL;
-static QueueHandle_t xQueueCom2Sys = NULL;
+static QueueHandle_t _xQueueCom2Sys = NULL;
+static fft_chart_data *_pFFTOuput;
 
 static int16_t testCnt = 0;
 
@@ -75,10 +73,19 @@ void btn_event_cb(lv_event_t *e)
         lv_label_set_text_fmt(label, cnt ? "RUN" : "STOP");
 
         command_data command;
-        command.command = APP_CMD;
-        command.value = POS_SEARCH;
+        if (cnt == 1)
+        {
 
-        xQueueSend(xQueueCom2Sys, &command, portMAX_DELAY);
+            command.command = APP_CMD;
+            command.value = POS_SEARCH;
+        }
+        else
+        {
+            command.command = APP_CMD;
+            command.value = IDLE;
+        }
+
+        xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
     }
 }
 
@@ -115,42 +122,17 @@ void btn_test_event_cb(lv_event_t *e)
     }
 }
 
-uint8_t gui_init(QueueHandle_t xQueueData2GUI_handle, QueueHandle_t xQueueComTo_handle, QueueHandle_t xQueueComFrom_handle, QueueHandle_t xQueueCom2Sys_handle)
+uint8_t gui_init(QueueHandle_t xQueueCom2Sys_handle, fft_chart_data *pFFTOuput)
 {
     uint8_t ret = 0;
 
-    if (xQueueData2GUI_handle != NULL)
+    if ((xQueueCom2Sys_handle == NULL) || (pFFTOuput == NULL))
     {
-        _xQueueData2GUI = xQueueData2GUI_handle;
+        return ESP_FAIL;
     }
-    else
-    {
-        ret++;
-    }
-    if (xQueueComTo_handle != NULL)
-    {
-        xQueueComTo = xQueueComTo_handle;
-    }
-    else
-    {
-        ret++;
-    }
-    if (xQueueComFrom_handle != NULL)
-    {
-        _xQueueSys2Acc = xQueueComFrom_handle;
-    }
-    else
-    {
-        ret++;
-    }
-    if (xQueueCom2Sys_handle != NULL)
-    {
-        xQueueCom2Sys = xQueueCom2Sys_handle;
-    }
-    else
-    {
-        ret++;
-    }
+
+    _xQueueCom2Sys = xQueueCom2Sys_handle;
+    _pFFTOuput = pFFTOuput;
 
     lv_disp_t *dispp = lv_disp_get_default();
     lv_theme_t *theme = lv_theme_default_init(dispp, lv_palette_main(LV_PALETTE_BLUE), lv_palette_main(LV_PALETTE_RED),
@@ -249,7 +231,7 @@ void gui_chart_update(void)
 {
     int16_t chartData[3] = {0};
 
-    while (uxQueueMessagesWaiting(_xQueueData2GUI) != 0)
+    /* while (uxQueueMessagesWaiting(_xQueueData2GUI) != 0)
     {
         if (xQueueReceive(_xQueueData2GUI,
                           chartData,
@@ -259,7 +241,7 @@ void gui_chart_update(void)
             lv_chart_set_next_value(gui_AccelChart, serAccY, (lv_coord_t)chartData[1]);
             lv_chart_set_next_value(gui_AccelChart, serAccZ, (lv_coord_t)chartData[2]);
         }
-    }
+    } */
 }
 
 void gui_testvalue_increment(void)

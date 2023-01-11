@@ -34,10 +34,10 @@
 /****************************
  *  FUNCTIONS DECLARATIONS  *
  ****************************/
-uint8_t acceleration_init(QueueHandle_t xQueueAcc2GUI_handle, QueueHandle_t xQueueCommandTo_handle, QueueHandle_t xQueueCommandFrom_handle);
+uint8_t acceleration_init(FIFOBuffer<acc_sensor_data> *pDataBuffer, QueueHandle_t xQueueCommandTo_handle, QueueHandle_t xQueueCommandFrom_handle);
 uint8_t acceleration_update(void);
 uint8_t acceleration_read_data(void);
-uint8_t acceleration_send2gui(void);
+uint8_t acceleration_send2FIFO(void);
 uint8_t acceleration_FIFOFlush(void);
 uint8_t acceleration_start_read(void);
 uint8_t acceleration_stop_read(void);

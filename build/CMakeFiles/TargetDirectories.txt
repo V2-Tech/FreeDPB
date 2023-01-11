@@ -594,6 +594,13 @@ C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Bala
 C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/main/CMakeFiles/install.dir
 C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/main/CMakeFiles/install/local.dir
 C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/main/CMakeFiles/install/strip.dir
+C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/esp-dsp/CMakeFiles/__idf_esp-dsp.dir
+C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/esp-dsp/CMakeFiles/edit_cache.dir
+C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/esp-dsp/CMakeFiles/rebuild_cache.dir
+C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/esp-dsp/CMakeFiles/list_install_components.dir
+C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/esp-dsp/CMakeFiles/install.dir
+C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/esp-dsp/CMakeFiles/install/local.dir
+C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/esp-dsp/CMakeFiles/install/strip.dir
 C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/src/CMakeFiles/__idf_src.dir
 C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/src/CMakeFiles/edit_cache.dir
 C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/src/CMakeFiles/rebuild_cache.dir

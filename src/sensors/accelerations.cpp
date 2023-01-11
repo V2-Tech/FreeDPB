@@ -1,34 +1,18 @@
 #include "accelerations_def.h"
 #include "accelerations.h"
 
-uint8_t acceleration_init(QueueHandle_t xQueueAcc2GUI_handle, QueueHandle_t xQueueCommandTo_handle, QueueHandle_t xQueueCommandFrom_handle)
+uint8_t acceleration_init(FIFOBuffer<acc_sensor_data> *pDataBuffer, QueueHandle_t xQueueCommandTo_handle, QueueHandle_t xQueueCommandFrom_handle)
 {
     uint8_t ret = 0;
 
-    if (xQueueAcc2GUI_handle != NULL)
+    if ((pDataBuffer == NULL) || (xQueueCommandTo_handle == NULL) || (xQueueCommandFrom_handle == NULL))
     {
-        _xQueueData2GUI = xQueueAcc2GUI_handle;
+        return ESP_FAIL;
     }
-    else
-    {
-        ret++;
-    }
-    if (xQueueCommandTo_handle != NULL)
-    {
-        _xQueueAcc2Sys = xQueueCommandTo_handle;
-    }
-    else
-    {
-        ret++;
-    }
-    if (xQueueCommandFrom_handle != NULL)
-    {
-        _xQueueSys2Acc = xQueueCommandFrom_handle;
-    }
-    else
-    {
-        ret++;
-    }
+
+    _pDataBuffer = pDataBuffer;
+    _xQueueAcc2Sys = xQueueCommandTo_handle;
+    _xQueueSys2Acc = xQueueCommandFrom_handle;
 
 #ifdef USE_BMX055
     /* Initialize the communication bus */
@@ -45,11 +29,10 @@ uint8_t acceleration_init(QueueHandle_t xQueueAcc2GUI_handle, QueueHandle_t xQue
             .command_bits = 0,
             .address_bits = 8,
             .dummy_bits = 0,
-            .mode = 0,
+            .mode = 0, // SPI mode 0
             .cs_ena_pretrans = 0,
             .cs_ena_posttrans = 0,
             .clock_speed_hz = 10 * 1000 * 1000, // Clock out at 10 MHz
-                                                // SPI mode 0
             .spics_io_num = HSPI_SS,            // CS pin
             .queue_size = 1,
             .pre_cb = NULL,
@@ -66,9 +49,9 @@ uint8_t acceleration_init(QueueHandle_t xQueueAcc2GUI_handle, QueueHandle_t xQue
 
 #endif
 
-    ret += accel.init(spi);
+    ESP_ERROR_CHECK(accel.init(spi));
 
-    return ret;
+    return ESP_OK;
 }
 
 uint8_t acceleration_update(void)
@@ -95,23 +78,41 @@ uint8_t acceleration_read_data()
     /* Convert fifo data into accelerations packets */
     accel.fifo_extract_frames(accel_data, &acc_index);
 
-    /* Send accelerations value to GUI task */
-    acceleration_send2gui();
+    /* Add value to analized buffer */
+    acceleration_send2FIFO();
 #endif
 
-    return 0;
+    return ESP_OK;
 }
 
-uint8_t acceleration_send2gui()
+uint8_t acceleration_send2FIFO()
 {
     uint8_t idx;
+    acc_sensor_data data;
+    command_data command;
 
     for (idx = 0; idx < acc_index; idx++)
     {
-        xQueueSend(_xQueueData2GUI, &accel_data[idx], portMAX_DELAY);
+        data.accel_data[0] = static_cast<float>(accel_data[idx].x);
+        data.accel_data[1] = static_cast<float>(accel_data[idx].y);
+        data.accel_data[2] = static_cast<float>(accel_data[idx].z);
+
+        _pDataBuffer->push(data);
+
+        if (_pDataBuffer->full())
+        {
+            acceleration_stop_read();
+
+            command.command = APP_CMD;
+            command.value = ANALYSING;
+
+            xQueueSend(_xQueueAcc2Sys, &command, portMAX_DELAY);
+
+            return ESP_OK;
+        }
     }
 
-    return 0;
+    return ESP_OK;
 }
 
 uint8_t acceleration_FIFOFlush(void)
@@ -142,12 +143,15 @@ uint8_t acceleration_start_read(void)
 {
     uint8_t ret = 0;
     command_data command;
+    const char *TAG = "acceleration_start_read";
 
 #ifdef USE_BMX055
     bmx_fifo_conf _fifo_conf;
 
+    ESP_LOGI(TAG, "Get actual FIFO configuration");
     ret += accel.get_fifo_config(&_fifo_conf);
-
+    
+    ESP_LOGI(TAG, "Enabling FIFO data collection ");
     _fifo_conf.fifo_mode_select = BMX_MODE_FIFO;
     ret += accel.set_fifo_config(&_fifo_conf);
 #endif

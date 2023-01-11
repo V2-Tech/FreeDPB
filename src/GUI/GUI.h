@@ -146,7 +146,7 @@ extern void btn_test_event_cb(lv_event_t *e);
 
 void lv_example_get_started_1(void);
 
-uint8_t gui_init(QueueHandle_t xQueueData2GUI_handle, QueueHandle_t xQueueComTo_handle, QueueHandle_t xQueueComFrom_handle, QueueHandle_t xQueueCom2Sys_handle);
+uint8_t gui_init(QueueHandle_t xQueueCom2Sys_handle, fft_chart_data *pFFTOuput);
 void gui_MainScreen_init(void);
 void slider_x_event_cb(lv_event_t *e);
 void slider_y_event_cb(lv_event_t *e);

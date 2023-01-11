@@ -17,11 +17,17 @@ bmx_error BMX055::init(spi_device_handle_t spiHandle)
         printf("Chip id : 0x%x\n", dummy_value);
         if (dummy_value == BMX_CHIPID)
         {
+            status += soft_reset();
+            if (status != 0)
+            {
+                printf("* ACCEL SOFT-RESET FAILED *\n");
+            }
+
             /* Get accelerometer actual configuration */
             status += get_accel_conf(&_acc_conf);
             if (status != 0)
             {
-                printf("* ACCEL CONFIG FAILED *\n");
+                printf("* ACCEL CONFIG READ FAILED *\n");
             }
             else
             {
@@ -36,26 +42,44 @@ bmx_error BMX055::init(spi_device_handle_t spiHandle)
                 printf("%s\n", _acc_conf.data_high_bw ? "Unfiltered" : "filtered");
             }
 
+            /* Set accelerometer configuration required value */
+            _acc_conf.bw = BMX_ACC_BW_250_HZ;
+            _acc_conf.range = BMX_ACC_RANGE_4G;
+
+            /* Set accelerometer actual configuration */
+            status += set_accel_conf(&_acc_conf);
+            if (status != 0)
+            {
+                printf("* ACCEL CONFIG FAILED *\n");
+            }
+
+            /* Get accelerometer actual configuration */
+            status += get_accel_conf(&_acc_conf);
+            if (status != 0)
+            {
+                printf("* ACCEL CONFIG READ FAILED *\n");
+            }
+            else
+            {
+                printf("******************************\n");
+                printf("*   ACCEL CONFIG APP VALUE   *\n");
+                printf("******************************\n");
+                printf("Range: 0x0%x\n", _acc_conf.range);
+                printf("Bandwidth: 0x0%x\n", _acc_conf.bw);
+                printf("Shadowing mode: ");
+                printf("%s\n", _acc_conf.shadow_dis ? "true" : "false");
+                printf("Data type: ");
+                printf("%s\n", _acc_conf.data_high_bw ? "Unfiltered" : "filtered");
+            }
+
             /* Set accelerometer offsets using fast compensation feature */
             // TODO
-            
+
             /* Get FIFO actual configuration */
             status += get_fifo_config(&_fifo_conf);
             if (status != 0)
             {
                 printf("* FIFO CONFIG READ FAILED *\n");
-            }
-            else
-            {
-                printf("*****************************\n");
-                printf("* FIFO CONFIG DEFAULT VALUE *\n");
-                printf("*****************************\n");
-                printf("FIFO data type: %x\n", _fifo_conf.fifo_data_select);
-                printf("FIFO mode: %x\n", _fifo_conf.fifo_mode_select);
-                printf("FIFO watermark level: %d\n", _fifo_conf.wm_level);
-                printf("FIFO frame count: %d\n", _fifo_conf.fifo_frame_count);
-                printf("FIFO overrun? ");
-                printf("%s\n", _fifo_conf.fifo_overrun ? "YES" : "NO");
             }
 
             /* Set FIFO configuration required value*/
@@ -259,6 +283,42 @@ bmx_error BMX055::get_accel_conf(bmx_acc_conf *acc_conf_struct)
  */
 bmx_error BMX055::set_accel_conf(bmx_acc_conf *acc_conf_struct)
 {
+    uint8_t reg_data[2];
+
+    if (acc_conf_struct != NULL)
+    {
+        if (read_regs(BMX_REG_PMU_RANGE, reg_data, 2) == BMX_OK)
+        {
+            reg_data[0] = BMX_SET_BITS_POS_0(reg_data[0], BMX_RANGE, acc_conf_struct->range);
+            reg_data[1] = BMX_SET_BITS_POS_0(reg_data[1], BMX_BW, acc_conf_struct->bw);
+
+            /* Set the values in the accel configuration registers */
+            if (write_regs(BMX_REG_PMU_RANGE, reg_data, 2) == BMX_OK)
+            {
+                reg_data[0] = 0;
+                reg_data[0] = BMX_SET_BITS_POS_0(reg_data[0], BMX_SHADOW_DIS, acc_conf_struct->shadow_dis);
+                reg_data[0] = BMX_SET_BITS_POS_0(reg_data[0], BMX_DATA_HIGH_BW, acc_conf_struct->data_high_bw);
+
+                if (write_regs(BMX_REG_ACCD_HBW, &reg_data[0], 1) != BMX_OK)
+                {
+                    return BMX_ERR_WR;
+                }
+            }
+            else
+            {
+                return BMX_ERR_WR;
+            }
+        }
+        else
+        {
+            return BMX_ERR_RD;
+        }
+    }
+    else
+    {
+        return BMX_ERR_NULL_POINTER;
+    }
+
     return BMX_OK;
 }
 
@@ -319,7 +379,7 @@ bmx_error BMX055::set_fifo_config(bmx_fifo_conf *fifo_conf_struct)
     {
         if (read_regs(BMX_REG_FIFO_CONFIG_0, &reg_data, 1) == BMX_OK)
         {
-            reg_data = BMX_SET_BITS_POS_0(reg_data, BMX_FIFO_WATER_MARK, _fifo_conf.wm_level);
+            reg_data = BMX_SET_BITS_POS_0(reg_data, BMX_FIFO_WATER_MARK, fifo_conf_struct->wm_level);
         }
         else
         {
@@ -328,15 +388,20 @@ bmx_error BMX055::set_fifo_config(bmx_fifo_conf *fifo_conf_struct)
 
         if (write_regs(BMX_REG_FIFO_CONFIG_0, &reg_data, 1) == BMX_OK)
         {
+            _fifo_conf.wm_level = fifo_conf_struct->wm_level;
+
             if (read_regs(BMX_REG_FIFO_CONFIG_1, &reg_data, 1) == BMX_OK)
             {
-                reg_data = BMX_SET_BITS_POS_0(reg_data, BMX_FIFO_DATA_SELECT, _fifo_conf.fifo_data_select);
-                reg_data = BMX_SET_BITS(reg_data, BMX_FIFO_MODE_SELECT, _fifo_conf.fifo_mode_select);
+                reg_data = BMX_SET_BITS_POS_0(reg_data, BMX_FIFO_DATA_SELECT, fifo_conf_struct->fifo_data_select);
+                reg_data = BMX_SET_BITS(reg_data, BMX_FIFO_MODE_SELECT, fifo_conf_struct->fifo_mode_select);
 
                 if (write_regs(BMX_REG_FIFO_CONFIG_1, &reg_data, 1) != BMX_OK)
                 {
                     return BMX_ERR_WR;
                 }
+
+                _fifo_conf.fifo_data_select = fifo_conf_struct->fifo_data_select;
+                _fifo_conf.fifo_mode_select = fifo_conf_struct->fifo_mode_select;
             }
             else
             {
@@ -928,16 +993,21 @@ bmx_error BMX055::write_regs(uint8_t reg_addr, uint8_t *data_wr, uint32_t length
     spi_transaction_t t =
         {
             .addr = (uint64_t)(reg_addr & BMX_SPI_WR_MASK),
-            .length = 8 * length,
+            .length = 8,
             .tx_buffer = data_wr // Buffer of data to write
         };
-
+    // ! there is a bug inside the spi_device_polling_transmit which cause no data transmit when (t.length > 8)
     if ((length > 0) && (data_wr != NULL))
     {
-        if (xSemaphoreTake(_xSpiSemaphore, portMAX_DELAY) == pdTRUE)
+        for (uint32_t i = 0; i < length; i++)
         {
-            ret = spi_device_polling_transmit(_spi, &t);
-            xSemaphoreGive(_xSpiSemaphore);
+            t.addr = (uint64_t)((reg_addr + i) & BMX_SPI_WR_MASK),
+            t.tx_buffer = &data_wr[i];
+            if (xSemaphoreTake(_xSpiSemaphore, portMAX_DELAY) == pdTRUE)
+            {
+                ret = spi_device_polling_transmit(_spi, &t);
+                xSemaphoreGive(_xSpiSemaphore);
+            }
         }
     }
     else

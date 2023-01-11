@@ -13,7 +13,7 @@
 /************************************/
 /*   SHARED VARIABLES DECLARATIONS  */
 /************************************/
-extern app_status _app_step;
+extern app_steps _app_step;
 
 /************************************/
 /*      VARIABLES DECLARATIONS      */
@@ -21,6 +21,7 @@ extern app_status _app_step;
 static QueueHandle_t _xQueueSysInput;
 static QueueHandle_t _xQueueSysOutput;
 static FIFOBuffer<acc_sensor_data> *_pDataBuffer;
+static fft_chart_data *_pFFTOuput;
 
 Motor *_pMotor;
 

@@ -23,5 +23,5 @@ void app_main()
     /* Creating tasks
     * ! DPB app task: 
     */
-    xTaskCreatePinnedToCore(application, "app", 1024*4, NULL, 0, &appTaskHandle, 0);
+    xTaskCreatePinnedToCore(application, "app", 1024*8, NULL, 0, &appTaskHandle, 0);
 }

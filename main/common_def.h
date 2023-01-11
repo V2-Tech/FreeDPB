@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -17,6 +18,8 @@
 
 #include "esp_system.h"
 #include "driver/gpio.h"
+
+#include "esp_dsp.h"
 
 #define APP_DEBUG_MODE
 
@@ -34,7 +37,8 @@
 /*************************************/
 /*      GLOBAL DEFINES               */
 /*************************************/
-#define VIBE_RECORD_TIME_MS 2000
+#define VIBE_RECORD_TIME_MS 2000 //Not use actualy
+#define ACC_DATA_BUFFER_SIZE 1024
 
 /*!
  * @brief Enum to define commands
@@ -45,7 +49,7 @@ enum app_command
     MOTOR_CMD,
 };
 
-enum app_status
+enum app_steps
 {
     IDLE,
     POS_SEARCH,
@@ -68,7 +72,7 @@ struct command_data
 struct acc_sensor_data
 {
 #ifdef USE_BMX055
-    int16_t accel_data[3];
+    float_t accel_data[3];
 #endif
 };
 
@@ -88,9 +92,15 @@ union gui_status
     };
 };
 
+struct fft_chart_data
+{
+    float_t fft_data[ACC_DATA_BUFFER_SIZE];
+};
+
 /************************************/
 /*      CLASSES DECLARATIONS        */
 /************************************/
+inline const char *TAG = "common";
 template <typename T>
 class FIFOBuffer
 {
@@ -98,39 +108,53 @@ public:
     // Constructor
     FIFOBuffer(int capacity) : capacity_(capacity), head_(0), tail_(0)
     {
+        m_mutex = xSemaphoreCreateMutex();
         buffer_ = new T[capacity];
     }
 
     // Destructor
     ~FIFOBuffer()
     {
+        vSemaphoreDelete(m_mutex);
         delete[] buffer_;
     }
 
     // Add an element to the end of the buffer
     void push(T element)
     {
-        if (full())
+        if (xSemaphoreTake(m_mutex, portMAX_DELAY) == pdTRUE)
         {
-            // The buffer is full, so we need to remove the oldest element
-            // to make space for the new element
-            pop();
-        }
+            if (full())
+            {
+                // The buffer is full, so we need to remove the oldest element
+                // to make space for the new element
+                pop();
+            }
 
-        buffer_[tail_] = element;
-        tail_ = (tail_ + 1) % capacity_;
+            buffer_[tail_] = element;
+            tail_ = (tail_ + 1) % capacity_;
+
+            xSemaphoreGive(m_mutex);
+        }
     }
 
     // Remove and return the oldest element from the buffer
     T pop()
     {
-        if (empty())
-        {
-            throw std::out_of_range("FIFOBuffer is empty");
-        }
+        T element;
 
-        T element = buffer_[head_];
-        head_ = (head_ + 1) % capacity_;
+        if (xSemaphoreTake(m_mutex, portMAX_DELAY) == pdTRUE)
+        {
+            if (empty())
+            {
+                ESP_LOGE(TAG, "FIFOBuffer is empty");
+            }
+
+            element = buffer_[head_];
+            head_ = (head_ + 1) % capacity_;
+
+            xSemaphoreGive(m_mutex);
+        }
         return element;
     }
 
@@ -139,10 +163,20 @@ public:
     {
         if (empty())
         {
-            throw std::out_of_range("FIFOBuffer is empty");
+            ESP_LOGE(TAG, "FIFOBuffer is empty");
         }
 
         return buffer_[head_];
+    }
+
+    // Remove all elements from the buffer
+    void clear() const
+    {
+        if (xSemaphoreTake(m_mutex, portMAX_DELAY) == pdTRUE)
+        {
+            head_ = tail_ = 0;
+            xSemaphoreGive(m_mutex);
+        }
     }
 
     // Return the number of elements in the buffer
@@ -171,6 +205,7 @@ public:
     }
 
 private:
+    SemaphoreHandle_t m_mutex;
     T *buffer_;    // The buffer
     int capacity_; // The maximum number of elements the buffer can hold
     int head_;     // The index of the oldest element in the buffer
