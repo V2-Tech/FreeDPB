@@ -19,6 +19,7 @@
 #include "esp_system.h"
 #include "driver/gpio.h"
 #include "driver/gptimer.h"
+#include "driver/pulse_cnt.h"
 
 #include "esp_dsp.h"
 
@@ -34,12 +35,16 @@
 /****************/
 #define GPIO_LED_ERROR GPIO_NUM_2
 #define GPIO_OPT_SENSOR GPIO_NUM_35
+#define GPIO_ESC_OUT GPIO_NUM_4
 
 /*************************************/
 /*      GLOBAL DEFINES               */
 /*************************************/
 #define VIBE_RECORD_TIME_MS 2000 //Not use actualy
 #define ACC_DATA_BUFFER_SIZE 1024
+#define DEFAULT_PROP_NUM 3
+
+static IRAM_ATTR float_t testGlobalVar;
 
 /*!
  * @brief Enum to define commands
@@ -48,6 +53,7 @@ enum app_command
 {
     APP_CMD,
     MOTOR_CMD,
+    RPM_VAL_CMD,
 };
 
 enum app_steps
@@ -63,7 +69,7 @@ enum app_steps
 struct command_data
 {
     app_command command;
-    uint8_t value;
+    int64_t value;
 };
 
 /************************************/
@@ -101,7 +107,6 @@ struct fft_chart_data
 /************************************/
 /*      CLASSES DECLARATIONS        */
 /************************************/
-inline const char *TAG = "common";
 template <typename T>
 class FIFOBuffer
 {
@@ -206,6 +211,7 @@ public:
     }
 
 private:
+    const char *TAG = "FIFOBuffer-CLASS";
     SemaphoreHandle_t m_mutex;
     T *buffer_;    // The buffer
     int capacity_; // The maximum number of elements the buffer can hold

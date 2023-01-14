@@ -146,11 +146,12 @@ extern void btn_test_event_cb(lv_event_t *e);
 
 void lv_example_get_started_1(void);
 
-uint8_t gui_init(QueueHandle_t xQueueCom2Sys_handle, fft_chart_data *pFFTOuput);
+uint8_t gui_init(QueueHandle_t xQueueComp2Sys_handle, QueueHandle_t xQueueSys2Comp_handle, fft_chart_data *pFFTOuput);
 void gui_MainScreen_init(void);
+void gui_IdleScreen_init(void);
 void slider_x_event_cb(lv_event_t *e);
 void slider_y_event_cb(lv_event_t *e);
 
-void gui_chart_update(void);
+void gui_update(void);
 void gui_testvalue_increment(void);
 #endif

@@ -6,7 +6,7 @@
 /************************************/
 /*      VARAIABLES DECLARATIONS     */
 /************************************/
-
+inline const char *TAG = "POSITION";
 
 /************************************/
 /*      FUNCTION DECLARATIONS       */

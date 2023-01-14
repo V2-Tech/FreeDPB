@@ -33,13 +33,18 @@ static StaticQueue_t xStaticQueueSys2CompCommand;
 uint8_t ucQueueSys2CompCommandStorageArea[QUEUE_COMMANDS_LENGTH * ITEM_COMMANDS_SIZE];
 QueueHandle_t xQueueSys2CompCommandsHandle;
 
-static Motor esc(4, DSHOT300);
-static DPB app;
+#ifdef USE_BMX055
+static BMX055 accel;
+#endif
+
+static DPB sys(GPIO_ESC_OUT, DSHOT300, GPIO_OPT_SENSOR, &accel);
 
 __attribute__((aligned(16)))
-static FIFOBuffer<acc_sensor_data> accDataBuffer(ACC_DATA_BUFFER_SIZE);
+static FIFOBuffer<float_t> accXBuffer(ACC_DATA_BUFFER_SIZE);
+__attribute__((aligned(16)))
+static FIFOBuffer<float_t> accYBuffer(ACC_DATA_BUFFER_SIZE);
 
-static fft_chart_data FFTOuput[3];
+static fft_chart_data FFTOuput[2];
 
 /*********************
  *      CLASSES

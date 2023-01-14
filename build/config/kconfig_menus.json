@@ -4513,7 +4513,10 @@
                         "help": "Timeout for flushing last trace data to host in case of panic. In ms.\nUse -1 to disable timeout and wait forever.",
                         "id": "APPTRACE_ONPANIC_HOST_FLUSH_TMO",
                         "name": "APPTRACE_ONPANIC_HOST_FLUSH_TMO",
-                        "range": null,
+                        "range": [
+                            -1,
+                            5000
+                        ],
                         "title": "Timeout for flushing last trace data to host on panic",
                         "type": "int"
                     },
@@ -4523,7 +4526,10 @@
                         "help": "Threshold for flushing last trace data to host on panic in post-mortem mode.\nThis is minimal amount of data needed to perform flush. In bytes.",
                         "id": "APPTRACE_POSTMORTEM_FLUSH_THRESH",
                         "name": "APPTRACE_POSTMORTEM_FLUSH_THRESH",
-                        "range": null,
+                        "range": [
+                            0,
+                            16384
+                        ],
                         "title": "Threshold for flushing last trace data to host on panic",
                         "type": "int"
                     },
@@ -14345,7 +14351,7 @@
                         "id": "ESP_IPC_TASK_STACK_SIZE",
                         "name": "ESP_IPC_TASK_STACK_SIZE",
                         "range": [
-                            512,
+                            2048,
                             65536
                         ],
                         "title": "Inter-Processor Call (IPC) task stack size",

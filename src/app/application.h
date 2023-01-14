@@ -10,11 +10,18 @@
 /************************************/
 /*      FUNCTION DECLARATIONS       */
 /************************************/
-class DPB
+class DPB : public Motor, public RotSense, public Accel
 {
 public:
-    uint8_t init(Motor *motor, gpio_num_t opto_gpio_num, QueueHandle_t xQueueSysInput_handle, QueueHandle_t xQueueSysOutput_handle, FIFOBuffer<acc_sensor_data> *pDataBuffer, fft_chart_data *pFFTOuput);
+    DPB(uint8_t escGPIO, dshot_mode_t escSpeed, gpio_num_t rotSensorGPIO, BMX055 *accel);
+
+    uint8_t init(QueueHandle_t xQueueSysInput_handle, QueueHandle_t xQueueSysOutput_handle, TaskHandle_t supportTask_handle);
+    uint8_t init_rpm(TaskHandle_t supportTask_handle, QueueHandle_t xQueueSysOutput_handle, uint8_t n_propeller);
+    uint8_t init_esc();
+    uint8_t init_accel();
+
     void loop(void);
+    void loop_rpm(void);
     void exe(command_data command);
     void start(void);
     void reset(void);
@@ -25,14 +32,11 @@ public:
 private:
     QueueHandle_t _xQueueSysInput;
     QueueHandle_t _xQueueSysOutput;
-    FIFOBuffer<acc_sensor_data> *_pDataBuffer;
-    fft_chart_data *_pFFTOuput;
+    TaskHandle_t _xSuppTask;
 
-    Motor *_pMotor;
-
-    TimerHandle_t _vibeRecTimer;
-
-    
+    uint16_t _init_status;
+    uint8_t _init_done;
+    TimerHandle_t _motorRunTimer;
 };
 
 #endif

@@ -40,8 +40,7 @@ public:
 
     void arm(void);
     void set_throttle(uint16_t throttle_val);
-    void stop(void);
-    void emergency_stop(void);
+    void motor_stop(void);
 
 private:
     rmt_channel_handle_t _esc_chan;

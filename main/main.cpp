@@ -13,12 +13,12 @@ void app_main()
     /* Creating tasks
     * ! Accelerometer task: 
     */
-    xTaskCreatePinnedToCore(accelTask, "accel", 1024*4, NULL, 1, &accelTaskHandle, 0);
+    //xTaskCreatePinnedToCore(accelTask, "accel", 1024*4, NULL, 1, &accelTaskHandle, 0);
 
     /* Creating tasks
     * ! Position sensor task: 
     */
-    xTaskCreatePinnedToCore(senseTask, "sense", 1024*4, NULL, 2, &senseTaskHandle, 0);
+    xTaskCreatePinnedToCore(senseTask, "sense", 1024*4, NULL, 1, &senseTaskHandle, 0);
 
     /* Creating tasks
     * ! DPB app task: 

@@ -5,17 +5,20 @@
  ***********************************/
 LGFX tft;
 lv_obj_t *gui_MainScreen = NULL;
+lv_obj_t *gui_IdleScreen = NULL;
 lv_obj_t *gui_AccelChart = NULL;
 lv_chart_series_t *serAccX = NULL;
 lv_chart_series_t *serAccY = NULL;
 lv_chart_series_t *serAccZ = NULL;
 lv_obj_t *gui_TestLabel = NULL;
+lv_obj_t *gui_RPMLabel = NULL;
 
 uint16_t accX_sample[3000] = {0};
 uint16_t accY_sample[3000] = {0};
 uint16_t accZ_sample[3000] = {0};
 
 static QueueHandle_t _xQueueCom2Sys = NULL;
+static QueueHandle_t _xQueueSys2Comp = NULL;
 static fft_chart_data *_pFFTOuput;
 
 static int16_t testCnt = 0;
@@ -70,19 +73,19 @@ void btn_event_cb(lv_event_t *e)
 
         /*Get the first child of the button which is the label and change its text*/
         lv_obj_t *label = lv_obj_get_child(btn, 0);
-        lv_label_set_text_fmt(label, cnt ? "RUN" : "STOP");
+        lv_label_set_text_fmt(label, cnt ? "STOP" : "START");
 
         command_data command;
         if (cnt == 1)
         {
 
-            command.command = APP_CMD;
-            command.value = POS_SEARCH;
+            command.command = MOTOR_CMD;
+            command.value = 225;
         }
         else
         {
-            command.command = APP_CMD;
-            command.value = IDLE;
+            command.command = MOTOR_CMD;
+            command.value = 0;
         }
 
         xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
@@ -122,16 +125,17 @@ void btn_test_event_cb(lv_event_t *e)
     }
 }
 
-uint8_t gui_init(QueueHandle_t xQueueCom2Sys_handle, fft_chart_data *pFFTOuput)
+uint8_t gui_init(QueueHandle_t xQueueComp2Sys_handle, QueueHandle_t xQueueSys2Comp_handle, fft_chart_data *pFFTOuput)
 {
     uint8_t ret = 0;
 
-    if ((xQueueCom2Sys_handle == NULL) || (pFFTOuput == NULL))
+    if ((xQueueComp2Sys_handle == NULL) || (xQueueSys2Comp_handle == NULL) || (pFFTOuput == NULL))
     {
         return ESP_FAIL;
     }
 
-    _xQueueCom2Sys = xQueueCom2Sys_handle;
+    _xQueueCom2Sys = xQueueComp2Sys_handle;
+    _xQueueSys2Comp = xQueueSys2Comp_handle;
     _pFFTOuput = pFFTOuput;
 
     lv_disp_t *dispp = lv_disp_get_default();
@@ -139,8 +143,8 @@ uint8_t gui_init(QueueHandle_t xQueueCom2Sys_handle, fft_chart_data *pFFTOuput)
                                               true, LV_FONT_DEFAULT);
 
     lv_disp_set_theme(dispp, theme);
-    gui_MainScreen_init();
-    lv_disp_load_scr(gui_MainScreen);
+    gui_IdleScreen_init();
+    lv_disp_load_scr(gui_IdleScreen);
 
     return ret;
 }
@@ -199,7 +203,7 @@ void gui_MainScreen_init(void)
     lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_ALL, NULL); /*Assign a callback to the button*/
 
     lv_obj_t *label = lv_label_create(btn); /*Add a label to the button*/
-    lv_label_set_text(label, "STOP");       /*Set the labels text*/
+    lv_label_set_text(label, "START");      /*Set the labels text*/
     lv_obj_center(label);
 
     /* Create interrupt count button */
@@ -211,6 +215,37 @@ void gui_MainScreen_init(void)
     gui_TestLabel = lv_label_create(btn); /*Add a label to the button*/
     lv_label_set_text_fmt(gui_TestLabel, "%d", testCnt);
     lv_obj_center(gui_TestLabel);
+}
+
+void gui_IdleScreen_init(void)
+{
+    /* Create IDLE SCREEN object */
+    gui_IdleScreen = lv_obj_create(NULL);
+    lv_obj_clear_flag(gui_IdleScreen, LV_OBJ_FLAG_SCROLLABLE);
+
+    /* Create start-stop button */
+    lv_obj_t *btn = lv_btn_create(gui_IdleScreen); /*Add a button the current screen*/
+    lv_obj_set_pos(btn, 10, 70);
+    lv_obj_set_size(btn, 100, 100);                             /*Set its size*/
+    lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_ALL, NULL); /*Assign a callback to the button*/
+
+    lv_obj_t *label = lv_label_create(btn); /*Add a label to the button*/
+    lv_label_set_text(label, "START");      /*Set the labels text*/
+    lv_obj_center(label);
+
+    /* Create RPM label */
+    gui_RPMLabel = lv_label_create(gui_IdleScreen); /*Add a label to the button*/
+    static lv_style_t label_style;
+    lv_style_init(&label_style);
+    lv_style_set_bg_color(&label_style, lv_palette_main(LV_PALETTE_BLUE));
+    // lv_style_set_bg_opa(&label_style, LV_OPA_100);
+    lv_style_set_text_color(&label_style, lv_palette_main(LV_PALETTE_AMBER));
+    lv_style_set_text_font(&label_style, &lv_font_montserrat_36);
+
+    lv_obj_add_style(gui_RPMLabel, &label_style, 0);
+    lv_obj_align_to(gui_RPMLabel, btn, LV_ALIGN_OUT_RIGHT_MID, 20, 0);
+    lv_obj_set_size(gui_RPMLabel, 150, 40);
+    lv_label_set_text(gui_RPMLabel, "0"); /*Set the labels text*/
 }
 
 void slider_x_event_cb(lv_event_t *e)
@@ -227,21 +262,26 @@ void slider_y_event_cb(lv_event_t *e)
     lv_chart_set_zoom_y(gui_AccelChart, v);
 }
 
-void gui_chart_update(void)
+// lv_chart_set_next_value(gui_AccelChart, serAccZ, (lv_coord_t)chartData[2]);
+void gui_update(void)
 {
-    int16_t chartData[3] = {0};
+    command_data command;
 
-    /* while (uxQueueMessagesWaiting(_xQueueData2GUI) != 0)
+    while (uxQueueMessagesWaiting(_xQueueSys2Comp) != 0)
     {
-        if (xQueueReceive(_xQueueData2GUI,
-                          chartData,
-                          (TickType_t)0) == pdPASS)
+        if (xQueueReceive(_xQueueSys2Comp, &command, (TickType_t)0) == pdPASS)
         {
-            lv_chart_set_next_value(gui_AccelChart, serAccX, (lv_coord_t)chartData[0]);
-            lv_chart_set_next_value(gui_AccelChart, serAccY, (lv_coord_t)chartData[1]);
-            lv_chart_set_next_value(gui_AccelChart, serAccZ, (lv_coord_t)chartData[2]);
+            switch (command.command)
+            {
+            case RPM_VAL_CMD:
+                lv_label_set_text_fmt(gui_RPMLabel, "%lli", command.value);
+                break;
+
+            default:
+                break;
+            }
         }
-    } */
+    }
 }
 
 void gui_testvalue_increment(void)

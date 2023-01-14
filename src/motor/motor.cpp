@@ -61,12 +61,7 @@ void Motor::set_throttle(uint16_t throttle_val)
     ESP_ERROR_CHECK(rmt_enable(_esc_chan));
 }
 
-void Motor::stop(void)
+void Motor::motor_stop(void)
 {
-    ;
-}
-
-void Motor::emergency_stop(void) 
-{
-    set_throttle(0);
+    set_throttle(0);;
 }
