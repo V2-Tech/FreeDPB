@@ -80,12 +80,12 @@ void btn_event_cb(lv_event_t *e)
         {
 
             command.command = MOTOR_CMD;
-            command.value = 225;
+            command.value.ull = 225;
         }
         else
         {
             command.command = MOTOR_CMD;
-            command.value = 0;
+            command.value.ull = 0;
         }
 
         xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
@@ -274,7 +274,7 @@ void gui_update(void)
             switch (command.command)
             {
             case RPM_VAL_CMD:
-                lv_label_set_text_fmt(gui_RPMLabel, "%lli", command.value);
+                lv_label_set_text_fmt(gui_RPMLabel, "%.1f", command.value.f);
                 break;
 
             default:

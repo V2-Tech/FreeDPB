@@ -30,5 +30,6 @@ inline const char *TAG = "DPB";
 /*      FUNCTION DECLARATIONS       */
 /************************************/
 
-static void _vibeTimerCallback(TimerHandle_t pxTimer);
+static void _motorStartupTimerCallback(TimerHandle_t pxTimer);
+
 #endif

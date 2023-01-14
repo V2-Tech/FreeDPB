@@ -36,7 +36,12 @@ private:
 
     uint16_t _init_status;
     uint8_t _init_done;
-    TimerHandle_t _motorRunTimer;
+    TimerHandle_t _motorStartupTimer;
+    TimerHandle_t _guiUpdateTimer;
+
+protected:
+    static void __guiUpdateTimerCallback_static(TimerHandle_t pxTimer);
+    void __guiUpdateTimerCallback(TimerHandle_t pxTimer);
 };
 
 #endif

@@ -40,11 +40,10 @@
 /*************************************/
 /*      GLOBAL DEFINES               */
 /*************************************/
-#define VIBE_RECORD_TIME_MS 2000 //Not use actualy
+#define MOTOR_STARTUP_DELAY_MS 2000
+#define GUI_REFRESH_DELAY_MS 20  
 #define ACC_DATA_BUFFER_SIZE 1024
 #define DEFAULT_PROP_NUM 3
-
-static IRAM_ATTR float_t testGlobalVar;
 
 /*!
  * @brief Enum to define commands
@@ -66,10 +65,17 @@ enum app_steps
     DECEL,
 };
 
+union dpb_generic
+{
+    float_t f;
+    uint64_t ull;
+    int64_t ll;
+};
+
 struct command_data
 {
     app_command command;
-    int64_t value;
+    dpb_generic value;
 };
 
 /************************************/

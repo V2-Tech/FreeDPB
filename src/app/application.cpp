@@ -3,14 +3,10 @@
 
 DPB::DPB(uint8_t escGPIO, dshot_mode_t escSpeed, gpio_num_t rotSensorGPIO, BMX055 *accelDev) : Motor(escGPIO, escSpeed), RotSense(rotSensorGPIO), Accel(accelDev)
 {
-    _motorRunTimer = xTimerCreate(
-        "VibeRecorderTimer", // Just a text name, not used by the kernel.
-        VIBE_RECORD_TIME_MS, // The timer period in ticks.
-        pdFALSE,             // The timers will auto-reload themselves when they expire.
-        0,                   // Assign each timer a unique id equal to its array index.
-        _vibeTimerCallback   // Each timer calls the same callback when it expires.
-    );
-    assert(_motorRunTimer);
+    _motorStartupTimer = xTimerCreate("VibeRecorderTimer", MOTOR_STARTUP_DELAY_MS, pdFALSE, NULL, _motorStartupTimerCallback);
+    assert(_motorStartupTimer);
+    _guiUpdateTimer = xTimerCreate("GUIUpdateTimer", GUI_REFRESH_DELAY_MS, pdTRUE, this, __guiUpdateTimerCallback_static);
+    assert(_guiUpdateTimer);
 }
 
 uint8_t DPB::init(QueueHandle_t xQueueSysInput_handle, QueueHandle_t xQueueSysOutput_handle, TaskHandle_t supportTask_handle)
@@ -34,6 +30,9 @@ uint8_t DPB::init(QueueHandle_t xQueueSysInput_handle, QueueHandle_t xQueueSysOu
         ;
 
     ESP_LOGI(TAG, "DPB intialization completed");
+
+    xTimerStart(_guiUpdateTimer, portMAX_DELAY);
+
     _init_done = 1;
 
     return ESP_OK;
@@ -101,30 +100,30 @@ void DPB::exe(command_data command)
     switch (command.command)
     {
     case APP_CMD:
-        if (command.value == IDLE)
+        if (command.value.ull == IDLE)
         {
-            //app_reset();
+            // app_reset();
         }
-        if (command.value == POS_SEARCH)
+        if (command.value.ull == POS_SEARCH)
         {
-            //app_start();
+            // app_start();
         }
-        if (command.value == VIBES_REC)
+        if (command.value.ull == VIBES_REC)
         {
-            //app_rec_timer_start();
+            // app_rec_timer_start();
         }
-        if (command.value == FILTERING)
+        if (command.value.ull == FILTERING)
         {
             ;
         }
-        if (command.value == ANALYSING)
+        if (command.value.ull == ANALYSING)
         {
-            //app_fft();
+            // app_fft();
         }
         break;
 
     case MOTOR_CMD:
-        set_throttle(command.value);
+        set_throttle(command.value.ull);
         break;
 
     default:
@@ -132,7 +131,21 @@ void DPB::exe(command_data command)
     }
 }
 
-void _vibeTimerCallback(TimerHandle_t pxTimer)
+/* Thank to @FoxKeys https://github.com/espressif/esp-idf/issues/2355 */
+void DPB::__guiUpdateTimerCallback_static(TimerHandle_t pxTimer) 
+{
+    reinterpret_cast<DPB *>(pvTimerGetTimerID(pxTimer))->__guiUpdateTimerCallback(pxTimer);
+}
+
+void DPB::__guiUpdateTimerCallback(TimerHandle_t pxTimer) {
+  command_data command;
+
+  command.command = RPM_VAL_CMD;
+  command.value.f = get_rpm();
+  xQueueSend(__xQueueSysOutput, &command, portMAX_DELAY);
+}
+
+void _motorStartupTimerCallback(TimerHandle_t pxTimer)
 {
     ;
 }

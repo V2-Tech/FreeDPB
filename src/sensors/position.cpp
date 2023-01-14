@@ -83,7 +83,7 @@ void RotSense::rpm_update()
 {
     uint64_t count;
     float_t f_count;
-    command_data command;
+    
 
     static uint8_t __isr_event_counter = 0;
 
@@ -105,10 +105,6 @@ void RotSense::rpm_update()
 
     __isr_event_counter = 0;
     _rot_done = 1;
-
-    command.command = RPM_VAL_CMD;
-    command.value = static_cast<int64_t>(_rpm);
-    xQueueSend(__xQueueSysOutput, &command, portMAX_DELAY);
 }
 
 float_t RotSense::get_rpm()
