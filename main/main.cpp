@@ -13,7 +13,7 @@ void app_main()
     /* Creating tasks
     * ! Accelerometer task: 
     */
-    //xTaskCreatePinnedToCore(accelTask, "accel", 1024*4, NULL, 1, &accelTaskHandle, 0);
+    xTaskCreatePinnedToCore(accelTask, "accel", 1024*4, NULL, 1, &accelTaskHandle, 1);
 
     /* Creating tasks
     * ! Position sensor task: 

@@ -44,7 +44,7 @@ bmx_error BMX055::init(spi_device_handle_t spiHandle)
 
             /* Set accelerometer configuration required value */
             _acc_conf.bw = BMX_ACC_BW_1000_HZ;
-            _acc_conf.range = BMX_ACC_RANGE_4G;
+            _acc_conf.range = BMX_ACC_RANGE_2G;
 
             /* Set accelerometer actual configuration */
             status += set_accel_conf(&_acc_conf);
@@ -225,7 +225,7 @@ bmx_error BMX055::init(spi_device_handle_t spiHandle)
  */
 bmx_error BMX055::get_chipID(uint8_t *chipID_value)
 {
-    return read_regs(BMX_REG_CHIPID, chipID_value, 1);
+    return _read_regs(BMX_REG_CHIPID, chipID_value, 1);
 }
 
 /*!
@@ -244,12 +244,12 @@ bmx_error BMX055::get_accel_conf(bmx_acc_conf *acc_conf_struct)
     if (acc_conf_struct != NULL)
     {
         /* Get the values in the accel configuration registers */
-        if (read_regs(BMX_REG_PMU_RANGE, reg_data, 2) == BMX_OK)
+        if (_read_regs(BMX_REG_PMU_RANGE, reg_data, 2) == BMX_OK)
         {
             acc_conf_struct->range = BMX_GET_BITS_POS_0(reg_data[0], BMX_RANGE);
             acc_conf_struct->bw = BMX_GET_BITS_POS_0(reg_data[1], BMX_BW);
 
-            if (read_regs(BMX_REG_ACCD_HBW, &reg_data[0], 1) == BMX_OK)
+            if (_read_regs(BMX_REG_ACCD_HBW, &reg_data[0], 1) == BMX_OK)
             {
                 acc_conf_struct->shadow_dis = BMX_GET_BITS(reg_data[0], BMX_SHADOW_DIS);
                 acc_conf_struct->data_high_bw = BMX_GET_BITS(reg_data[0], BMX_DATA_HIGH_BW);
@@ -287,19 +287,19 @@ bmx_error BMX055::set_accel_conf(bmx_acc_conf *acc_conf_struct)
 
     if (acc_conf_struct != NULL)
     {
-        if (read_regs(BMX_REG_PMU_RANGE, reg_data, 2) == BMX_OK)
+        if (_read_regs(BMX_REG_PMU_RANGE, reg_data, 2) == BMX_OK)
         {
             reg_data[0] = BMX_SET_BITS_POS_0(reg_data[0], BMX_RANGE, acc_conf_struct->range);
             reg_data[1] = BMX_SET_BITS_POS_0(reg_data[1], BMX_BW, acc_conf_struct->bw);
 
             /* Set the values in the accel configuration registers */
-            if (write_regs(BMX_REG_PMU_RANGE, reg_data, 2) == BMX_OK)
+            if (_write_regs(BMX_REG_PMU_RANGE, reg_data, 2) == BMX_OK)
             {
                 reg_data[0] = 0;
                 reg_data[0] = BMX_SET_BITS_POS_0(reg_data[0], BMX_SHADOW_DIS, acc_conf_struct->shadow_dis);
                 reg_data[0] = BMX_SET_BITS_POS_0(reg_data[0], BMX_DATA_HIGH_BW, acc_conf_struct->data_high_bw);
 
-                if (write_regs(BMX_REG_ACCD_HBW, &reg_data[0], 1) != BMX_OK)
+                if (_write_regs(BMX_REG_ACCD_HBW, &reg_data[0], 1) != BMX_OK)
                 {
                     return BMX_ERR_WR;
                 }
@@ -331,12 +331,12 @@ bmx_error BMX055::get_fifo_config(bmx_fifo_conf *fifo_conf_struct)
 
     if (fifo_conf_struct != NULL)
     {
-        if (read_regs(BMX_REG_FIFO_STATUS, &reg_data, 1) == BMX_OK)
+        if (_read_regs(BMX_REG_FIFO_STATUS, &reg_data, 1) == BMX_OK)
         {
             fifo_conf_struct->fifo_frame_count = BMX_GET_BITS_POS_0(reg_data, BMX_FIFO_FRAME_COUNT);
             fifo_conf_struct->fifo_overrun = BMX_GET_BITS(reg_data, BMX_FIFO_OVERRUN);
 
-            if (read_regs(BMX_REG_FIFO_CONFIG_0, &reg_data, 1) == BMX_OK)
+            if (_read_regs(BMX_REG_FIFO_CONFIG_0, &reg_data, 1) == BMX_OK)
             {
                 fifo_conf_struct->wm_level = BMX_GET_BITS_POS_0(reg_data, BMX_FIFO_WATER_MARK);
             }
@@ -345,7 +345,7 @@ bmx_error BMX055::get_fifo_config(bmx_fifo_conf *fifo_conf_struct)
                 return BMX_ERR_RD;
             }
 
-            if (read_regs(BMX_REG_FIFO_CONFIG_1, &reg_data, 1) == BMX_OK)
+            if (_read_regs(BMX_REG_FIFO_CONFIG_1, &reg_data, 1) == BMX_OK)
             {
                 fifo_conf_struct->fifo_data_select = BMX_GET_BITS_POS_0(reg_data, BMX_FIFO_DATA_SELECT);
                 fifo_conf_struct->fifo_mode_select = BMX_GET_BITS(reg_data, BMX_FIFO_MODE_SELECT);
@@ -377,7 +377,7 @@ bmx_error BMX055::set_fifo_config(bmx_fifo_conf *fifo_conf_struct)
 
     if (fifo_conf_struct != NULL)
     {
-        if (read_regs(BMX_REG_FIFO_CONFIG_0, &reg_data, 1) == BMX_OK)
+        if (_read_regs(BMX_REG_FIFO_CONFIG_0, &reg_data, 1) == BMX_OK)
         {
             reg_data = BMX_SET_BITS_POS_0(reg_data, BMX_FIFO_WATER_MARK, fifo_conf_struct->wm_level);
         }
@@ -386,16 +386,16 @@ bmx_error BMX055::set_fifo_config(bmx_fifo_conf *fifo_conf_struct)
             return BMX_ERR_RD;
         }
 
-        if (write_regs(BMX_REG_FIFO_CONFIG_0, &reg_data, 1) == BMX_OK)
+        if (_write_regs(BMX_REG_FIFO_CONFIG_0, &reg_data, 1) == BMX_OK)
         {
             _fifo_conf.wm_level = fifo_conf_struct->wm_level;
 
-            if (read_regs(BMX_REG_FIFO_CONFIG_1, &reg_data, 1) == BMX_OK)
+            if (_read_regs(BMX_REG_FIFO_CONFIG_1, &reg_data, 1) == BMX_OK)
             {
                 reg_data = BMX_SET_BITS_POS_0(reg_data, BMX_FIFO_DATA_SELECT, fifo_conf_struct->fifo_data_select);
                 reg_data = BMX_SET_BITS(reg_data, BMX_FIFO_MODE_SELECT, fifo_conf_struct->fifo_mode_select);
 
-                if (write_regs(BMX_REG_FIFO_CONFIG_1, &reg_data, 1) != BMX_OK)
+                if (_write_regs(BMX_REG_FIFO_CONFIG_1, &reg_data, 1) != BMX_OK)
                 {
                     return BMX_ERR_WR;
                 }
@@ -428,21 +428,21 @@ bmx_error BMX055::set_interrupt_source(uint32_t int_source_to_en)
 {
     uint8_t reg_data[3];
 
-    if (read_regs(BMX_REG_INT_EN_0, reg_data, 3) == BMX_OK)
+    if (_read_regs(BMX_REG_INT_EN_0, reg_data, 3) == BMX_OK)
     {
         reg_data[0] = BMX_SET_BITS_POS_0(reg_data[0], BMX_INT_EN_0, int_source_to_en);
         reg_data[1] = (uint8_t)(BMX_SET_BITS_POS_0(reg_data[1], BMX_INT_EN_1, int_source_to_en) >> 8);
         reg_data[2] = (uint8_t)(BMX_SET_BITS_POS_0(reg_data[2], BMX_INT_EN_2, int_source_to_en) >> 16);
         printf("Desired Interrupt source bytes value: 0x%x, 0x%x, 0x%x\n", reg_data[0], reg_data[1], reg_data[2]);
-        if (write_regs(BMX_REG_INT_EN_0, &reg_data[0], 1) != BMX_OK)
+        if (_write_regs(BMX_REG_INT_EN_0, &reg_data[0], 1) != BMX_OK)
         {
             return BMX_ERR_WR;
         }
-        if (write_regs(BMX_REG_INT_EN_1, &reg_data[1], 1) != BMX_OK)
+        if (_write_regs(BMX_REG_INT_EN_1, &reg_data[1], 1) != BMX_OK)
         {
             return BMX_ERR_WR;
         }
-        if (write_regs(BMX_REG_INT_EN_2, &reg_data[2], 1) != BMX_OK)
+        if (_write_regs(BMX_REG_INT_EN_2, &reg_data[2], 1) != BMX_OK)
         {
             return BMX_ERR_WR;
         }
@@ -466,7 +466,7 @@ bmx_error BMX055::get_interrupt_source(bmx_int_scr *int_en)
 
     if (int_en != NULL)
     {
-        if (read_regs(BMX_REG_INT_EN_0, reg_data, 3) == BMX_OK)
+        if (_read_regs(BMX_REG_INT_EN_0, reg_data, 3) == BMX_OK)
         {
             d_dummy_var = (uint32_t)((uint32_t)(reg_data[2] << 16) | (uint16_t)(reg_data[1] << 8) | reg_data[0]);
             memcpy(int_en, &d_dummy_var, sizeof(d_dummy_var));
@@ -494,7 +494,7 @@ bmx_error BMX055::get_power_mode(bmx_power_mode *power_mode)
 
     if (power_mode != NULL)
     {
-        if (read_regs(BMX_REG_PMU_LPW, reg_data, 2) == BMX_OK)
+        if (_read_regs(BMX_REG_PMU_LPW, reg_data, 2) == BMX_OK)
         {
             reg_data[0] = BMX_GET_BITS(reg_data[0], BMX_POWER_MODE_CTRL);
             reg_data[1] = BMX_GET_BITS(reg_data[1], BMX_LOW_POWER_MODE);
@@ -540,13 +540,13 @@ bmx_error BMX055::set_power_mode(bmx_power_mode power_mode)
     uint8_t low_power_mode;
 
     /* Read the power control registers */
-    if (read_regs(BMX_REG_PMU_LPW, reg_data, 2) == BMX_OK)
+    if (_read_regs(BMX_REG_PMU_LPW, reg_data, 2) == BMX_OK)
     {
         switch (power_mode)
         {
         case BMX_NORMAL_MODE:
         case BMX_DEEP_SUSPEND_MODE:
-            rslt = set_normal_mode();
+            rslt = _set_normal_mode();
             break;
 
         case BMX_LOW_POWER_MODE_1:
@@ -554,7 +554,7 @@ bmx_error BMX055::set_power_mode(bmx_power_mode power_mode)
             if ((_power_mode == BMX_LOW_POWER_MODE_2) || (_power_mode == BMX_STANDBY_MODE) ||
                 (_power_mode == BMX_DEEP_SUSPEND_MODE))
             {
-                rslt = set_normal_mode();
+                rslt = _set_normal_mode();
             }
 
             break;
@@ -563,7 +563,7 @@ bmx_error BMX055::set_power_mode(bmx_power_mode power_mode)
             if ((_power_mode == BMX_LOW_POWER_MODE_1) || (_power_mode == BMX_SUSPEND_MODE) ||
                 (_power_mode == BMX_DEEP_SUSPEND_MODE))
             {
-                rslt = set_normal_mode();
+                rslt = _set_normal_mode();
             }
 
             break;
@@ -584,13 +584,13 @@ bmx_error BMX055::set_power_mode(bmx_power_mode power_mode)
             power_mode = (bmx_power_mode)((uint8_t)power_mode & BMX_POWER_MODE_MASK);
             reg_data[0] = BMX_SET_BITS(reg_data[0], BMX_POWER_MODE_CTRL, power_mode);
 
-            if (write_regs(BMX_REG_PMU_LPW, &reg_data[0], 1) == BMX_OK)
+            if (_write_regs(BMX_REG_PMU_LPW, &reg_data[0], 1) == BMX_OK)
             {
                 /* To overcome invalid powermode state a delay of 450us is provided. Since
                  * 2 registers are accessed to set powermode */
                 vTaskDelay(pdMS_TO_TICKS(1));
 
-                if (write_regs(BMX_REG_LOW_NOISE, &reg_data[1], 1) == BMX_OK)
+                if (_write_regs(BMX_REG_LOW_NOISE, &reg_data[1], 1) == BMX_OK)
                 {
                     _power_mode = power_mode;
                 }
@@ -620,12 +620,12 @@ bmx_error BMX055::set_power_mode(bmx_power_mode power_mode)
 /*!
  * @brief This internal API is used to set the powermode as normal.
  */
-bmx_error BMX055::set_normal_mode()
+bmx_error BMX055::_set_normal_mode()
 {
     uint8_t reg_data[2];
 
     /* Read the power control registers */
-    if (read_regs(BMX_REG_PMU_LPW, reg_data, 2) == BMX_OK)
+    if (_read_regs(BMX_REG_PMU_LPW, reg_data, 2) == BMX_OK)
     {
         if (_power_mode == BMX_DEEP_SUSPEND_MODE)
         {
@@ -641,13 +641,13 @@ bmx_error BMX055::set_normal_mode()
             reg_data[0] = BMX_SET_BIT_VAL_0(reg_data[0], BMX_POWER_MODE_CTRL);
             reg_data[1] = BMX_SET_BIT_VAL_0(reg_data[1], BMX_LOW_POWER_MODE);
 
-            if (write_regs(BMX_REG_PMU_LPW, &reg_data[0], 1) == BMX_OK)
+            if (_write_regs(BMX_REG_PMU_LPW, &reg_data[0], 1) == BMX_OK)
             {
                 /* To overcome invalid powermode state a delay is provided. Since
                  * 2 registers are accessed to set powermode */
                 vTaskDelay(pdMS_TO_TICKS(1));
 
-                if (write_regs(BMX_REG_LOW_NOISE, &reg_data[1], 1) != BMX_OK)
+                if (_write_regs(BMX_REG_LOW_NOISE, &reg_data[1], 1) != BMX_OK)
                 {
                     return BMX_ERR_WR;
                 }
@@ -677,7 +677,7 @@ bmx_error BMX055::soft_reset()
     uint8_t soft_rst_cmd = BMX_SOFT_RESET_CMD;
 
     /* Soft-reset is done by writing soft-reset command into the register */
-    if (write_regs(BMX_REG_BGW_SOFT_RESET, &soft_rst_cmd, 1) == BMX_OK)
+    if (_write_regs(BMX_REG_BGW_SOFT_RESET, &soft_rst_cmd, 1) == BMX_OK)
     {
         /* Delay for soft-reset */
         vTaskDelay(pdMS_TO_TICKS(1));
@@ -699,7 +699,7 @@ bmx_error BMX055::get_int_status(bmx_int_status *int_status)
 
     if (int_status != NULL)
     {
-        if (read_regs(BMX_REG_INT_STATUS_0, reg_data, 4) == BMX_OK)
+        if (_read_regs(BMX_REG_INT_STATUS_0, reg_data, 4) == BMX_OK)
         {
             int_status->int_status_0 = reg_data[0];
             int_status->int_status_1 = reg_data[1];
@@ -715,6 +715,39 @@ bmx_error BMX055::get_int_status(bmx_int_status *int_status)
     {
         return BMX_ERR_NULL_POINTER;
     }
+
+    return BMX_OK;
+}
+
+bmx_error BMX055::read_acc_data(sensor_3D_data *accel_data)
+{
+    uint8_t reg_data[6];
+    uint8_t new_data_xyz;
+    uint8_t new_data_bit;
+
+    if (accel_data == NULL)
+    {
+        return BMX_ERR_NULL_POINTER;
+    }
+
+    if (_read_regs_dma(BMX_REG_ACCD_X_LSB, reg_data, 6) != BMX_OK)
+    {
+        return BMX_ERR_RD;
+    }
+
+    new_data_bit = BMX_GET_BITS_POS_0(reg_data[4], BMX_NEW_DATA);
+    new_data_xyz = (uint8_t)(new_data_bit << 2);
+    new_data_bit = BMX_GET_BITS_POS_0(reg_data[2], BMX_NEW_DATA);
+    new_data_xyz |= (uint8_t)(new_data_bit << 1);
+    new_data_bit = BMX_GET_BITS_POS_0(reg_data[0], BMX_NEW_DATA);
+    new_data_xyz |= new_data_bit;
+
+    if (new_data_xyz != BMX_NEW_DATA_XYZ)
+    {
+        return BMX_ERR_NO_NEW_AVAILABLE;
+    }
+
+    _convert_reg_data_to_accel(accel_data, reg_data);
 
     return BMX_OK;
 }
@@ -750,7 +783,7 @@ bmx_error BMX055::read_fifo_data()
     }
 
     /* Read only the filled bytes in the FIFO Buffer */
-    if (read_regs_dma(BMX_REG_FIFO_DATA, _FIFO_data, _fifo_conf.length) != BMX_OK)
+    if (_read_regs_dma(BMX_REG_FIFO_DATA, _FIFO_data, _fifo_conf.length) != BMX_OK)
     {
         return BMX_ERR_RD_DMA;
     }
@@ -762,7 +795,7 @@ bmx_error BMX055::get_fifo_frame_count()
 {
     uint8_t reg_data;
 
-    if (read_regs(BMX_REG_FIFO_STATUS, &reg_data, 1) == BMX_OK)
+    if (_read_regs(BMX_REG_FIFO_STATUS, &reg_data, 1) == BMX_OK)
     {
         _fifo_conf.fifo_frame_count = BMX_GET_BITS_POS_0(reg_data, BMX_FIFO_FRAME_COUNT);
         _fifo_conf.fifo_overrun = BMX_GET_BITS(reg_data, BMX_FIFO_OVERRUN);
@@ -934,7 +967,7 @@ bmx_error BMX055::fifo_frame_empty_check(uint16_t *data_index)
  * @return 0 -> Success
  * @return != 0 -> Fail
  */
-bmx_error BMX055::read_regs(uint8_t reg_addr, uint8_t *data_rd, uint32_t length)
+bmx_error BMX055::_read_regs(uint8_t reg_addr, uint8_t *data_rd, uint32_t length)
 {
     esp_err_t ret = ESP_FAIL;
 
@@ -986,7 +1019,7 @@ bmx_error BMX055::read_regs(uint8_t reg_addr, uint8_t *data_rd, uint32_t length)
  * @return 0 -> Success
  * @return != 0 -> Fail
  */
-bmx_error BMX055::write_regs(uint8_t reg_addr, uint8_t *data_wr, uint32_t length)
+bmx_error BMX055::_write_regs(uint8_t reg_addr, uint8_t *data_wr, uint32_t length)
 {
     esp_err_t ret = ESP_FAIL;
 
@@ -1037,7 +1070,7 @@ bmx_error BMX055::write_regs(uint8_t reg_addr, uint8_t *data_wr, uint32_t length
  * @return 0 -> Success
  * @return != 0 -> Fail
  */
-bmx_error BMX055::read_regs_dma(uint8_t reg_addr, uint8_t *data_rd, uint32_t length)
+bmx_error BMX055::_read_regs_dma(uint8_t reg_addr, uint8_t *data_rd, uint32_t length)
 {
     esp_err_t ret = ESP_FAIL;
 
@@ -1073,5 +1106,49 @@ bmx_error BMX055::read_regs_dma(uint8_t reg_addr, uint8_t *data_rd, uint32_t len
     else
     {
         return BMX_ERR_RD;
+    }
+}
+
+void BMX055::_convert_reg_data_to_accel(sensor_3D_data *accel, uint8_t *data_array)
+{
+    uint32_t reg_data;
+
+    /* Accel X axis data */
+    reg_data = (uint32_t)(((uint16_t)(data_array[1] << 8) | data_array[0]) >> BMX_RES_SHIFT_VAL);
+
+    if (reg_data > BMX_RES_MAX_VAL)
+    {
+        /* Computing accel data negative value */
+        accel->x = (int16_t)(reg_data - BMX_RES_NEG_VAL);
+    }
+    else
+    {
+        accel->x = (int16_t)reg_data;
+    }
+
+    /* Accel Y axis data */
+    reg_data = (uint32_t)(((uint16_t)(data_array[3] << 8) | data_array[2]) >> BMX_RES_SHIFT_VAL);
+
+    if (reg_data > BMX_RES_MAX_VAL)
+    {
+        /* Computing accel data negative value */
+        accel->y = (int16_t)(reg_data - BMX_RES_NEG_VAL);
+    }
+    else
+    {
+        accel->y = (int16_t)reg_data;
+    }
+
+    /* Accel Z axis data */
+    reg_data = (uint32_t)(((uint16_t)(data_array[5] << 8) | data_array[4]) >> BMX_RES_SHIFT_VAL);
+
+    if (reg_data > BMX_RES_MAX_VAL)
+    {
+        /* Computing accel data negative value */
+        accel->z = (int16_t)(reg_data - BMX_RES_NEG_VAL);
+    }
+    else
+    {
+        accel->z = (int16_t)reg_data;
     }
 }

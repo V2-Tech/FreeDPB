@@ -1,25 +1,12 @@
 #ifndef INC_GUI_H
 #define INC_GUI_H
 
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_freertos_hooks.h"
-#include "freertos/semphr.h"
-#include "freertos/queue.h"
-
-#include "esp_system.h"
-#include "driver/gpio.h"
-
 #define LGFX_USE_V1
 #include "../../components/LovyanGFX/src/LovyanGFX.hpp"
 #include "../../components/lvgl/lvgl.h"
 
-#include "../../main/common_def.h"
+#include "../shared/common_def.h"
+#include "../shared/shared_data.h"
 
 /*********************
  *      DEFINES
@@ -34,10 +21,6 @@ static const uint16_t screenHeight = 240;
  ****************************/
 extern lv_obj_t *gui_MainScreen;
 extern lv_obj_t *gui_AccelChart;
-
-extern uint16_t accX_sample[3000];
-extern uint16_t accY_sample[3000];
-extern uint16_t accZ_sample[3000];
 
 /*********************
  *      CLASSES
@@ -131,6 +114,12 @@ public:
   }
 };
 
+enum dpb_page
+{
+    IDLE,
+    FFT,
+};
+
 extern LGFX tft;
 
 /****************************
@@ -141,17 +130,21 @@ void lv_tick_task(void *arg);
 
 extern void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p);
 extern void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data);
-extern void btn_event_cb(lv_event_t *e);
-extern void btn_test_event_cb(lv_event_t *e);
 
-void lv_example_get_started_1(void);
-
-uint8_t gui_init(QueueHandle_t xQueueComp2Sys_handle, QueueHandle_t xQueueSys2Comp_handle, fft_chart_data *pFFTOuput);
-void gui_MainScreen_init(void);
+uint8_t gui_init(QueueHandle_t xQueueComp2Sys_handle, QueueHandle_t xQueueSys2Comp_handle);
 void gui_IdleScreen_init(void);
+void gui_FFTScreen_init(void);
 void slider_x_event_cb(lv_event_t *e);
 void slider_y_event_cb(lv_event_t *e);
+void start_btn_event_cb(lv_event_t *e);
+void fft_btn_event_cb(lv_event_t *e);
+void back_btn_event_cb(lv_event_t *e);
 
 void gui_update(void);
-void gui_testvalue_increment(void);
+void gui_check_commands(void);
+void gui_exe(command_data command);
+void gui_show_page(dpb_page page);
+void gui_values_update(void);
+void gui_charts_update(void);
+void gui_fft_update(void);
 #endif

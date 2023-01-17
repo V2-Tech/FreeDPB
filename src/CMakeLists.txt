@@ -6,6 +6,7 @@ file(GLOB SRCS
     motor/*.cpp
     motor/dshot/*.c
     app/*.cpp
+    shared/*.cpp
     )
 
 file(GLOB INCL
@@ -16,6 +17,7 @@ file(GLOB INCL
     motor
     motor/dshot
     app
+    shared
     )
 
 idf_component_register(SRCS ${SRCS}

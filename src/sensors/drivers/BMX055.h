@@ -38,6 +38,7 @@ public:
     bmx_error soft_reset();
 
     bmx_error get_int_status(bmx_int_status *int_status);
+    bmx_error read_acc_data(sensor_3D_data *accel_data);
 
     bmx_error read_fifo_data();
     bmx_error get_fifo_frame_count();
@@ -53,12 +54,14 @@ private:
 
     uint8_t _FIFO_data[BMX_FIFO_BUFFER_SIZE] = {0};
 
-    bmx_error set_normal_mode();
+    bmx_error _set_normal_mode();
 
-    bmx_error read_regs(uint8_t reg_addr, uint8_t *data_rd, uint32_t length);
-    bmx_error write_regs(uint8_t reg_addr, uint8_t *data_wr, uint32_t length);
+    bmx_error _read_regs(uint8_t reg_addr, uint8_t *data_rd, uint32_t length);
+    bmx_error _write_regs(uint8_t reg_addr, uint8_t *data_wr, uint32_t length);
 
-    bmx_error read_regs_dma(uint8_t reg_addr, uint8_t *data_rd, uint32_t length);
+    bmx_error _read_regs_dma(uint8_t reg_addr, uint8_t *data_rd, uint32_t length);
+
+    void _convert_reg_data_to_accel(sensor_3D_data *accel_data, uint8_t *reg_data);
 };
 
 #endif

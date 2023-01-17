@@ -3,7 +3,7 @@
 
 Accel::Accel(BMX055 *accel)
 {
-    __accel = accel;
+    _accel = accel;
 
     /* Initialize the communication bus */
     spi_bus_config_t buscfg =
@@ -31,14 +31,24 @@ Accel::Accel(BMX055 *accel)
     ESP_LOGI(TAG, "Bus initialized");
 
     // Attach the Accelerometer to the SPI bus
-    ESP_ERROR_CHECK(spi_bus_add_device(HSPI_HOST, &devcfg, &__spi));
+    ESP_ERROR_CHECK(spi_bus_add_device(HSPI_HOST, &devcfg, &_spi));
     ESP_LOGI(TAG, "Device added to HSPI bus");
 }
 
-uint8_t Accel::_set_default_config()
+uint8_t Accel::get_int_status(bmx_int_status *int_status)
+{
+    return _accel->get_int_status(int_status);
+}
+
+uint8_t Accel::read_acceleration_data(acc_data_i *dataBuffer)
+{
+    return _accel->read_acc_data((sensor_3D_data *)dataBuffer);
+}
+
+uint8_t Accel::__set_default_config()
 {
     ESP_LOGI(TAG, "Initalizing accelerometer's registers with app default values");
-    return __accel->init(__spi);
+    return _accel->init(_spi);
 }
 
 // uint8_t acceleration_update(void)

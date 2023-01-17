@@ -1,16 +1,7 @@
 #ifndef _MOTOR_H
 #define _MOTOR_H
 
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-#include "esp_freertos_hooks.h"
-#include "freertos/semphr.h"
-#include "freertos/queue.h"
+#include "../shared/common_def.h"
 
 #include "./dshot/dshot_esc_encoder.h"
 #include "driver/rmt_tx.h"

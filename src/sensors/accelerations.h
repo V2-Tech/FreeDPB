@@ -1,21 +1,8 @@
 #ifndef INC_ACCELERATIONS_H
 #define INC_ACCELERATIONS_H
 
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_freertos_hooks.h"
-#include "freertos/semphr.h"
-#include "freertos/queue.h"
-
-#include "esp_system.h"
-#include "driver/gpio.h"
-
-#include "../../main/common_def.h"
+#include "../shared/common_def.h"
+#include "../shared/shared_data.h"
 
 #ifdef USE_BMX055
 #include "drivers/BMX055.h"
@@ -39,12 +26,15 @@ class Accel
 public:
     Accel(BMX055 *accel);
 
+    uint8_t get_int_status(bmx_int_status *int_status);
+    uint8_t read_acceleration_data(acc_data_i *dataBuffer);
+
 private:
-    BMX055 *__accel;
-    spi_device_handle_t __spi;
+    BMX055 *_accel;
+    spi_device_handle_t _spi;
 
 protected:
-    uint8_t _set_default_config();
+    uint8_t __set_default_config();
 };
 
 #endif

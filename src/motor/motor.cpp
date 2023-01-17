@@ -63,5 +63,5 @@ void Motor::set_throttle(uint16_t throttle_val)
 
 void Motor::motor_stop(void)
 {
-    set_throttle(0);;
+    set_throttle(0);
 }

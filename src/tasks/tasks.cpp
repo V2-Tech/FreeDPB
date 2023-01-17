@@ -1,11 +1,15 @@
 #include "tasks_def.h"
 #include "tasks.h"
 
+DPBShared& sharedVars = DPBShared::getInstance();
+
 /******************************************
  *              GUI TASK
  ******************************************/
 void guiTask(void *pvParameter)
 {
+    const char *TAG = "GUI-TASK";
+
     /* TFT init */
     tft.begin();
     /* Landscape orientation, flipped */
@@ -50,7 +54,7 @@ void guiTask(void *pvParameter)
         ;
 
     /* Create DPB first page interface */
-    ESP_ERROR_CHECK(gui_init(xQueueComp2SysCommandsHandle, xQueueSys2CompCommandsHandle, FFTOuput));
+    ESP_ERROR_CHECK(gui_init(xQueueComp2SysCommandsHandle, xQueueSys2CompCommandsHandle));
 
     while (1)
     {
@@ -81,8 +85,11 @@ void IRAM_ATTR lv_tick_task(void *arg)
  ****************************************/
 void accelTask(void *pvParameter)
 {
+    const char *TAG = "ACCEL-TASK";
+    
     while (1)
     {
+        sys.loop_accel();
         vTaskDelay(pdMS_TO_TICKS(1));
     }
 
@@ -94,6 +101,8 @@ void accelTask(void *pvParameter)
  ********************************/
 void senseTask(void *pvParameter)
 {
+    const char *TAG = "SENSE-TASK";
+
     while (1)
     {
         sys.loop_rpm();
@@ -127,7 +136,7 @@ void application(void *pvParameter)
     while ((xQueueComp2SysCommandsHandle == NULL) || (xQueueSys2CompCommandsHandle == NULL))
         ;
 
-    ESP_ERROR_CHECK(sys.init(xQueueComp2SysCommandsHandle, xQueueSys2CompCommandsHandle, senseTaskHandle));
+    ESP_ERROR_CHECK(sys.init(xQueueComp2SysCommandsHandle, xQueueSys2CompCommandsHandle, senseTaskHandle, &sharedVars));
 
     while (1)
     {

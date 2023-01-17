@@ -1,7 +1,8 @@
 #ifndef INC_ACCELERATIONS_DEF_H
 #define INC_ACCELERATIONS_DEF_H
 
-#include "../../main/common_def.h"
+#include "../shared/common_def.h"
+#include "../shared/shared_data.h"
 
 #ifdef USE_BMX055
 #include "drivers/BMX055.h"

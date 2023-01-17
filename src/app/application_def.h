@@ -1,7 +1,8 @@
 #ifndef INC_APP_DEF_H
 #define INC_APP_DEF_H
 
-#include "../../main/common_def.h"
+#include "../shared/common_def.h"
+#include "../shared/shared_data.h"
 
 #include "../motor/motor.h"
 
@@ -19,7 +20,6 @@
 /************************************/
 /*   SHARED VARIABLES DECLARATIONS  */
 /************************************/
-extern app_steps _app_step;
 
 /************************************/
 /*      VARIABLES DECLARATIONS      */
@@ -29,7 +29,5 @@ inline const char *TAG = "DPB";
 /************************************/
 /*      FUNCTION DECLARATIONS       */
 /************************************/
-
-static void _motorStartupTimerCallback(TimerHandle_t pxTimer);
 
 #endif

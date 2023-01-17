@@ -1,7 +1,8 @@
 #ifndef INC_POSITION_H
 #define INC_POSITION_H
 
-#include "../../main/common_def.h"
+#include "../shared/common_def.h"
+#include "../shared/shared_data.h"
 
 class RotSense
 {
@@ -9,7 +10,7 @@ public:
     RotSense(gpio_num_t opto_gpio_num);
     ~RotSense();
 
-    uint8_t init_rpm_sensor(TaskHandle_t Task_handle, QueueHandle_t xQueueSysOutput_handle, uint8_t n_propeller);
+    uint8_t init_rpm_sensor(TaskHandle_t Task_handle, gptimer_handle_t xTimer_handle, uint8_t n_propeller);
     void rpm_update();
 
     float_t get_rpm();
@@ -22,17 +23,20 @@ public:
 
 private:
     gpio_num_t _in_GPIO;
-    gptimer_handle_t _rpmTimer;
-    float_t _rpm;
+    uint16_t _rpm;
     uint8_t _rot_done;
     uint8_t _prop_number;
+    
+    void _set_rotation_done();
 
 protected:
     static bool __opto_isr_handler_static(pcnt_unit_handle_t unit, const pcnt_watch_event_data_t *edata, void *user_ctx);
     void __opto_isr_handler();
-    QueueHandle_t __xQueueSysOutput;
+    gptimer_handle_t __xGPTimer;
     pcnt_unit_handle_t __rpm_pcnt;
     TaskHandle_t __task_calc;
+
+    SemaphoreHandle_t __xSem;
 };
 
 #endif

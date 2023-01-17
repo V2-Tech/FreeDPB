@@ -1,11 +1,10 @@
 #ifndef INC_TASKS_DEF_H
 #define INC_TASKS_DEF_H
 
-#include "../../main/common_def.h"
+#include "../shared/common_def.h"
+#include "../shared/shared_data.h"
 
 #include "../GUI/GUI.h"
-#include "../sensors/accelerations.h"
-#include "../motor/motor.h"
 #include "../app/application.h"
 
 /*********************
@@ -38,11 +37,6 @@ static BMX055 accel;
 #endif
 
 static DPB sys(GPIO_ESC_OUT, DSHOT300, GPIO_OPT_SENSOR, &accel);
-
-__attribute__((aligned(16)))
-static FIFOBuffer<float_t> accXBuffer(ACC_DATA_BUFFER_SIZE);
-__attribute__((aligned(16)))
-static FIFOBuffer<float_t> accYBuffer(ACC_DATA_BUFFER_SIZE);
 
 static fft_chart_data FFTOuput[2];
 

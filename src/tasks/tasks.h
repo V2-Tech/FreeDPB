@@ -1,9 +1,9 @@
 #ifndef INC_TASKS_H
 #define INC_TASKS_H
 
-#include "../../main/common_def.h"
+#include "../shared/common_def.h"
+#include "../shared/shared_data.h"
 
-#include "../GUI/GUI.h"
 #include "../sensors/accelerations.h"
 #include "../motor/motor.h"
 #include "../app/application.h"

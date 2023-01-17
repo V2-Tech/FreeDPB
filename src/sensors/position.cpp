@@ -6,15 +6,8 @@ RotSense::RotSense(gpio_num_t opto_gpio_num)
     _in_GPIO = opto_gpio_num;
     _rot_done = _rpm = 0;
 
-    ESP_LOGI(TAG, "Create timer handle");
-    gptimer_config_t rpm_timer_config = {
-        .clk_src = GPTIMER_CLK_SRC_DEFAULT,
-        .direction = GPTIMER_COUNT_UP,
-        .resolution_hz = 1000000, // 1MHz, 1 tick=1us
-    };
-    ESP_ERROR_CHECK(gptimer_new_timer(&rpm_timer_config, &_rpmTimer));
-    ESP_LOGI(TAG, "Enable rpm timer");
-    ESP_ERROR_CHECK(gptimer_enable(_rpmTimer));
+    __xSem = xSemaphoreCreateMutex();
+    assert(__xSem);
 
     /* GPIO interrupt seem to be bugged (ESP-IDF v5.0): even with a debounce circuit, ghost events fire without reasons */
     /* Better use PCNT which have an anti-glitch already builded inside. With a propper debounce circuit, it's seem to work perfectly */
@@ -65,15 +58,15 @@ RotSense::~RotSense()
     ;
 }
 
-uint8_t RotSense::init_rpm_sensor(TaskHandle_t Task_handle, QueueHandle_t xQueueSysOutput_handle, uint8_t n_propeller)
+uint8_t RotSense::init_rpm_sensor(TaskHandle_t Task_handle, gptimer_handle_t xTimer_handle, uint8_t n_propeller)
 {
-    if ((n_propeller == 0) || (xQueueSysOutput_handle == 0) || (Task_handle == 0))
+    if ((n_propeller == 0) || (xTimer_handle == 0) || (Task_handle == 0))
     {
         return ESP_FAIL;
     }
 
     _prop_number = n_propeller;
-    __xQueueSysOutput = xQueueSysOutput_handle;
+    __xGPTimer = xTimer_handle;
     __task_calc = Task_handle;
 
     return ESP_OK;
@@ -82,29 +75,18 @@ uint8_t RotSense::init_rpm_sensor(TaskHandle_t Task_handle, QueueHandle_t xQueue
 void RotSense::rpm_update()
 {
     uint64_t count;
-    float_t f_count;
-    
-
-    static uint8_t __isr_event_counter = 0;
+    float_t f_delta;
+    static uint64_t last_count = 0;
 
     ESP_ERROR_CHECK(pcnt_unit_clear_count(__rpm_pcnt));
 
-    if (__isr_event_counter == 0)
-    {
-        __isr_event_counter++;
-        ESP_ERROR_CHECK(gptimer_start(_rpmTimer));
-        return;
-    }
+    ESP_ERROR_CHECK(gptimer_get_raw_count(__xGPTimer, &count));
+    f_delta = static_cast<float_t>(count - last_count);
+    _rpm = static_cast<uint16_t>(60.0 / (f_delta / 1000000));
 
-    ESP_ERROR_CHECK(gptimer_get_raw_count(_rpmTimer, &count));
-    f_count = static_cast<float_t>(count);
+    last_count = count;
 
-    _rpm = 60 / (f_count / 1000000);
-    gptimer_stop(_rpmTimer);
-    ESP_ERROR_CHECK(gptimer_set_raw_count(_rpmTimer, 0));
-
-    __isr_event_counter = 0;
-    _rot_done = 1;
+    _set_rotation_done();
 }
 
 float_t RotSense::get_rpm()
@@ -114,12 +96,19 @@ float_t RotSense::get_rpm()
 
 uint8_t RotSense::get_rotation_done()
 {
-    return _rot_done;
+    uint8_t v;
+    xSemaphoreTake(__xSem, portMAX_DELAY);
+    v = _rot_done;
+    xSemaphoreGive(__xSem);
+
+    return v;
 }
 
 void RotSense::reset_rotation_done()
 {
+    xSemaphoreTake(__xSem, portMAX_DELAY);
     _rot_done = 0;
+    xSemaphoreGive(__xSem);
 }
 
 void RotSense::set_propeller(uint8_t n_propeller)
@@ -132,12 +121,17 @@ uint8_t RotSense::get_propeller()
     return _prop_number;
 }
 
-/* Thank to @FoxKeys https://github.com/espressif/esp-idf/issues/2355 */
-/* void IRAM_ATTR RotSense::__opto_isr_handler_static(void *arg)
+void RotSense::_set_rotation_done()
 {
-    reinterpret_cast<RotSense *>(arg)->__opto_isr_handler();
-} */
-bool IRAM_ATTR RotSense::__opto_isr_handler_static(pcnt_unit_handle_t unit, const pcnt_watch_event_data_t *edata, void *user_ctx)
+    xSemaphoreTake(__xSem, portMAX_DELAY);
+    _rot_done = 1;
+    xSemaphoreGive(__xSem);
+}
+
+/* Thank to @FoxKeys https://github.com/espressif/esp-idf/issues/2355 */
+bool IRAM_ATTR RotSense::__opto_isr_handler_static(
+    pcnt_unit_handle_t unit, const pcnt_watch_event_data_t *edata,
+    void *user_ctx)
 {
     reinterpret_cast<RotSense *>(user_ctx)->__opto_isr_handler();
     return pdTRUE;
