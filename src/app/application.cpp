@@ -166,7 +166,7 @@ void DPB::exe(command_data command)
             motor_stop();
             log_acc_data();
             ask_charts_update(); // ? Show raw data
-            filter_data();
+            reset();
         }
         if (command.value.ull == ANALYSING)
         {
@@ -186,7 +186,14 @@ void DPB::exe(command_data command)
         }
         reset();
         break;
+    case FFT_REQUEST_CMD:
 
+        break;
+    case LPF_REQUEST_CMD:
+        if (filter_data() == ESP_OK)
+            ask_charts_update(); // ? Show filtered data
+        reset();
+        break;
     default:
         break;
     }
@@ -221,10 +228,99 @@ void DPB::ask_charts_update(void)
     xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
 }
 
-void DPB::filter_data(void)
+uint8_t DPB::filter_data(void)
 {
-    reset();
-    //_app_step = FILTERING;
+    __attribute__((aligned(16))) static float accX_input[ACC_DATA_BUFFER_SIZE];
+    __attribute__((aligned(16))) static float accY_input[ACC_DATA_BUFFER_SIZE];
+    __attribute__((aligned(16))) static float accX_filtered[ACC_DATA_BUFFER_SIZE];
+    __attribute__((aligned(16))) static float accY_filtered[ACC_DATA_BUFFER_SIZE];
+    float_t coeffs_lpf[5];
+    float_t w_lpf[5] = {0, 0};
+
+    setStep(FILTERING);
+
+    for (int32_t i = 0; i < ACC_DATA_BUFFER_SIZE; i++)
+    {
+        dpb_acc_data d;
+        _xShared.getAccData(&d, i);
+
+        accX_input[i] = d.accel_data.acc_x;
+        accY_input[i] = d.accel_data.acc_y;
+    }
+
+    // Calculate iir filter coefficients
+    if (dsps_biquad_gen_lpf_f32(coeffs_lpf, 0.1, 1) != ESP_OK)
+    {
+        ESP_LOGE(TAG, "IIR coefs calc error");
+        return ESP_FAIL;
+    }
+
+    // Filter X signal
+    if (dsps_biquad_f32(accX_input, accX_filtered, ACC_DATA_BUFFER_SIZE, coeffs_lpf, w_lpf) != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Filtering operation error");
+        return ESP_FAIL;
+    }
+    // Filter Y signal
+    if (dsps_biquad_f32(accY_input, accY_filtered, ACC_DATA_BUFFER_SIZE, coeffs_lpf, w_lpf) != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Filtering operation error");
+        return ESP_FAIL;
+    }
+
+    for (int32_t i = 0; i < ACC_DATA_BUFFER_SIZE; i++)
+    {
+        dpb_acc_data d;
+        _xShared.getAccData(&d, i);
+
+        _xShared.setAccX(accX_filtered[i], d.xRot_done, d.time_counts, i);
+        _xShared.setAccY(accY_filtered[i], d.xRot_done, d.time_counts, i);
+    }
+
+    return ESP_OK;
+}
+
+uint8_t DPB::fft(void)
+{
+    setStep(ANALYSING);
+
+    int32_t N = ACC_DATA_BUFFER_SIZE;
+
+    // Window coefficients
+    __attribute__((aligned(16)))
+    float_t wind[ACC_DATA_BUFFER_SIZE];
+
+    // Init FFT filter
+    if (dsps_fft2r_init_fc32(NULL, CONFIG_DSP_MAX_FFT_SIZE) != ESP_OK)
+    {
+        char *TAG = "app_fft";
+        ESP_LOGE(TAG, "Not possible to initialize FFT");
+        return ESP_FAIL;
+    }
+
+    // Generate hann window
+    dsps_wind_hann_f32(wind, N);
+    // working complex array
+    __attribute__((aligned(16))) static float x_cf[ACC_DATA_BUFFER_SIZE * 2];
+    __attribute__((aligned(16))) static float y_cf[ACC_DATA_BUFFER_SIZE * 2];
+
+    // Convert input vectors to complex vectors
+    ESP_LOGW(TAG, "Signal accZ");
+    for (int32_t i = 0; i < N; i++)
+    {
+        dpb_acc_data d;
+        _xShared.getAccData(&d, i);
+
+        /* _xShared.setAccX(d.accel_data.acc_x * wind[i], d.xRot_done, d.time_counts, i);
+        _xShared.setAccY(d.accel_data.acc_y * wind[i], d.xRot_done, d.time_counts, i); */
+
+        x_cf[i * 2 + 0] = d.accel_data.acc_x * wind[i];
+        x_cf[i * 2 + 1] = 0;
+        y_cf[i * 2 + 0] = d.accel_data.acc_y * wind[i];
+        y_cf[i * 2 + 1] = 0;
+    }
+
+    return ESP_OK;
 }
 
 void DPB::setStep(app_steps v)

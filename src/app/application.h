@@ -30,9 +30,8 @@ public:
     void start(void);
     void reset(void);
     void ask_charts_update(void);
-    void filter_data(void);
-    void rec_timer_start(void);
-    void fft(void);
+    uint8_t filter_data(void);
+    uint8_t fft(void);
     void setStep(app_steps v);
 
     int8_t get_app_step();

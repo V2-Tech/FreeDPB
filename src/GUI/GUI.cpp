@@ -7,7 +7,7 @@ static QueueHandle_t _xQueueCom2Sys = NULL;
 static QueueHandle_t _xQueueSys2Comp = NULL;
 static uint8_t _gui_init_done = 0;
 DPBShared &_xShared = DPBShared::getInstance();
-static dpb_page _gui_act_page = IDLE;
+static dpb_page _gui_act_page = IDLE_PAGE;
 
 lv_obj_t *gui_IdleScreen = NULL;
 lv_obj_t *gui_FFTScreen = NULL;
@@ -85,7 +85,7 @@ uint8_t gui_init(QueueHandle_t xQueueComp2Sys_handle, QueueHandle_t xQueueSys2Co
 
     lv_disp_set_theme(dispp, theme);
     gui_IdleScreen_init();
-    gui_show_page(IDLE);
+    gui_show_page(IDLE_PAGE);
 
     _gui_init_done = 1;
 
@@ -148,12 +148,22 @@ void gui_IdleScreen_init(void)
 
     /* Create FFT button */
     btn = lv_btn_create(gui_IdleScreen); /*Add a button the current screen*/
-    lv_obj_set_size(btn, 120, 50);       /*Set its size*/
-    lv_obj_align_to(btn, gui_AccelChart_Xslider, LV_ALIGN_OUT_BOTTOM_LEFT, 160, 10);
+    lv_obj_set_size(btn, 50, 50);       /*Set its size*/
+    lv_obj_align_to(btn, gui_AccelChart_Xslider, LV_ALIGN_OUT_BOTTOM_LEFT, 130, 10);
     lv_obj_add_event_cb(btn, start_btn_event_cb, LV_EVENT_ALL, NULL); /*Assign a callback to the button*/
 
     lv_obj_t *label = lv_label_create(btn); /*Add a label to the button*/
     lv_label_set_text(label, "FFT");        /*Set the labels text*/
+    lv_obj_center(label);
+
+    /* Create LPF button */
+    btn = lv_btn_create(gui_IdleScreen); /*Add a button the current screen*/
+    lv_obj_set_size(btn, 50, 50);       /*Set its size*/
+    lv_obj_align_to(btn, gui_AccelChart_Xslider, LV_ALIGN_OUT_BOTTOM_LEFT, 190, 10);
+    lv_obj_add_event_cb(btn, filter_btn_event_cb, LV_EVENT_ALL, NULL); /*Assign a callback to the button*/
+
+    label = lv_label_create(btn); /*Add a label to the button*/
+    lv_label_set_text(label, "LPF");        /*Set the labels text*/
     lv_obj_center(label);
 
     /* Create RPM label */
@@ -200,12 +210,12 @@ void gui_FFTScreen_init(void)
 
     /* Create back button */
     lv_obj_t *btn = lv_btn_create(gui_FFTScreen); /*Add a button the current screen*/
-    lv_obj_set_size(btn, 120, 50);                 /*Set its size*/
+    lv_obj_set_size(btn, 120, 50);                /*Set its size*/
     lv_obj_align_to(btn, gui_FFTChart, LV_ALIGN_OUT_BOTTOM_LEFT, 160, 10);
     lv_obj_add_event_cb(btn, back_btn_event_cb, LV_EVENT_ALL, NULL); /*Assign a callback to the button*/
 
     lv_obj_t *label = lv_label_create(btn); /*Add a label to the button*/
-    lv_label_set_text(label, "Back");        /*Set the labels text*/
+    lv_label_set_text(label, "Back");       /*Set the labels text*/
     lv_obj_center(label);
 }
 
@@ -251,9 +261,23 @@ void fft_btn_event_cb(lv_event_t *e)
     }
 }
 
+void filter_btn_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *btn = lv_event_get_target(e);
+    if (code == LV_EVENT_CLICKED)
+    {
+        command_data command;
+        command.command = LPF_REQUEST_CMD;
+        command.value.ull = 1;
+
+        xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+    }
+}
+
 void back_btn_event_cb(lv_event_t *e)
 {
-    gui_show_page(IDLE);
+    gui_show_page(IDLE_PAGE);
 }
 
 // lv_chart_set_next_value(gui_AccelChart, serAccZ, (lv_coord_t)chartData[2]);
@@ -297,10 +321,10 @@ void gui_show_page(dpb_page page)
 {
     switch (page)
     {
-    case IDLE:
+    case IDLE_PAGE:
         lv_disp_load_scr(gui_IdleScreen);
         break;
-    case FFT:
+    case FFT_PAGE:
         lv_disp_load_scr(gui_FFTScreen);
         break;
     default:
@@ -327,22 +351,58 @@ void gui_values_update(void)
 void gui_charts_update(void)
 {
     dpb_acc_data d;
+    int16_t min = 0;
+    int16_t max = 0;
 
     for (size_t i = 0; i < pcnt; i++)
     {
         _xShared.getAccData(&d, i);
         accX_sample[i] = d.accel_data.acc_x;
         accY_sample[i] = d.accel_data.acc_y;
+        if ((accX_sample[i] > max) || (accY_sample[i] > max))
+        {
+            (accX_sample[i] > accY_sample[i]) ? max = accX_sample[i] : max = accY_sample[i];
+        }
+        if ((accX_sample[i] < min) || (accY_sample[i] < min))
+        {
+            (accX_sample[i] < accY_sample[i]) ? min = accX_sample[i] : min = accY_sample[i];
+        }
     }
 
+    lv_chart_set_range(gui_AccelChart, LV_CHART_AXIS_PRIMARY_Y, min*1.1, max*1.1);
     lv_chart_refresh(gui_AccelChart);
 }
 
 void gui_fft_update(void)
 {
-    if (_gui_act_page != FFT)
+    if (_gui_act_page != FFT_PAGE)
     {
-        gui_show_page(FFT);
+        gui_show_page(FFT_PAGE);
     }
     // TODO
+}
+
+void _chart_Y_autorange(lv_obj_t *chart_obj)
+{
+    int16_t min = 0;
+    int16_t max = 0;
+
+    lv_chart_t *chart = (lv_chart_t *)chart_obj;
+    lv_chart_series_t *ser = (lv_chart_series_t *)chart->series_ll.head;
+
+    for (size_t i = 0; i < chart->point_cnt; i++)
+    {
+        int16_t v;
+        v = *(ser->y_points + i);
+        if (v > max)
+        {
+            max = v;
+        }
+        if (v < min)
+        {
+            min = v;
+        }
+    }
+
+    lv_chart_set_range(chart_obj, LV_CHART_AXIS_PRIMARY_Y, min, max);
 }

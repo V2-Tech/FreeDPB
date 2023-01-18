@@ -68,7 +68,7 @@ void DPBShared::getAccData(dpb_acc_data *v, uint32_t index)
     _unlock();
 }
 
-void DPBShared::setRPM(uint16_t v) 
+void DPBShared::setRPM(uint16_t v)
 {
     _lock();
     _data->_rpm = v;
@@ -83,7 +83,7 @@ uint16_t DPBShared::getRPM()
     return v;
 }
 
-void DPBShared::setAppStatus(app_steps v) 
+void DPBShared::setAppStatus(app_steps v)
 {
     _lock();
     _data->_step = v;
@@ -94,6 +94,36 @@ app_steps DPBShared::getAppStatus()
 {
     _lock();
     app_steps v = _data->_step;
+    _unlock();
+    return v;
+}
+
+void DPBShared::setFFTX(float_t v, size_t index)
+{
+    _lock();
+    _data->_fft_x[index] = v;
+    _unlock();
+}
+
+float_t DPBShared::getFFTX(size_t index)
+{
+    _lock();
+    float_t v = _data->_fft_x[index];
+    _unlock();
+    return v;
+}
+
+void DPBShared::setFFTY(float_t v, size_t index)
+{
+    _lock();
+    _data->_fft_y[index] = v;
+    _unlock();
+}
+
+float_t DPBShared::getFFTY(size_t index)
+{
+    _lock();
+    float_t v = _data->_fft_y[index];
     _unlock();
     return v;
 }

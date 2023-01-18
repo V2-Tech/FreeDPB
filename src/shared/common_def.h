@@ -55,10 +55,10 @@ enum app_command
     APP_CMD,
     MOTOR_CMD,
     START_BUT_CMD,
-    APP_STATUS_CMD,
     ACC_CHART_UPDATE_CMD,
     FFT_REQUEST_CMD,
     FFT_CHART_UPDATE_CMD,
+    LPF_REQUEST_CMD,
 };
 
 enum app_steps

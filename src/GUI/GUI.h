@@ -116,8 +116,8 @@ public:
 
 enum dpb_page
 {
-    IDLE,
-    FFT,
+    IDLE_PAGE,
+    FFT_PAGE,
 };
 
 extern LGFX tft;
@@ -138,6 +138,7 @@ void slider_x_event_cb(lv_event_t *e);
 void slider_y_event_cb(lv_event_t *e);
 void start_btn_event_cb(lv_event_t *e);
 void fft_btn_event_cb(lv_event_t *e);
+void filter_btn_event_cb(lv_event_t *e);
 void back_btn_event_cb(lv_event_t *e);
 
 void gui_update(void);
@@ -147,4 +148,6 @@ void gui_show_page(dpb_page page);
 void gui_values_update(void);
 void gui_charts_update(void);
 void gui_fft_update(void);
+
+void _chart_Y_autorange(lv_obj_t *chart_obj);
 #endif

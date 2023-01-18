@@ -24,6 +24,10 @@ public:
     uint16_t getRPM();
     void setAppStatus(app_steps v);
     app_steps getAppStatus();
+    void setFFTX(float_t v, size_t index);
+    float_t getFFTX(size_t index);
+    void setFFTY(float_t v, size_t index);
+    float_t getFFTY(size_t index);
 
 private:
     DPBShared();
@@ -37,6 +41,8 @@ private:
         app_steps _step;
         char message[20];
         dpb_acc_data _dpb_acc[ACC_DATA_BUFFER_SIZE];
+        float_t _fft_x[ACC_DATA_BUFFER_SIZE / 2];
+        float_t _fft_y[ACC_DATA_BUFFER_SIZE / 2];
     };
     Data *_data;
 
