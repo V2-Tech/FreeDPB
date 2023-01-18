@@ -1,5 +1,5 @@
 # DPB - Dynamic Propeller Balancer
 
-## Under devlopment...
+## Under development...
 
 ![DPB_3DView](doc\img\DPB-alpha0.2.png)
