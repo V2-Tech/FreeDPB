@@ -16,8 +16,6 @@ class DPB : public Motor, public RotSense, public Accel
 public:
     DPB(uint8_t escGPIO, dshot_mode_t escSpeed, gpio_num_t rotSensorGPIO, BMX055 *accel);
 
-    dpb_acc_data dpbAccBuff[1024];
-
     uint8_t init(QueueHandle_t xQueueSysInput_handle, QueueHandle_t xQueueSysOutput_handle, TaskHandle_t supportTask_handle, DPBShared *sharedData);
     uint8_t init_rpm(TaskHandle_t supportTask_handle, gptimer_handle_t xTimer_handle, uint8_t n_propeller);
     uint8_t init_esc();
@@ -29,12 +27,14 @@ public:
     void exe(command_data command);
     void start(void);
     void reset(void);
-    void ask_charts_update(void);
-    uint8_t filter_data(void);
-    uint8_t fft(void);
-    void setStep(app_steps v);
+    void ask_acc_charts_update(void);
+    void ask_fft_chart_update(void);
+    uint8_t filter_data(data_orig data_type);
+    uint8_t fft_calc(data_orig data_type);
+    void signal_peak_finder(void);
+    void fft_peak_finder(void);
 
-    int8_t get_app_step();
+    void setStep(app_steps v);
 
 private:
     QueueHandle_t _xQueueSysInput;
@@ -47,8 +47,11 @@ private:
     app_steps _app_step;
     TimerHandle_t _motorStartupTimer;
     gptimer_handle_t _rpmTimer;
+    uint8_t _peakCount;
 
-    void log_acc_data(void);
+    void _log_acc_data(void);
+    void _sort_index_by_height(size_t *output, size_t indexCount);
+    void _array_value_remover(int16_t *array, size_t arraySize, int16_t target);
 
 protected:
     static void __motorStartupTimerCallback_static(TimerHandle_t pxTimer);

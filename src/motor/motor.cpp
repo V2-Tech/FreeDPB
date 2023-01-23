@@ -49,6 +49,7 @@ void Motor::arm(void)
     ESP_LOGI(TAG, "Start ESC by sending zero throttle for a while...");
     ESP_ERROR_CHECK(rmt_transmit(_esc_chan, _dshot_encoder, &_throttle, sizeof(_throttle), &_tx_config));
     vTaskDelay(pdMS_TO_TICKS(500));
+    ESP_LOGI(TAG, "ESC armed");
 }
 
 void Motor::set_throttle(uint16_t throttle_val)

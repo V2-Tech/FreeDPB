@@ -43,7 +43,7 @@ bmx_error BMX055::init(spi_device_handle_t spiHandle)
             }
 
             /* Set accelerometer configuration required value */
-            _acc_conf.bw = BMX_ACC_BW_1000_HZ;
+            _acc_conf.bw = BMX_ACC_BW_500_HZ;
             _acc_conf.range = BMX_ACC_RANGE_2G;
 
             /* Set accelerometer actual configuration */

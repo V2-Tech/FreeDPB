@@ -8,7 +8,7 @@ void app_main()
     /* Creating tasks
     * ! GUI task: 
     */
-    xTaskCreatePinnedToCore(guiTask, "gui", 1024*4, NULL, 0, &guiTaskHandle, 1);
+    xTaskCreatePinnedToCore(guiTask, "gui", 1024*8, NULL, 0, &guiTaskHandle, 1);
 
     /* Creating tasks
     * ! Accelerometer task: 

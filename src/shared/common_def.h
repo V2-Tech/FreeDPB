@@ -43,6 +43,7 @@
 #define MOTOR_STARTUP_DELAY_MS 2000
 #define GUI_REFRESH_DELAY_MS 15
 #define ACC_DATA_BUFFER_SIZE 1024
+#define FFT_DATA_BUFFER_SIZE ACC_DATA_BUFFER_SIZE / 2
 #define DEFAULT_PROP_NUM 3
 #define DEFAULT_MEASURE_THROTTLE 225 /* ~3500rpm for a 1700kV motor */
 #define DEFAULT_FUNC_TIMOUT pdTICKS_TO_MS(100)
@@ -69,6 +70,12 @@ enum app_steps
     FILTERING,
     ANALYSING,
     DECEL,
+};
+
+enum data_orig
+{
+    RAW_DATA,
+    FILTERED_DATA
 };
 
 union dpb_generic

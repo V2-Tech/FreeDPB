@@ -12,6 +12,8 @@
  *      DEFINES
  *********************/
 #define LV_TICK_PERIOD_MS 1
+#define FFT_MAJOR_TICK_COUNT 11
+#define ACC_CHART_POINT_COUNT ACC_DATA_BUFFER_SIZE / 8
 
 static const uint16_t screenWidth = 320;
 static const uint16_t screenHeight = 240;
@@ -140,6 +142,9 @@ void start_btn_event_cb(lv_event_t *e);
 void fft_btn_event_cb(lv_event_t *e);
 void filter_btn_event_cb(lv_event_t *e);
 void back_btn_event_cb(lv_event_t *e);
+void FFTXChart_draw_event_cb(lv_event_t *e);
+void FFTYChart_draw_event_cb(lv_event_t *e);
+void AccelChart_draw_event_cb(lv_event_t *e);
 
 void gui_update(void);
 void gui_check_commands(void);
@@ -149,5 +154,6 @@ void gui_values_update(void);
 void gui_charts_update(void);
 void gui_fft_update(void);
 
-void _chart_Y_autorange(lv_obj_t *chart_obj);
+void _chart_Y_autorange(lv_obj_t *chart_obj, lv_chart_series_t *ser);
+void _ask_peak_draw(void);
 #endif

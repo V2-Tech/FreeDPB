@@ -72,6 +72,8 @@ uint8_t DPB::init_accel()
         return ESP_FAIL;
     }
 
+    _xShared.setSampleRate(500);
+
     _init_status |= INIT_ACCEL_DONE;
 
     return ESP_OK;
@@ -128,8 +130,7 @@ void DPB::loop_accel(void)
             gptimer_get_raw_count(_rpmTimer, &time);
             r_d = get_rotation_done();
 
-            _xShared.setAccX(acc_data.acc_x, r_d, time, i);
-            _xShared.setAccY(acc_data.acc_y, r_d, time, i);
+            _xShared.setDPBAccData(acc_data.acc_x, acc_data.acc_y, r_d, time, i);
 
             reset_rotation_done();
 
@@ -157,20 +158,24 @@ void DPB::exe(command_data command)
         {
             start();
         }
-        if (command.value.ull == VIBES_REC)
-        {
-            ;
-        }
         if (command.value.ull == FILTERING)
         {
             motor_stop();
-            log_acc_data();
-            ask_charts_update(); // ? Show raw data
+            _log_acc_data();
+            if (filter_data(RAW_DATA) != ESP_OK)
+            {
+                // TODO Error message
+                break;
+            }
+            if (fft_calc(FILTERED_DATA) != ESP_OK)
+            {
+                // TODO Error message
+                break;
+            }
+            signal_peak_finder();
+            ask_acc_charts_update(); // ? Show filtered data
+
             reset();
-        }
-        if (command.value.ull == ANALYSING)
-        {
-            // app_fft();
         }
         break;
 
@@ -187,11 +192,13 @@ void DPB::exe(command_data command)
         reset();
         break;
     case FFT_REQUEST_CMD:
-
+        if (fft_calc(FILTERED_DATA) == ESP_OK)
+            ask_fft_chart_update();
+        reset();
         break;
     case LPF_REQUEST_CMD:
-        if (filter_data() == ESP_OK)
-            ask_charts_update(); // ? Show filtered data
+        if (filter_data(FILTERED_DATA) == ESP_OK)
+            ask_acc_charts_update(); // ? Show filtered data
         reset();
         break;
     default:
@@ -219,7 +226,7 @@ void DPB::reset(void)
     setStep(IDLE);
 }
 
-void DPB::ask_charts_update(void)
+void DPB::ask_acc_charts_update(void)
 {
     command_data command;
 
@@ -228,7 +235,16 @@ void DPB::ask_charts_update(void)
     xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
 }
 
-uint8_t DPB::filter_data(void)
+void DPB::ask_fft_chart_update(void)
+{
+    command_data command;
+
+    command.command = FFT_CHART_UPDATE_CMD;
+    command.value.ull = 1;
+    xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
+}
+
+uint8_t DPB::filter_data(data_orig data_type)
 {
     __attribute__((aligned(16))) static float accX_input[ACC_DATA_BUFFER_SIZE];
     __attribute__((aligned(16))) static float accY_input[ACC_DATA_BUFFER_SIZE];
@@ -242,7 +258,14 @@ uint8_t DPB::filter_data(void)
     for (int32_t i = 0; i < ACC_DATA_BUFFER_SIZE; i++)
     {
         dpb_acc_data d;
-        _xShared.getAccData(&d, i);
+        if (data_type == RAW_DATA)
+        {
+            _xShared.getDPBAccData(&d, i);
+        }
+        else
+        {
+            _xShared.getDPBAccDataFiltered(&d, i);
+        }
 
         accX_input[i] = d.accel_data.acc_x;
         accY_input[i] = d.accel_data.acc_y;
@@ -271,20 +294,19 @@ uint8_t DPB::filter_data(void)
     for (int32_t i = 0; i < ACC_DATA_BUFFER_SIZE; i++)
     {
         dpb_acc_data d;
-        _xShared.getAccData(&d, i);
-
-        _xShared.setAccX(accX_filtered[i], d.xRot_done, d.time_counts, i);
-        _xShared.setAccY(accY_filtered[i], d.xRot_done, d.time_counts, i);
+        _xShared.getDPBAccData(&d, i);
+        _xShared.setDPBAccDataFiltered(accX_filtered[i], accY_filtered[i], d.xRot_done, d.time_counts, i);
     }
 
     return ESP_OK;
 }
 
-uint8_t DPB::fft(void)
+uint8_t DPB::fft_calc(data_orig data_type)
 {
     setStep(ANALYSING);
 
     int32_t N = ACC_DATA_BUFFER_SIZE;
+    esp_err_t ret = ESP_OK;
 
     // Window coefficients
     __attribute__((aligned(16)))
@@ -305,14 +327,17 @@ uint8_t DPB::fft(void)
     __attribute__((aligned(16))) static float y_cf[ACC_DATA_BUFFER_SIZE * 2];
 
     // Convert input vectors to complex vectors
-    ESP_LOGW(TAG, "Signal accZ");
     for (int32_t i = 0; i < N; i++)
     {
         dpb_acc_data d;
-        _xShared.getAccData(&d, i);
-
-        /* _xShared.setAccX(d.accel_data.acc_x * wind[i], d.xRot_done, d.time_counts, i);
-        _xShared.setAccY(d.accel_data.acc_y * wind[i], d.xRot_done, d.time_counts, i); */
+        if (data_type == RAW_DATA)
+        {
+            _xShared.getDPBAccData(&d, i);
+        }
+        else
+        {
+            _xShared.getDPBAccDataFiltered(&d, i);
+        }
 
         x_cf[i * 2 + 0] = d.accel_data.acc_x * wind[i];
         x_cf[i * 2 + 1] = 0;
@@ -320,7 +345,180 @@ uint8_t DPB::fft(void)
         y_cf[i * 2 + 1] = 0;
     }
 
+    // FFT
+    ret += dsps_fft2r_fc32(x_cf, N);
+    // Bit reverse
+    ret += dsps_bit_rev_fc32(x_cf, N);
+    // Convert one complex vector to two complex vectors
+    ret += dsps_cplx2reC_fc32(x_cf, N);
+
+    // FFT
+    ret += dsps_fft2r_fc32(y_cf, N);
+    // Bit reverse
+    ret += dsps_bit_rev_fc32(y_cf, N);
+    // Convert one complex vector to two complex vectors
+    ret += dsps_cplx2reC_fc32(y_cf, N);
+
+    if (ret != ESP_OK)
+    {
+        char *TAG = "app_fft";
+        ESP_LOGE(TAG, "FFT calc error");
+        return ESP_FAIL;
+    }
+
+    // Make module and normalize it
+    for (int i = 0; i < N / 2; i++)
+    {
+        float_t t;
+
+        //? I scale by 2 to make sure i dont lose too much precision when i convert the data to int16 for the FFT chart
+        t = 2 * sqrtf((x_cf[i * 2 + 0] * x_cf[i * 2 + 0] + x_cf[i * 2 + 1] * x_cf[i * 2 + 1] + 0.0000001) / N);
+        _xShared.setFFTX(t, i);
+
+        t = 2 * sqrtf((y_cf[i * 2 + 0] * y_cf[i * 2 + 0] + y_cf[i * 2 + 1] * y_cf[i * 2 + 1] + 0.0000001) / N);
+        _xShared.setFFTY(t, i);
+    }
+
+    fft_peak_finder();
+
     return ESP_OK;
+}
+
+void DPB::signal_peak_finder(void)
+{
+    dpb_acc_data data;
+    dpb_acc_data data_b;
+    dpb_acc_data data_a;
+    dpb_acc_data data_t;
+    dpb_acc_data data_lp;
+
+    size_t maxPeakIndex = 0;
+
+    _peakCount = 0;
+
+    //* Find all local peaks index and absolute max peak index
+    for (size_t i = 1; i < ACC_DATA_BUFFER_SIZE - 1; i++)
+    {
+        _xShared.getDPBAccDataFiltered(&data_b, i - 1);
+        _xShared.getDPBAccDataFiltered(&data, i);
+        _xShared.getDPBAccDataFiltered(&data_a, i + 1);
+
+        if (data.accel_data.acc_x > data_b.accel_data.acc_x && data.accel_data.acc_x > data_a.accel_data.acc_x)
+        {
+            _xShared.setPeakIndex(i, _peakCount);
+
+            if (_peakCount == 0)
+            {
+                maxPeakIndex = i;
+            }
+
+            _peakCount++;
+        }
+        _xShared.getDPBAccDataFiltered(&data_lp, maxPeakIndex);
+        if ((data.accel_data.acc_x > data_lp.accel_data.acc_x))
+        {
+            maxPeakIndex = i;
+        }
+    }
+
+    _xShared.setAccXMaxPeak(maxPeakIndex);
+
+    bool *to_remove = new bool[_peakCount]();
+
+    //* Calc min distance between two real local peak
+    static float_t fft_res = _xShared.getSampleRate();
+    fft_res /= FFT_DATA_BUFFER_SIZE;
+    static float_t signal_fundamental = fft_res * _xShared.getFFTXPeak();
+    if (signal_fundamental == 0)
+    {
+        signal_fundamental = fft_res; // Min distance equal to FFT resolution
+    }
+
+    static float_t peak_min_dist = ((float_t)900000.0 / signal_fundamental); //? supposing time_count_res 1us
+
+    //* Remove peak indexs that dont meet the min required distance
+    size_t *height_sorted_peak_index = new size_t[_peakCount](); //? Index of peak index
+    _sort_index_by_height(height_sorted_peak_index, _peakCount);
+    for (size_t i = 0; i < _peakCount; i++)
+    {
+        size_t current = height_sorted_peak_index[i];
+
+        if (to_remove[current])
+        {
+            continue; // peak will already be removed, move on.
+        }
+
+        // check on left side of peak
+        int16_t neighbor = current - 1;
+        _xShared.getDPBAccDataFiltered(&data, _xShared.getPeakIndex(current));
+        if (neighbor >= 0)
+        {
+            _xShared.getDPBAccDataFiltered(&data_t, _xShared.getPeakIndex(neighbor));
+        }
+
+        while (neighbor >= 0 && (data.time_counts - data_t.time_counts) < peak_min_dist)
+        {
+            to_remove[neighbor] = true;
+            --neighbor;
+            _xShared.getDPBAccDataFiltered(&data, _xShared.getPeakIndex(current));
+            _xShared.getDPBAccDataFiltered(&data_t, _xShared.getPeakIndex(neighbor));
+        }
+
+        // check on right side of peak
+        neighbor = current + 1;
+        _xShared.getDPBAccDataFiltered(&data, _xShared.getPeakIndex(current));
+        if (neighbor < _peakCount)
+        {
+            _xShared.getDPBAccDataFiltered(&data_t, _xShared.getPeakIndex(neighbor));
+        }
+        while (neighbor < _peakCount && (data_t.time_counts - data.time_counts) < peak_min_dist)
+        {
+            to_remove[neighbor] = true;
+            ++neighbor;
+            _xShared.getDPBAccDataFiltered(&data, _xShared.getPeakIndex(current));
+            _xShared.getDPBAccDataFiltered(&data_t, _xShared.getPeakIndex(neighbor));
+        }
+    }
+
+    // Remove the incorrect peak indexs
+    for (size_t i = 0, j = 0; i < _peakCount; i++)
+    {
+        if (to_remove[i])
+        {
+            _xShared.setPeakIndex(-1, i);
+        }
+    }
+
+    _array_value_remover(_xShared.getPeakIndexPointer(), _peakCount, -1);
+
+    delete[] to_remove;
+    delete[] height_sorted_peak_index;
+}
+
+void DPB::fft_peak_finder(void)
+{
+    float_t fft_x = 0, fft_y = 0;
+    float_t peak_x = 0, peak_y = 0;
+    size_t peak_x_index = 0, peak_y_index = 0;
+
+    for (size_t i = 2; i < FFT_DATA_BUFFER_SIZE; i++)
+    {
+        fft_x = _xShared.getFFTX(i);
+        fft_y = _xShared.getFFTY(i);
+        if (fft_x > peak_x)
+        {
+            peak_x = fft_x;
+            peak_x_index = i;
+        }
+        if (fft_y > peak_y)
+        {
+            peak_y = fft_y;
+            peak_y_index = i;
+        }
+    }
+
+    _xShared.setFFTXPeak(peak_x_index);
+    _xShared.setFFTYPeak(peak_y_index);
 }
 
 void DPB::setStep(app_steps v)
@@ -329,12 +527,7 @@ void DPB::setStep(app_steps v)
     _xShared.setAppStatus(v);
 }
 
-int8_t DPB::get_app_step()
-{
-    return _app_step;
-}
-
-void DPB::log_acc_data(void)
+void DPB::_log_acc_data(void)
 {
 #ifdef APP_DEBUG_MODE
     ESP_LOGI(TAG, "Accelerations data acquired");
@@ -342,11 +535,59 @@ void DPB::log_acc_data(void)
     for (size_t i = 0; i < ACC_DATA_BUFFER_SIZE; i++)
     {
         dpb_acc_data data;
-        _xShared.getAccData(&data, i);
+        _xShared.getDPBAccData(&data, i);
         // ESP_LOGI(TAG, "| X: %d, Y: %d | Rot:%d | T:%llu |", data.accel_data.acc_x, data.accel_data.acc_y, data.xRot_done, data.time_counts);
         printf("%d;%d;%llu\n", data.accel_data.acc_x, data.accel_data.acc_y, data.time_counts);
     }
 #endif
+}
+
+void DPB::_sort_index_by_height(size_t *output, size_t indexCount)
+{
+    dpb_acc_data data;
+    dpb_acc_data data_a;
+
+    for (size_t i = 0; i < indexCount; i++)
+    {
+        output[i] = i;
+    }
+
+    for (size_t i = 0; i < indexCount; i++)
+    {
+        for (size_t j = i + 1; j < indexCount; j++)
+        {
+            _xShared.getDPBAccDataFiltered(&data, _xShared.getPeakIndex(i));
+            _xShared.getDPBAccDataFiltered(&data_a, _xShared.getPeakIndex(j));
+
+            if (data.accel_data.acc_x < data_a.accel_data.acc_x)
+            {
+                size_t temp = output[i];
+                output[i] = output[j];
+                output[j] = temp;
+            }
+        }
+    }
+}
+
+void DPB::_array_value_remover(int16_t *array, size_t arraySize, int16_t target)
+{
+    size_t new_size = arraySize;
+
+    for (size_t i = 0; i < arraySize; i++)
+    {
+        if (array[i] == target)
+        {
+            for (size_t j = i; j < new_size - 1; j++)
+            {
+                array[j] = array[j + 1];
+                if (j == (new_size - 2))
+                {
+                    array[j + 1] = 0;
+                }
+            }
+            i--;
+        }
+    }
 }
 
 /* Thank to @FoxKeys https://github.com/espressif/esp-idf/issues/2355 */
@@ -358,4 +599,8 @@ void DPB::__motorStartupTimerCallback_static(TimerHandle_t pxTimer)
 void DPB::__motorStartupTimerCallback(TimerHandle_t pxTimer)
 {
     xTaskNotifyGiveIndexed(accelTaskHandle, 0);
+    if (xTimerStop(pxTimer, DEFAULT_FUNC_TIMOUT) != pdTRUE)
+    {
+        esp_system_abort("Timer stop-command timeout");
+    }
 }
