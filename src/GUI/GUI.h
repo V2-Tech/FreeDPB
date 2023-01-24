@@ -8,9 +8,9 @@
 #include "../shared/common_def.h"
 #include "../shared/shared_data.h"
 
-/*********************
- *      DEFINES
- *********************/
+//************************/
+//*      DEFINES         */
+//************************/
 #define LV_TICK_PERIOD_MS 1
 #define FFT_MAJOR_TICK_COUNT 11
 #define ACC_CHART_POINT_COUNT ACC_DATA_BUFFER_SIZE / 4
@@ -18,15 +18,9 @@
 static const uint16_t screenWidth = 320;
 static const uint16_t screenHeight = 240;
 
-/****************************
- *      SHARED VARIABLES
- ****************************/
-extern lv_obj_t *gui_MainScreen;
-extern lv_obj_t *gui_AccelChart;
-
-/*********************
- *      CLASSES
- *********************/
+//*******************************/
+//*      CLASS DECLARATION      */
+//*******************************/
 class LGFX : public lgfx::LGFX_Device
 {
   lgfx::Panel_ILI9341 _panel_instance;
@@ -116,22 +110,20 @@ public:
   }
 };
 
-enum dpb_page
+//*******************************/
+//*         TYPE DEFINES        */
+//*******************************/
+enum dpb_page_t
 {
     IDLE_PAGE,
     FFT_PAGE,
 };
 
-extern LGFX tft;
-
-/****************************
- *  FUNCTIONS DECLARATIONS  *
- ****************************/
-void guiTask(void *pvParameter);
-void lv_tick_task(void *arg);
-
-extern void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p);
-extern void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data);
+//*********************************/
+//*     FUNCTIONS DECLARATION     */
+//*********************************/
+void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p);
+void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data);
 
 uint8_t gui_init(QueueHandle_t xQueueComp2Sys_handle, QueueHandle_t xQueueSys2Comp_handle);
 void gui_IdleScreen_init(void);
@@ -148,12 +140,14 @@ void AccelChart_draw_event_cb(lv_event_t *e);
 
 void gui_update(void);
 void gui_check_commands(void);
-void gui_exe(command_data command);
-void gui_show_page(dpb_page page);
+void gui_exe(command_data_t command);
+void gui_show_page(dpb_page_t page);
 void gui_values_update(void);
 void gui_charts_update(void);
 void gui_fft_update(void);
 
+void _display_init(void);
 void _chart_Y_autorange(lv_obj_t *chart_obj, lv_chart_series_t *ser);
 void _ask_peak_draw(void);
+
 #endif

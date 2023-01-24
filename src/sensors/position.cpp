@@ -1,6 +1,13 @@
-#include "position_def.h"
 #include "position.h"
 
+//************************/
+//*      VARIABLES       */
+//************************/
+static const char *TAG = "POSITION";
+
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
+//?         FUNCTIONS DEFINITION        /
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
 RotSense::RotSense(gpio_num_t opto_gpio_num)
 {
     _in_GPIO = opto_gpio_num;
@@ -92,6 +99,17 @@ void RotSense::rpm_update()
 float_t RotSense::get_rpm()
 {
     return _rpm;
+}
+
+void RotSense::reset_rpm_cnt()
+{
+    ESP_ERROR_CHECK(pcnt_unit_clear_count(__rpm_pcnt));
+    ESP_ERROR_CHECK(pcnt_unit_start(__rpm_pcnt));
+}
+
+void RotSense::stop_rpm_cnt()
+{
+    ESP_ERROR_CHECK(pcnt_unit_stop(__rpm_pcnt));
 }
 
 uint8_t RotSense::get_rotation_done()

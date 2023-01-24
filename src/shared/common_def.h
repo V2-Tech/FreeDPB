@@ -23,35 +23,40 @@
 
 #include "esp_dsp.h"
 
-#define APP_DEBUG_MODE
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!/
+//!         PROJECT DEFINES         /
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!/
+//* Debug serial loggin enabler
+//#define APP_DEBUG_MODE
 
-/************************/
-/*      DEVICE CHIOSE   */
-/************************/
-#define USE_BMX055
+//* Accelerometer type
+#define USE_BMX055 1
+//#define USE_ADXL345 1
 
-/****************/
-/*      I/O     */
-/****************/
+//* I/O
 #define GPIO_LED_ERROR GPIO_NUM_2
 #define GPIO_OPT_SENSOR GPIO_NUM_35
 #define GPIO_ESC_OUT GPIO_NUM_4
 
-/*************************************/
-/*      GLOBAL DEFINES               */
-/*************************************/
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!/
+//!         PROJECT SETTINGS        /
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!/
 #define MOTOR_STARTUP_DELAY_MS 2000
 #define GUI_REFRESH_DELAY_MS 15
 #define ACC_DATA_BUFFER_SIZE 1024
 #define FFT_DATA_BUFFER_SIZE ACC_DATA_BUFFER_SIZE / 2
-#define DEFAULT_PROP_NUM 3
 #define DEFAULT_MEASURE_THROTTLE 175 /* 225~3600rpm, 175~2700rpm for a 1700kV motor */
+
+//*******************************/
+//*         GLOBAL DEFINES      */
+//*******************************/
+#define DEFAULT_PROP_NUM 3
 #define DEFAULT_FUNC_TIMOUT pdTICKS_TO_MS(100)
 
-/*!
- * @brief Enum to define commands
- */
-enum app_command
+//*******************************/
+//*         TYPE DEFINES        */
+//*******************************/
+enum app_command_e
 {
     APP_CMD,
     MOTOR_CMD,
@@ -62,7 +67,7 @@ enum app_command
     LPF_REQUEST_CMD,
 };
 
-enum app_steps
+enum app_steps_e
 {
     IDLE,
     START_MOTOR,
@@ -72,37 +77,33 @@ enum app_steps
     DECEL,
 };
 
-enum data_orig
+enum data_orig_e
 {
     RAW_DATA,
     FILTERED_DATA
 };
 
-union dpb_generic
+union dpb_generic_u
 {
     float_t f;
     uint64_t ull;
     int64_t ll;
 };
 
-struct command_data
+struct command_data_t
 {
-    app_command command;
-    dpb_generic value;
+    app_command_e command;
+    dpb_generic_u value;
 };
 
-/************************************/
-/*      STRUCT DECLARATIONS         */
-/************************************/
-
-struct acc_data_f
+struct acc_data_f_t
 {
     float_t acc_x_f;
     float_t acc_y_f;
     float_t acc_z_f;
 };
 
-struct acc_data_i
+struct acc_data_i_t
 {
     int16_t acc_x;
     int16_t acc_y;
@@ -111,12 +112,12 @@ struct acc_data_i
 
 struct dpb_acc_data
 {
-    acc_data_i accel_data;
+    acc_data_i_t accel_data;
     uint8_t xRot_done;
     uint64_t time_counts;
 };
 
-union gui_status
+union gui_status_u
 {
     uint32_t allBits;
     struct
@@ -132,14 +133,9 @@ union gui_status
     };
 };
 
-struct fft_chart_data
-{
-    float_t fft_data[ACC_DATA_BUFFER_SIZE];
-};
-
-/************************************/
-/*      CLASSES DECLARATIONS        */
-/************************************/
+//*******************************/
+//*      CLASS DECLARATION      */
+//*******************************/
 template <typename T>
 class RINGBuffer
 {
@@ -265,9 +261,9 @@ private:
     int tail_;     // The index where the next element will be added
 };
 
-/*************************************/
-/*          GLOBAL VARIABLES         */
-/*************************************/
+//**********************************/
+//*         GLOBAL VARIABLES        /
+//**********************************/
 extern TaskHandle_t guiTaskHandle;
 extern TaskHandle_t accelTaskHandle;
 extern TaskHandle_t senseTaskHandle;

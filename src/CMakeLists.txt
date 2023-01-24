@@ -7,7 +7,7 @@ file(GLOB SRCS
     motor/dshot/*.c
     app/*.cpp
     shared/*.cpp
-    /*.cpp
+    main.cpp
     )
 
 file(GLOB INCL
@@ -19,6 +19,7 @@ file(GLOB INCL
     motor/dshot
     app
     shared
+    sanity
     )
 
 idf_component_register(SRCS ${SRCS}

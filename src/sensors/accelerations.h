@@ -27,7 +27,7 @@ public:
     Accel(BMX055 *accel);
 
     uint8_t get_int_status(bmx_int_status *int_status);
-    uint8_t read_acceleration_data(acc_data_i *dataBuffer);
+    uint8_t read_acceleration_data(acc_data_i_t *dataBuffer);
 
 private:
     BMX055 *_accel;

@@ -6,8 +6,14 @@
 #include "./dshot/dshot_esc_encoder.h"
 #include "driver/rmt_tx.h"
 
+//************************/
+//*      DEFINES         */
+//************************/
 #define DSHOT_ESC_RESOLUTION_HZ 40000000 // 40MHz resolution, DSHot protocol needs a relative high resolution
 
+//*******************************/
+//*         TYPE DEFINES        */
+//*******************************/
 typedef enum dshot_mode_e
 {
     DSHOT_OFF = 0,
@@ -23,6 +29,9 @@ typedef enum telemetric_request_e
     ENABLE_TELEMETRIC,
 } telemetric_request_t;
 
+//*******************************/
+//*      CLASS DECLARATION      */
+//*******************************/
 class Motor
 {
 public:

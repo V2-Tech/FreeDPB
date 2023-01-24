@@ -8,9 +8,17 @@
 #include "../motor/motor.h"
 #include "../sensors/position.h"
 
-/************************************/
-/*      FUNCTION DECLARATIONS       */
-/************************************/
+//************************/
+//*      DEFINES         */
+//************************/
+#define INIT_ISR_DONE   1U<<1
+#define INIT_ESC_DONE   1U<<2
+#define INIT_ACCEL_DONE 1U<<3
+#define INIT_RPM_S_DONE 1U<<4
+
+//*******************************/
+//*      CLASS DECLARATION      */
+//*******************************/
 class DPB : public Motor, public RotSense, public Accel
 {
 public:
@@ -24,17 +32,17 @@ public:
     void loop(void);
     void loop_rpm(void);
     void loop_accel(void);
-    void exe(command_data command);
+    void exe(command_data_t command);
     void start(void);
     void reset(void);
     void ask_acc_charts_update(void);
     void ask_fft_chart_update(void);
-    uint8_t filter_data_iir(data_orig data_type);
-    uint8_t fft_calc(data_orig data_type);
+    uint8_t filter_data_iir(data_orig_e data_type);
+    uint8_t fft_calc(data_orig_e data_type);
     void signal_peak_finder(void);
     void fft_peak_finder(void);
 
-    void setStep(app_steps v);
+    void setStep(app_steps_e v);
 
 private:
     QueueHandle_t _xQueueSysInput;
@@ -44,7 +52,7 @@ private:
 
     uint16_t _init_status;
     uint8_t _init_done;
-    app_steps _app_step;
+    app_steps_e _app_step;
     TimerHandle_t _motorStartupTimer;
     gptimer_handle_t _rpmTimer;
     uint8_t _peakCount;

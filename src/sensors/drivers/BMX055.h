@@ -15,6 +15,9 @@
 
 #include "BMX055_defs.h"
 
+//*******************************/
+//*      CLASS DECLARATION      */
+//*******************************/
 class BMX055
 {
 public:

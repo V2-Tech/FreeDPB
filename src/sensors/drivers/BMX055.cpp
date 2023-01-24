@@ -1,5 +1,13 @@
 #include "BMX055.h"
 
+//************************/
+//*      VARIABLES       */
+//************************/
+static const char *TAG = "BMX055";
+
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
+//?         FUNCTIONS DEFINITION        /
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
 bmx_error BMX055::init(spi_device_handle_t spiHandle)
 {
     int8_t status = 0;

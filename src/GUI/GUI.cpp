@@ -1,13 +1,16 @@
 #include "GUI.h"
-/***********************************
- *      VARIABLES DECALRATIONS     *
- ***********************************/
-LGFX tft;
+
+//************************/
+//*      VARIABLES       */
+//************************/
+static LGFX tft;
+static lv_disp_draw_buf_t draw_buf;
+static lv_color_t buf[screenWidth * 10];
 static QueueHandle_t _xQueueCom2Sys = NULL;
 static QueueHandle_t _xQueueSys2Comp = NULL;
 static uint8_t _gui_init_done = 0;
 DPBShared &_xShared = DPBShared::getInstance();
-static dpb_page _gui_act_page = IDLE_PAGE;
+static dpb_page_t _gui_act_page = IDLE_PAGE;
 static uint8_t _peak_draw_done = 0;
 
 lv_obj_t *gui_IdleScreen = NULL;
@@ -34,7 +37,9 @@ size_t pcnt;
 int16_t accX_sample[ACC_CHART_POINT_COUNT] = {0};
 int16_t accY_sample[ACC_CHART_POINT_COUNT] = {0};
 
-/************************************************************************/
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
+//?         FUNCTIONS DEFINITION        /
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
 /* Display flushing */
 void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p)
 {
@@ -82,6 +87,8 @@ uint8_t gui_init(QueueHandle_t xQueueComp2Sys_handle, QueueHandle_t xQueueSys2Co
 
     _xQueueCom2Sys = xQueueComp2Sys_handle;
     _xQueueSys2Comp = xQueueSys2Comp_handle;
+
+    _display_init();
 
     lv_disp_t *dispp = lv_disp_get_default();
     lv_theme_t *theme = lv_theme_default_init(dispp, lv_palette_main(LV_PALETTE_BLUE), lv_palette_main(LV_PALETTE_RED),
@@ -274,7 +281,7 @@ void start_btn_event_cb(lv_event_t *e)
     lv_obj_t *btn = lv_event_get_target(e);
     if (code == LV_EVENT_CLICKED)
     {
-        command_data command;
+        command_data_t command;
         command.command = START_BUT_CMD;
         command.value.ull = 0;
 
@@ -290,7 +297,7 @@ void fft_btn_event_cb(lv_event_t *e)
     {
         gui_show_page(FFT_PAGE);
 
-        command_data command;
+        command_data_t command;
         command.command = FFT_REQUEST_CMD;
         command.value.ull = 1;
 
@@ -304,7 +311,7 @@ void filter_btn_event_cb(lv_event_t *e)
     lv_obj_t *btn = lv_event_get_target(e);
     if (code == LV_EVENT_CLICKED)
     {
-        command_data command;
+        command_data_t command;
         command.command = LPF_REQUEST_CMD;
         command.value.ull = 1;
 
@@ -477,7 +484,7 @@ void gui_update(void)
 
 void gui_check_commands(void)
 {
-    command_data command;
+    command_data_t command;
 
     if (xQueueReceive(_xQueueSys2Comp, &command, (TickType_t)0) == pdPASS)
     {
@@ -485,7 +492,7 @@ void gui_check_commands(void)
     }
 }
 
-void gui_exe(command_data command)
+void gui_exe(command_data_t command)
 {
     switch (command.command)
     {
@@ -500,7 +507,7 @@ void gui_exe(command_data command)
     }
 }
 
-void gui_show_page(dpb_page page)
+void gui_show_page(dpb_page_t page)
 {
     switch (page)
     {
@@ -519,7 +526,7 @@ void gui_show_page(dpb_page page)
 
 void gui_values_update(void)
 {
-    app_steps status = _xShared.getAppStatus();
+    app_steps_e status = _xShared.getAppStatus();
     lv_label_set_text_fmt(gui_StartButLabel, status == IDLE ? "START" : "STOP");
     if (status == IDLE)
     {
@@ -582,29 +589,55 @@ void gui_fft_update(void)
     lv_chart_refresh(gui_FFTYChart);
 }
 
-void _chart_Y_autorange(lv_obj_t *chart_obj, lv_chart_series_t *ser)
+void _display_init(void) 
 {
-    int16_t min = 0;
-    int16_t max = 0;
+    /* TFT init */
+    tft.begin();
+    /* Landscape orientation, flipped */
+    tft.setRotation(1);
+    tft.setBrightness(255);
+    /* Calibrate touchscreen */
+    uint16_t calData[] = {3754, 454, 3694, 3862, 352, 453, 314, 3883};
+    tft.setTouchCalibrate(calData);
 
-    lv_chart_t *chart = (lv_chart_t *)chart_obj;
-    lv_coord_t *ser_array = lv_chart_get_y_array(chart_obj, ser);
+    /* Initialize the display */
+    lv_init();
+    lv_disp_draw_buf_init(&draw_buf, buf, NULL, screenWidth * 10);
+    static lv_disp_drv_t disp_drv;
+    lv_disp_drv_init(&disp_drv);
+    disp_drv.hor_res = screenWidth;
+    disp_drv.ver_res = screenHeight;
+    disp_drv.flush_cb = my_disp_flush;
+    disp_drv.draw_buf = &draw_buf;
+    lv_disp_drv_register(&disp_drv);
 
-    for (size_t i = 0; i < chart->point_cnt; i++)
-    {
-        int16_t v;
-        v = ser_array[i];
-        if (v > max)
-        {
-            max = v;
-        }
-        if (v < min)
-        {
-            min = v;
-        }
+    /* Initialize the (dummy) input device driver */
+    static lv_indev_drv_t indev_drv;
+    lv_indev_drv_init(&indev_drv);
+    indev_drv.type = LV_INDEV_TYPE_POINTER;
+    indev_drv.read_cb = my_touchpad_read;
+    lv_indev_drv_register(&indev_drv);
+}
+
+void _chart_Y_autorange(lv_obj_t *chart_obj, lv_chart_series_t *ser) {
+  int16_t min = 0;
+  int16_t max = 0;
+
+  lv_chart_t *chart = (lv_chart_t *)chart_obj;
+  lv_coord_t *ser_array = lv_chart_get_y_array(chart_obj, ser);
+
+  for (size_t i = 0; i < chart->point_cnt; i++) {
+    int16_t v;
+    v = ser_array[i];
+    if (v > max) {
+      max = v;
     }
+    if (v < min) {
+      min = v;
+    }
+  }
 
-    lv_chart_set_range(chart_obj, LV_CHART_AXIS_PRIMARY_Y, min, max);
+  lv_chart_set_range(chart_obj, LV_CHART_AXIS_PRIMARY_Y, min, max);
 }
 
 void _ask_peak_draw(void)

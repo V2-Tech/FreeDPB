@@ -127,17 +127,17 @@ uint16_t DPBShared::getRPM()
     return v;
 }
 
-void DPBShared::setAppStatus(app_steps v)
+void DPBShared::setAppStatus(app_steps_e v)
 {
     _lock();
     _data->_step = v;
     _unlock();
 }
 
-app_steps DPBShared::getAppStatus()
+app_steps_e DPBShared::getAppStatus()
 {
     _lock();
-    app_steps v = _data->_step;
+    app_steps_e v = _data->_step;
     _unlock();
     return v;
 }

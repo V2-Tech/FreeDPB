@@ -27,8 +27,8 @@ public:
     void getDPBAccDataFiltered(dpb_acc_data *data, uint32_t index);
     void setRPM(uint16_t v);
     uint16_t getRPM();
-    void setAppStatus(app_steps v);
-    app_steps getAppStatus();
+    void setAppStatus(app_steps_e v);
+    app_steps_e getAppStatus();
     void setFFTX(float_t v, size_t index);
     float_t getFFTX(size_t index);
     void setFFTY(float_t v, size_t index);
@@ -58,7 +58,7 @@ private:
         // Dati condivisi
         uint64_t _rotCount;
         uint16_t _rpm;
-        app_steps _step;
+        app_steps_e _step;
         char message[20];
         dpb_acc_data _dpb_acc[ACC_DATA_BUFFER_SIZE] = {0};
         dpb_acc_data _dpb_acc_filtered[ACC_DATA_BUFFER_SIZE] = {0};

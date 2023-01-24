@@ -1,5 +1,13 @@
-#include "accelerations_def.h"
 #include "accelerations.h"
+
+//************************/
+//*      VARIABLES       */
+//************************/
+static const char *TAG = "ACCELERATIONS";
+
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
+//?         FUNCTIONS DEFINITION        /
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
 
 Accel::Accel(BMX055 *accel)
 {
@@ -40,7 +48,7 @@ uint8_t Accel::get_int_status(bmx_int_status *int_status)
     return _accel->get_int_status(int_status);
 }
 
-uint8_t Accel::read_acceleration_data(acc_data_i *dataBuffer)
+uint8_t Accel::read_acceleration_data(acc_data_i_t *dataBuffer)
 {
     return _accel->read_acc_data((sensor_3D_data *)dataBuffer);
 }
@@ -86,7 +94,7 @@ uint8_t Accel::__set_default_config()
 // {
 //     uint8_t idx;
 //     acc_sensor_data data;
-//     command_data command;
+//     command_data_t command;
 // 
 //     for (idx = 0; idx < acc_index; idx++)
 //     {
@@ -139,7 +147,7 @@ uint8_t Accel::__set_default_config()
 // uint8_t acceleration_start_read(void)
 // {
 //     uint8_t ret = 0;
-//     command_data command;
+//     command_data_t command;
 //     const char *TAG = "acceleration_start_read";
 // 
 // #ifdef USE_BMX055

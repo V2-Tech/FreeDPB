@@ -1,6 +1,13 @@
-#include "application_def.h"
 #include "application.h"
 
+//************************/
+//*      VARIABLES       */
+//************************/
+static const char *TAG = "DPB";
+
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
+//?         FUNCTIONS DEFINITION        /
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
 DPB::DPB(uint8_t escGPIO, dshot_mode_t escSpeed, gpio_num_t rotSensorGPIO, BMX055 *accelDev) : Motor(escGPIO, escSpeed), RotSense(rotSensorGPIO), Accel(accelDev)
 {
     _motorStartupTimer = xTimerCreate("MotorStartupTimer", MOTOR_STARTUP_DELAY_MS, pdFALSE, this, __motorStartupTimerCallback_static);
@@ -49,7 +56,7 @@ uint8_t DPB::init(QueueHandle_t xQueueSysInput_handle, QueueHandle_t xQueueSysOu
 
 uint8_t DPB::init_rpm(TaskHandle_t supportTask_handle, gptimer_handle_t xTimer_handle, uint8_t n_propeller)
 {
-    this->init_rpm_sensor(supportTask_handle, xTimer_handle, n_propeller);
+    RotSense::init_rpm_sensor(supportTask_handle, xTimer_handle, n_propeller);
 
     _init_status |= INIT_RPM_S_DONE;
 
@@ -58,7 +65,7 @@ uint8_t DPB::init_rpm(TaskHandle_t supportTask_handle, gptimer_handle_t xTimer_h
 
 uint8_t DPB::init_esc()
 {
-    this->arm();
+    Motor::arm();
 
     _init_status |= INIT_ESC_DONE;
 
@@ -86,7 +93,7 @@ void DPB::loop(void)
         return;
     };
 
-    command_data command;
+    command_data_t command;
 
     /* Check incoming commands to execute */
     if (xQueueReceive(_xQueueSysInput, &command, portMAX_DELAY) == pdPASS)
@@ -109,7 +116,7 @@ void DPB::loop_rpm(void)
 
 void DPB::loop_accel(void)
 {
-    acc_data_i acc_data;
+    acc_data_i_t acc_data;
     size_t i = 0;
 
     if (!_init_done)
@@ -136,14 +143,14 @@ void DPB::loop_accel(void)
         }
     }
 
-    command_data command;
+    command_data_t command;
 
     command.command = APP_CMD;
     command.value.ull = FILTERING;
     xQueueSend(_xQueueSysInput, &command, portMAX_DELAY);
 }
 
-void DPB::exe(command_data command)
+void DPB::exe(command_data_t command)
 {
     switch (command.command)
     {
@@ -206,6 +213,7 @@ void DPB::exe(command_data command)
 
 void DPB::start(void)
 {
+    RotSense::reset_rpm_cnt();
     set_throttle(DEFAULT_MEASURE_THROTTLE);
     if (xTimerReset(_motorStartupTimer, DEFAULT_FUNC_TIMOUT) != pdTRUE)
     {
@@ -226,7 +234,7 @@ void DPB::reset(void)
 
 void DPB::ask_acc_charts_update(void)
 {
-    command_data command;
+    command_data_t command;
 
     command.command = ACC_CHART_UPDATE_CMD;
     command.value.ull = 1;
@@ -235,14 +243,14 @@ void DPB::ask_acc_charts_update(void)
 
 void DPB::ask_fft_chart_update(void)
 {
-    command_data command;
+    command_data_t command;
 
     command.command = FFT_CHART_UPDATE_CMD;
     command.value.ull = 1;
     xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
 }
 
-uint8_t DPB::filter_data_iir(data_orig data_type)
+uint8_t DPB::filter_data_iir(data_orig_e data_type)
 {
     __attribute__((aligned(16))) static float accX_input[ACC_DATA_BUFFER_SIZE];
     __attribute__((aligned(16))) static float accY_input[ACC_DATA_BUFFER_SIZE];
@@ -299,7 +307,7 @@ uint8_t DPB::filter_data_iir(data_orig data_type)
     return ESP_OK;
 }
 
-uint8_t DPB::fft_calc(data_orig data_type)
+uint8_t DPB::fft_calc(data_orig_e data_type)
 {
     setStep(ANALYSING);
 
@@ -519,7 +527,7 @@ void DPB::fft_peak_finder(void)
     _xShared.setFFTYPeak(peak_y_index);
 }
 
-void DPB::setStep(app_steps v)
+void DPB::setStep(app_steps_e v)
 {
     _app_step = v;
     _xShared.setAppStatus(v);

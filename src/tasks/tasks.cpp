@@ -1,44 +1,31 @@
-#include "tasks_def.h"
 #include "tasks.h"
+
+//**************************************/
+//*         VARIABLES DECLARATIONS      /
+//**************************************/
+static StaticQueue_t xStaticQueueComp2SysCommand;
+uint8_t ucQueueComp2SysCommandStorageArea[QUEUE_COMMANDS_LENGTH * ITEM_COMMANDS_SIZE];
+QueueHandle_t xQueueComp2SysCommandsHandle;
+
+static StaticQueue_t xStaticQueueSys2CompCommand;
+uint8_t ucQueueSys2CompCommandStorageArea[QUEUE_COMMANDS_LENGTH * ITEM_COMMANDS_SIZE];
+QueueHandle_t xQueueSys2CompCommandsHandle;
+
+#ifdef USE_BMX055
+static BMX055 accel;
+#elif USE_ADXL345
+static ADXL345 accel;
+#endif
+
+static DPB sys(GPIO_ESC_OUT, DSHOT300, GPIO_OPT_SENSOR, &accel);
 
 DPBShared& sharedVars = DPBShared::getInstance();
 
-/******************************************
- *              GUI TASK
- ******************************************/
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
+//?             GUI TASK            /
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
 void guiTask(void *pvParameter)
 {
-    const char *TAG = "GUI-TASK";
-
-    /* TFT init */
-    tft.begin();
-    /* Landscape orientation, flipped */
-    tft.setRotation(1);
-    tft.setBrightness(255);
-    /* Calibrate touchscreen */
-    uint16_t calData[] = {3754, 454, 3694, 3862, 352, 453, 314, 3883};
-    tft.setTouchCalibrate(calData);
-
-    /* Initialize the display */
-    lv_init();
-    lv_disp_draw_buf_init(&draw_buf, buf, NULL, screenWidth * 10);
-    static lv_disp_drv_t disp_drv;
-    lv_disp_drv_init(&disp_drv);
-    disp_drv.hor_res = screenWidth;
-    disp_drv.ver_res = screenHeight;
-    disp_drv.flush_cb = my_disp_flush;
-    disp_drv.draw_buf = &draw_buf;
-    lv_disp_drv_register(&disp_drv);
-
-    /* Initialize the (dummy) input device driver */
-    static lv_indev_drv_t indev_drv;
-    lv_indev_drv_init(&indev_drv);
-    indev_drv.type = LV_INDEV_TYPE_POINTER;
-    indev_drv.read_cb = my_touchpad_read;
-    lv_indev_drv_register(&indev_drv);
-
-    (void)pvParameter;
-
     SemaphoreHandle_t xGuiSemaphore = xSemaphoreCreateMutex();
 
     /* Create and start a periodic timer interrupt to call lv_tick_inc */
@@ -80,13 +67,11 @@ void IRAM_ATTR lv_tick_task(void *arg)
     lv_tick_inc(LV_TICK_PERIOD_MS);
 }
 
-/****************************************
- *          ACCELEROMETER TASK          *
- ****************************************/
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
+//?         ACCELEROMETER TASK          /
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
 void accelTask(void *pvParameter)
-{
-    const char *TAG = "ACCEL-TASK";
-    
+{  
     while (1)
     {
         sys.loop_accel();
@@ -96,13 +81,11 @@ void accelTask(void *pvParameter)
     vTaskDelete(NULL);
 }
 
-/********************************
- *        POSITION TASK         *
- ********************************/
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
+//?         ROTATION TASK               /
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
 void senseTask(void *pvParameter)
 {
-    const char *TAG = "SENSE-TASK";
-
     while (1)
     {
         sys.loop_rpm();
@@ -112,13 +95,11 @@ void senseTask(void *pvParameter)
     vTaskDelete(NULL);
 }
 
-/****************************
- *          APP TASK        *
- ****************************/
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
+//?         APPLICATION TASK            /
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
 void application(void *pvParameter)
 {
-    const char *TAG = "APP-TASK";
-
     /* Create queue to send command from system app to app components */
     xQueueSys2CompCommandsHandle = xQueueCreateStatic(QUEUE_COMMANDS_LENGTH,
                                                       ITEM_COMMANDS_SIZE,

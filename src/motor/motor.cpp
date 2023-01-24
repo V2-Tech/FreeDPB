@@ -1,6 +1,13 @@
 #include "motor.h"
 
-inline const char *TAG = "motor";
+//************************/
+//*      VARIABLES       */
+//************************/
+static const char *TAG = "MOTOR";
+
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
+//?         FUNCTIONS DEFINITION        /
+//?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
 
 Motor::Motor(uint8_t pin, dshot_mode_t speed)
 {

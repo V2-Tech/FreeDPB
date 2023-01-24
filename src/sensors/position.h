@@ -4,6 +4,9 @@
 #include "../shared/common_def.h"
 #include "../shared/shared_data.h"
 
+//*******************************/
+//*      CLASS DECLARATION       /
+//*******************************/
 class RotSense
 {
 public:
@@ -14,6 +17,8 @@ public:
     void rpm_update();
 
     float_t get_rpm();
+    void reset_rpm_cnt();
+    void stop_rpm_cnt();
 
     uint8_t get_rotation_done();
     void reset_rotation_done();
