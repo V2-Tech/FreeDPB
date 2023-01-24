@@ -7,6 +7,7 @@ file(GLOB SRCS
     motor/dshot/*.c
     app/*.cpp
     shared/*.cpp
+    /*.cpp
     )
 
 file(GLOB INCL
