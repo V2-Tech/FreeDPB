@@ -118,7 +118,7 @@ void gui_IdleScreen_init(void)
     lv_obj_set_style_size(gui_AccelChart, 0, LV_PART_INDICATOR); // Do not display points on the data
     lv_chart_set_update_mode(gui_AccelChart, LV_CHART_UPDATE_MODE_SHIFT);
     lv_chart_set_range(gui_AccelChart, LV_CHART_AXIS_PRIMARY_Y, -4096, 4096);
-    //lv_chart_set_zoom_x(gui_AccelChart, 1400);                                         // Zoom in a little in X
+    // lv_chart_set_zoom_x(gui_AccelChart, 1400);                                         // Zoom in a little in X
     lv_obj_add_event_cb(gui_AccelChart, AccelChart_draw_event_cb, LV_EVENT_ALL, NULL); //? Event to be able to draw the peak points
 
     serAccY = lv_chart_add_series(gui_AccelChart, lv_palette_main(LV_PALETTE_BLUE), LV_CHART_AXIS_PRIMARY_Y);
@@ -135,7 +135,7 @@ void gui_IdleScreen_init(void)
     lv_obj_add_event_cb(gui_AccelChart_Xslider, slider_x_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
     lv_obj_set_size(gui_AccelChart_Xslider, 280, 10);
     lv_obj_align_to(gui_AccelChart_Xslider, gui_AccelChart, LV_ALIGN_OUT_BOTTOM_MID, 0, 5);
-    //lv_slider_set_value(gui_AccelChart_Xslider, 1400, LV_ANIM_OFF);
+    // lv_slider_set_value(gui_AccelChart_Xslider, 1400, LV_ANIM_OFF);
 
     /* Create Y-ScrollBar */
     gui_AccelChart_Yslider = lv_slider_create(gui_IdleScreen);
@@ -363,9 +363,14 @@ void AccelChart_draw_event_cb(lv_event_t *e)
     else if (code == LV_EVENT_DRAW_POST_END)
     {
         lv_chart_series_t *ser = lv_chart_get_series_next(chart, NULL);
-        while (ser && !_peak_draw_done)
+        while (ser)
         {
-            size_t peakCount = 0;
+            if (_peak_draw_done)
+            {
+                continue;
+            }
+            
+            size_t peakCount = 0, rotCount = 0;
 
             for (size_t i = 0; i < ACC_DATA_BUFFER_SIZE; i++)
             {
@@ -377,6 +382,18 @@ void AccelChart_draw_event_cb(lv_event_t *e)
                 peakCount++;
             }
 
+            size_t rotDoneIndex[ACC_CHART_POINT_COUNT] = {0};
+            for (size_t i = 0, j = 0; i < ACC_CHART_POINT_COUNT; i++)
+            {
+                dpb_acc_data v;
+                _xShared.getDPBAccDataFiltered(&v, i);
+                if (v.xRot_done == 1)
+                {
+                    rotDoneIndex[j++] = i;
+                    rotCount++;
+                }
+            }
+
             if (peakCount == 0)
             {
                 ser = lv_chart_get_series_next(chart, ser);
@@ -384,10 +401,16 @@ void AccelChart_draw_event_cb(lv_event_t *e)
             }
 
             lv_point_t *p = new lv_point_t[peakCount]();
+            lv_point_t *r = new lv_point_t[rotCount]();
 
             for (size_t i = 0; i < peakCount; i++)
             {
                 lv_chart_get_point_pos_by_id(chart, ser, _xShared.getPeakIndex(i), &p[i]);
+            }
+
+            for (size_t i = 0; i < rotCount; i++)
+            {
+                lv_chart_get_point_pos_by_id(chart, ser, rotDoneIndex[i], &r[i]);
             }
 
             for (size_t i = 0; i < peakCount; i++)
@@ -408,9 +431,28 @@ void AccelChart_draw_event_cb(lv_event_t *e)
                 lv_draw_rect(draw_ctx, &draw_rect_dsc, &a);
             }
 
+            for (size_t i = 0; i < rotCount; i++)
+            {
+                lv_draw_rect_dsc_t draw_rect_dsc;
+                lv_draw_rect_dsc_init(&draw_rect_dsc);
+                draw_rect_dsc.bg_color = lv_palette_main(LV_PALETTE_RED);
+                draw_rect_dsc.bg_opa = LV_OPA_100;
+                draw_rect_dsc.radius = 1;
+
+                lv_area_t a;
+                a.x1 = chart->coords.x1 + p[i].x - 2;
+                a.x2 = chart->coords.x1 + p[i].x + 2;
+                a.y1 = chart->coords.y1 + p[i].y - 2;
+                a.y2 = chart->coords.y1 + p[i].y + 2;
+
+                lv_draw_ctx_t *draw_ctx = lv_event_get_draw_ctx(e);
+                lv_draw_rect(draw_ctx, &draw_rect_dsc, &a);
+            }
+
             ser = lv_chart_get_series_next(chart, ser);
 
             delete[] p;
+            delete[] r;
         }
 
         //_peak_draw_done = 1;
@@ -512,6 +554,7 @@ void gui_charts_update(void)
 
     lv_chart_set_range(gui_AccelChart, LV_CHART_AXIS_PRIMARY_Y, min * 1.1, max * 1.1);
     lv_chart_refresh(gui_AccelChart);
+    _ask_peak_draw();
 }
 
 void gui_fft_update(void)

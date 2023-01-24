@@ -23,7 +23,7 @@
 
 #include "esp_dsp.h"
 
-//#define APP_DEBUG_MODE
+#define APP_DEBUG_MODE
 
 /************************/
 /*      DEVICE CHIOSE   */
@@ -45,7 +45,7 @@
 #define ACC_DATA_BUFFER_SIZE 1024
 #define FFT_DATA_BUFFER_SIZE ACC_DATA_BUFFER_SIZE / 2
 #define DEFAULT_PROP_NUM 3
-#define DEFAULT_MEASURE_THROTTLE 225 /* ~3500rpm for a 1700kV motor */
+#define DEFAULT_MEASURE_THROTTLE 175 /* 225~3600rpm, 175~2700rpm for a 1700kV motor */
 #define DEFAULT_FUNC_TIMOUT pdTICKS_TO_MS(100)
 
 /*!

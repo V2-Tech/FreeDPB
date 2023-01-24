@@ -72,7 +72,7 @@ uint8_t DPB::init_accel()
         return ESP_FAIL;
     }
 
-    _xShared.setSampleRate(500);
+    _xShared.setSampleRate(1000);
 
     _init_status |= INIT_ACCEL_DONE;
 
@@ -132,8 +132,6 @@ void DPB::loop_accel(void)
 
             _xShared.setDPBAccData(acc_data.acc_x, acc_data.acc_y, r_d, time, i);
 
-            reset_rotation_done();
-
             i++;
         }
     }
@@ -161,12 +159,12 @@ void DPB::exe(command_data command)
         if (command.value.ull == FILTERING)
         {
             motor_stop();
-            _log_acc_data();
-            if (filter_data(RAW_DATA) != ESP_OK)
+            if (filter_data_iir(RAW_DATA) != ESP_OK)
             {
                 // TODO Error message
                 break;
             }
+            _log_acc_data_filtered();
             if (fft_calc(FILTERED_DATA) != ESP_OK)
             {
                 // TODO Error message
@@ -197,7 +195,7 @@ void DPB::exe(command_data command)
         reset();
         break;
     case LPF_REQUEST_CMD:
-        if (filter_data(FILTERED_DATA) == ESP_OK)
+        if (filter_data_iir(FILTERED_DATA) == ESP_OK)
             ask_acc_charts_update(); // ? Show filtered data
         reset();
         break;
@@ -244,7 +242,7 @@ void DPB::ask_fft_chart_update(void)
     xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
 }
 
-uint8_t DPB::filter_data(data_orig data_type)
+uint8_t DPB::filter_data_iir(data_orig data_type)
 {
     __attribute__((aligned(16))) static float accX_input[ACC_DATA_BUFFER_SIZE];
     __attribute__((aligned(16))) static float accY_input[ACC_DATA_BUFFER_SIZE];
@@ -272,7 +270,7 @@ uint8_t DPB::filter_data(data_orig data_type)
     }
 
     // Calculate iir filter coefficients
-    if (dsps_biquad_gen_lpf_f32(coeffs_lpf, 0.1, 1) != ESP_OK)
+    if (dsps_biquad_gen_lpf_f32(coeffs_lpf, 0.02, 0.7071) != ESP_OK)
     {
         ESP_LOGE(TAG, "IIR coefs calc error");
         return ESP_FAIL;
@@ -538,6 +536,21 @@ void DPB::_log_acc_data(void)
         _xShared.getDPBAccData(&data, i);
         // ESP_LOGI(TAG, "| X: %d, Y: %d | Rot:%d | T:%llu |", data.accel_data.acc_x, data.accel_data.acc_y, data.xRot_done, data.time_counts);
         printf("%d;%d;%llu\n", data.accel_data.acc_x, data.accel_data.acc_y, data.time_counts);
+    }
+#endif
+}
+
+void DPB::_log_acc_data_filtered(void)
+{
+#ifdef APP_DEBUG_MODE
+    ESP_LOGI(TAG, "Filtered accelerations data");
+
+    for (size_t i = 0; i < ACC_DATA_BUFFER_SIZE; i++)
+    {
+        dpb_acc_data data;
+        _xShared.getDPBAccDataFiltered(&data, i);
+        // ESP_LOGI(TAG, "| X: %d, Y: %d | Rot:%d | T:%llu |", data.accel_data.acc_x, data.accel_data.acc_y, data.xRot_done, data.time_counts);
+        printf("%d;%d;%llu;%d\n", data.accel_data.acc_x, data.accel_data.acc_y, data.time_counts, data.xRot_done);
     }
 #endif
 }

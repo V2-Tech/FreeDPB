@@ -99,6 +99,7 @@ uint8_t RotSense::get_rotation_done()
     uint8_t v;
     xSemaphoreTake(__xSem, portMAX_DELAY);
     v = _rot_done;
+    _rot_done = 0;
     xSemaphoreGive(__xSem);
 
     return v;

@@ -29,7 +29,7 @@ public:
     void reset(void);
     void ask_acc_charts_update(void);
     void ask_fft_chart_update(void);
-    uint8_t filter_data(data_orig data_type);
+    uint8_t filter_data_iir(data_orig data_type);
     uint8_t fft_calc(data_orig data_type);
     void signal_peak_finder(void);
     void fft_peak_finder(void);
@@ -50,6 +50,7 @@ private:
     uint8_t _peakCount;
 
     void _log_acc_data(void);
+    void _log_acc_data_filtered(void);
     void _sort_index_by_height(size_t *output, size_t indexCount);
     void _array_value_remover(int16_t *array, size_t arraySize, int16_t target);
 
