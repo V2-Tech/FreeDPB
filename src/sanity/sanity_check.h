@@ -1,7 +1,7 @@
 #ifndef INC_SANITY_CHECK_H
 #define INC_SANITY_CHECK_H
 
-#include "../shared/common_def.h"
+#include "../common/common_def.h"
 
 #define USED_ACCEL (USE_BMX055 + USE_ADXL345)
 #if USED_ACCEL > 1

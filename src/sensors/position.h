@@ -1,7 +1,7 @@
 #ifndef INC_POSITION_H
 #define INC_POSITION_H
 
-#include "../shared/common_def.h"
+#include "../common/common_def.h"
 #include "../shared/shared_data.h"
 
 //*******************************/

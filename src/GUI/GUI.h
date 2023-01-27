@@ -5,7 +5,7 @@
 #include "../../components/LovyanGFX/src/LovyanGFX.hpp"
 #include "../../components/lvgl/lvgl.h"
 
-#include "../shared/common_def.h"
+#include "../common/common_def.h"
 #include "../shared/shared_data.h"
 
 //************************/
@@ -13,7 +13,6 @@
 //************************/
 #define LV_TICK_PERIOD_MS 1
 #define FFT_MAJOR_TICK_COUNT 11
-#define ACC_CHART_POINT_COUNT ACC_DATA_BUFFER_SIZE / 4
 
 static const uint16_t screenWidth = 320;
 static const uint16_t screenHeight = 240;

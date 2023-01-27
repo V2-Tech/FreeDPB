@@ -1,7 +1,7 @@
 #ifndef _MOTOR_H
 #define _MOTOR_H
 
-#include "../shared/common_def.h"
+#include "../common/common_def.h"
 
 #include "./dshot/dshot_esc_encoder.h"
 #include "driver/rmt_tx.h"
