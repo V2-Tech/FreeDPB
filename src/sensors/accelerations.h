@@ -4,10 +4,10 @@
 #include "../common/common_def.h"
 #include "../shared/shared_data.h"
 
-#ifdef USE_BMX055
 #include "drivers/BMX055.h"
 #include "drivers/BMX055_defs.h"
-#endif
+#include "drivers/ADXL345.h"
+#include "drivers/ADXL345_def.h"
 
 //**********************/
 //*      DEFINES       /
@@ -46,7 +46,7 @@ public:
 #endif
 
     uint8_t set_default_config(void);
-    uint8_t get_int_status(bmx_int_status *int_status);
+    uint8_t get_int_status(bmx_int_status_t *int_status);
     uint8_t read_acceleration_data(acc_data_i_t *dataBuffer);
 
     void get_acc_settings(accel_settings_t *actSettings);

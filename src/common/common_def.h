@@ -27,13 +27,22 @@
 //!         PROJECT DEFINES         /
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!/
 //* Debug serial loggin enabler
-#define APP_DEBUG_MODE
+// #define APP_DEBUG_MODE
 
 //* Accelerometer type
-#define USE_BMX055 1
-// #define USE_ADXL345 1
+// #define USE_BMX055 1
+#define USE_ADXL345 1
 
 //* I/O
+#define ACC_SPI_MISO GPIO_NUM_32
+#define ACC_SPI_MOSI GPIO_NUM_33
+#define ACC_SPI_SCLK GPIO_NUM_25
+#define ACC_SPI_CS GPIO_NUM_27
+#ifdef USE_BMX055
+#define ACC_SPI_SPEED 10 //Mhz
+#elif USE_ADXL345
+#define ACC_SPI_SPEED 4 //Mhz
+#endif
 #define GPIO_LED_ERROR GPIO_NUM_2
 #define GPIO_OPT_SENSOR GPIO_NUM_35
 #define GPIO_ESC_OUT GPIO_NUM_4

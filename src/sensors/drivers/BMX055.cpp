@@ -8,13 +8,13 @@ static const char *TAG = "BMX055";
 //?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
 //?         FUNCTIONS DEFINITION        /
 //?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
-bmx_error BMX055::init(spi_device_handle_t spiHandle)
+bmx_error_e BMX055::init(spi_device_handle_t spiHandle)
 {
     int8_t status = 0;
     uint8_t dummy_value;
     uint32_t l_dummy_value;
-    bmx_int_scr int_src_active;
-    bmx_power_mode pwr_mode;
+    bmx_int_scr_u int_src_active;
+    bmx_power_mode_e pwr_mode;
 
     _spi = spiHandle;
 
@@ -231,7 +231,7 @@ bmx_error BMX055::init(spi_device_handle_t spiHandle)
  * @return 0 -> Success
  * @return != 0 -> Fail
  */
-bmx_error BMX055::get_chipID(uint8_t *chipID_value)
+bmx_error_e BMX055::get_chipID(uint8_t *chipID_value)
 {
     return _read_regs(BMX_REG_CHIPID, chipID_value, 1);
 }
@@ -245,7 +245,7 @@ bmx_error BMX055::get_chipID(uint8_t *chipID_value)
  * @return 0 -> Success
  * @return != 0 -> Fail
  */
-bmx_error BMX055::get_accel_conf(bmx_acc_conf *acc_conf_struct)
+bmx_error_e BMX055::get_accel_conf(bmx_acc_conf_t *acc_conf_struct)
 {
     uint8_t reg_data[2];
 
@@ -289,7 +289,7 @@ bmx_error BMX055::get_accel_conf(bmx_acc_conf *acc_conf_struct)
  * @return 0 -> Success
  * @return != 0 -> Fail
  */
-bmx_error BMX055::set_accel_conf(bmx_acc_conf *acc_conf_struct)
+bmx_error_e BMX055::set_accel_conf(bmx_acc_conf_t *acc_conf_struct)
 {
     uint8_t reg_data[2];
 
@@ -333,7 +333,7 @@ bmx_error BMX055::set_accel_conf(bmx_acc_conf *acc_conf_struct)
 /*!
  *  @brief This API is used to get fifo configuration of the sensor.
  */
-bmx_error BMX055::get_fifo_config(bmx_fifo_conf *fifo_conf_struct)
+bmx_error_e BMX055::get_fifo_config(bmx_fifo_conf_t *fifo_conf_struct)
 {
     uint8_t reg_data;
 
@@ -379,7 +379,7 @@ bmx_error BMX055::get_fifo_config(bmx_fifo_conf *fifo_conf_struct)
 /*!
  *  @brief This API is used to get fifo configuration of the sensor.
  */
-bmx_error BMX055::set_fifo_config(bmx_fifo_conf *fifo_conf_struct)
+bmx_error_e BMX055::set_fifo_config(bmx_fifo_conf_t *fifo_conf_struct)
 {
     uint8_t reg_data;
 
@@ -432,7 +432,7 @@ bmx_error BMX055::set_fifo_config(bmx_fifo_conf *fifo_conf_struct)
 /*!
  * @brief This API is used to enable the various interrupts
  */
-bmx_error BMX055::set_interrupt_source(uint32_t int_source_to_en)
+bmx_error_e BMX055::set_interrupt_source(uint32_t int_source_to_en)
 {
     uint8_t reg_data[3];
 
@@ -467,7 +467,7 @@ bmx_error BMX055::set_interrupt_source(uint32_t int_source_to_en)
  * @brief This API is used to get the various interrupts
  * which are enabled in the sensor
  */
-bmx_error BMX055::get_interrupt_source(bmx_int_scr *int_en)
+bmx_error_e BMX055::get_interrupt_source(bmx_int_scr_u *int_en)
 {
     uint8_t reg_data[3];
     uint32_t d_dummy_var;
@@ -495,7 +495,7 @@ bmx_error BMX055::get_interrupt_source(bmx_int_scr *int_en)
 /*!
  * @brief This API is used to get the power mode of the sensor
  */
-bmx_error BMX055::get_power_mode(bmx_power_mode *power_mode)
+bmx_error_e BMX055::get_power_mode(bmx_power_mode_e *power_mode)
 {
     uint8_t reg_data[2];
     uint8_t power_mode_val;
@@ -520,7 +520,7 @@ bmx_error BMX055::get_power_mode(bmx_power_mode *power_mode)
                 power_mode_val = BMX_DEEP_SUSPEND_MODE;
             }
 
-            *power_mode = (bmx_power_mode)power_mode_val;
+            *power_mode = (bmx_power_mode_e)power_mode_val;
 
             /* Store the actual power mode in class value */
             _power_mode = *power_mode;
@@ -541,9 +541,9 @@ bmx_error BMX055::get_power_mode(bmx_power_mode *power_mode)
 /*!
  * @brief This API is used to set the power mode of the sensor
  */
-bmx_error BMX055::set_power_mode(bmx_power_mode power_mode)
+bmx_error_e BMX055::set_power_mode(bmx_power_mode_e power_mode)
 {
-    bmx_error rslt = BMX_ERR_WR;
+    bmx_error_e rslt = BMX_ERR_WR;
     uint8_t reg_data[2];
     uint8_t low_power_mode;
 
@@ -589,7 +589,7 @@ bmx_error BMX055::set_power_mode(bmx_power_mode power_mode)
             low_power_mode = BMX_GET_BITS(power_mode, BMX_POWER_MODE_EXTRACT);
             reg_data[1] = BMX_SET_BITS(reg_data[1], BMX_LOW_POWER_MODE, low_power_mode);
 
-            power_mode = (bmx_power_mode)((uint8_t)power_mode & BMX_POWER_MODE_MASK);
+            power_mode = (bmx_power_mode_e)((uint8_t)power_mode & BMX_POWER_MODE_MASK);
             reg_data[0] = BMX_SET_BITS(reg_data[0], BMX_POWER_MODE_CTRL, power_mode);
 
             if (_write_regs(BMX_REG_PMU_LPW, &reg_data[0], 1) == BMX_OK)
@@ -628,7 +628,7 @@ bmx_error BMX055::set_power_mode(bmx_power_mode power_mode)
 /*!
  * @brief This internal API is used to set the powermode as normal.
  */
-bmx_error BMX055::_set_normal_mode()
+bmx_error_e BMX055::_set_normal_mode()
 {
     uint8_t reg_data[2];
 
@@ -680,7 +680,7 @@ bmx_error BMX055::_set_normal_mode()
  * @brief This API is used to perform soft-reset of the sensor
  * where all the registers are reset to their default values
  */
-bmx_error BMX055::soft_reset()
+bmx_error_e BMX055::soft_reset()
 {
     uint8_t soft_rst_cmd = BMX_SOFT_RESET_CMD;
 
@@ -701,7 +701,7 @@ bmx_error BMX055::soft_reset()
 /*!
  *  @brief This API gets the interrupt status from the registers.
  */
-bmx_error BMX055::get_int_status(bmx_int_status *int_status)
+bmx_error_e BMX055::get_int_status(bmx_int_status_t *int_status)
 {
     uint8_t reg_data[4];
 
@@ -727,7 +727,7 @@ bmx_error BMX055::get_int_status(bmx_int_status *int_status)
     return BMX_OK;
 }
 
-bmx_error BMX055::read_acc_data(sensor_3D_data *accel_data)
+bmx_error_e BMX055::read_acc_data(sensor_3D_data_t *accel_data)
 {
     uint8_t reg_data[6];
     uint8_t new_data_xyz;
@@ -763,7 +763,7 @@ bmx_error BMX055::read_acc_data(sensor_3D_data *accel_data)
 /*!
  *  @brief This API is used to read the FIFO data from FIFO data register
  */
-bmx_error BMX055::read_fifo_data()
+bmx_error_e BMX055::read_fifo_data()
 {
     uint16_t fifo_data_byte_count = 0;
 
@@ -799,7 +799,7 @@ bmx_error BMX055::read_fifo_data()
     return BMX_OK;
 }
 
-bmx_error BMX055::get_fifo_frame_count()
+bmx_error_e BMX055::get_fifo_frame_count()
 {
     uint8_t reg_data;
 
@@ -816,7 +816,7 @@ bmx_error BMX055::get_fifo_frame_count()
     return BMX_OK;
 }
 
-bmx_error BMX055::fifo_extract_frames(sensor_3D_data *accel_data, uint16_t *acc_index)
+bmx_error_e BMX055::fifo_extract_frames(sensor_3D_data_t *accel_data, uint16_t *acc_index)
 {
     int8_t rslt = 0;
     uint16_t data_index = 0;
@@ -845,9 +845,9 @@ bmx_error BMX055::fifo_extract_frames(sensor_3D_data *accel_data, uint16_t *acc_
 /*!
  *  @brief This internal API is used to unpack the accel data.
  */
-bmx_error BMX055::decode_fifo_frames(sensor_3D_data *accel_data, uint16_t *data_index)
+bmx_error_e BMX055::decode_fifo_frames(sensor_3D_data_t *accel_data, uint16_t *data_index)
 {
-    bmx_error rslt;
+    bmx_error_e rslt;
 
     switch (_fifo_conf.fifo_data_select)
     {
@@ -947,7 +947,7 @@ bmx_error BMX055::decode_fifo_frames(sensor_3D_data *accel_data, uint16_t *data_
 /*!
  *  @brief This internal API is check if the fifo frame is empty.
  */
-bmx_error BMX055::fifo_frame_empty_check(uint16_t *data_index)
+bmx_error_e BMX055::fifo_frame_empty_check(uint16_t *data_index)
 {
     if ((_FIFO_data[*data_index] == 0) && (_FIFO_data[*data_index + 1] == 0) && (_FIFO_data[*data_index + 2] == 0) &&
         (_FIFO_data[*data_index + 3] == 0))
@@ -975,7 +975,7 @@ bmx_error BMX055::fifo_frame_empty_check(uint16_t *data_index)
  * @return 0 -> Success
  * @return != 0 -> Fail
  */
-bmx_error BMX055::_read_regs(uint8_t reg_addr, uint8_t *data_rd, uint32_t length)
+bmx_error_e BMX055::_read_regs(uint8_t reg_addr, uint8_t *data_rd, uint32_t length)
 {
     esp_err_t ret = ESP_FAIL;
 
@@ -1027,7 +1027,7 @@ bmx_error BMX055::_read_regs(uint8_t reg_addr, uint8_t *data_rd, uint32_t length
  * @return 0 -> Success
  * @return != 0 -> Fail
  */
-bmx_error BMX055::_write_regs(uint8_t reg_addr, uint8_t *data_wr, uint32_t length)
+bmx_error_e BMX055::_write_regs(uint8_t reg_addr, uint8_t *data_wr, uint32_t length)
 {
     esp_err_t ret = ESP_FAIL;
 
@@ -1078,7 +1078,7 @@ bmx_error BMX055::_write_regs(uint8_t reg_addr, uint8_t *data_wr, uint32_t lengt
  * @return 0 -> Success
  * @return != 0 -> Fail
  */
-bmx_error BMX055::_read_regs_dma(uint8_t reg_addr, uint8_t *data_rd, uint32_t length)
+bmx_error_e BMX055::_read_regs_dma(uint8_t reg_addr, uint8_t *data_rd, uint32_t length)
 {
     esp_err_t ret = ESP_FAIL;
 
@@ -1117,7 +1117,7 @@ bmx_error BMX055::_read_regs_dma(uint8_t reg_addr, uint8_t *data_rd, uint32_t le
     }
 }
 
-void BMX055::_convert_reg_data_to_accel(sensor_3D_data *accel, uint8_t *data_array)
+void BMX055::_convert_reg_data_to_accel(sensor_3D_data_t *accel, uint8_t *data_array)
 {
     uint32_t reg_data;
 

@@ -26,6 +26,24 @@ DPB::DPB(uint8_t escGPIO, dshot_mode_t escSpeed, gpio_num_t rotSensorGPIO, BMX05
     ESP_ERROR_CHECK(gptimer_start(_rpmTimer));
 }
 
+DPB::DPB(uint8_t escGPIO, dshot_mode_t escSpeed, gpio_num_t rotSensorGPIO, ADXL345 *accel) : Motor(escGPIO, escSpeed), RotSense(rotSensorGPIO), Accel(accelDev)
+{
+    _motorStartupTimer = xTimerCreate("MotorStartupTimer", MOTOR_STARTUP_DELAY_MS, pdFALSE, this, __motorStartupTimerCallback_static);
+    assert(_motorStartupTimer);
+
+    ESP_LOGI(TAG, "Creating rpm timer");
+    gptimer_config_t rpm_timer_config = {
+        .clk_src = GPTIMER_CLK_SRC_DEFAULT,
+        .direction = GPTIMER_COUNT_UP,
+        .resolution_hz = 1000000, // 1MHz, 1 tick=1us
+    };
+    ESP_ERROR_CHECK(gptimer_new_timer(&rpm_timer_config, &_rpmTimer));
+    ESP_LOGI(TAG, "Enable rpm timer");
+    ESP_ERROR_CHECK(gptimer_enable(_rpmTimer));
+    ESP_LOGI(TAG, "Starting rpm timer");
+    ESP_ERROR_CHECK(gptimer_start(_rpmTimer));
+}
+
 int16_t DPB::init(QueueHandle_t xQueueSysInput_handle, QueueHandle_t xQueueSysOutput_handle, TaskHandle_t supportTask_handle, DPBShared *sharedData)
 {
     if ((xQueueSysInput_handle == 0) || (xQueueSysOutput_handle == 0) || (supportTask_handle == 0) || (sharedData == 0))

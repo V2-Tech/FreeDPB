@@ -11,16 +11,6 @@
 #define BMX_FIFO_DATA_FRAME_COUNT UINT8_C(32)
 
 /*******************************************************/
-/*! @name Communication settings                       */
-/*******************************************************/
-
-/*! @name SPI pins */
-#define HSPI_MISO GPIO_NUM_32
-#define HSPI_MOSI GPIO_NUM_33
-#define HSPI_SCLK GPIO_NUM_25
-#define HSPI_SS GPIO_NUM_27
-
-/*******************************************************/
 /*! @name Registers address                            */
 /*******************************************************/
 
@@ -334,7 +324,7 @@
 /*!
  * @brief Enum to function's return errors
  */
-enum bmx_error
+enum bmx_error_e
 {
     BMX_OK,
     BMX_ERR_RD,
@@ -354,7 +344,7 @@ enum bmx_error
 /*!
  * @brief Enum to define fifo modes
  */
-enum bmx_fifo_mode
+enum bmx_fifo_mode_e
 {
     /*! Bypass mode */
     BMX_MODE_BYPASS,
@@ -367,7 +357,7 @@ enum bmx_fifo_mode
 /*!
  * @brief Enum to define fifo select data
  */
-enum bmx_fifo_data_select
+enum bmx_fifo_data_select_e
 {
     /*! X, Y and Z-axis selection */
     BMX_XYZ_AXES,
@@ -382,7 +372,7 @@ enum bmx_fifo_data_select
 /*!
  * @brief Enum to define device power modes
  */
-enum bmx_power_mode
+enum bmx_power_mode_e
 {
     BMX_NORMAL_MODE = 0x00,
     BMX_DEEP_SUSPEND_MODE = 0x01,
@@ -399,7 +389,7 @@ enum bmx_power_mode
 /*!
  * @brief BMX accel configuration structure
  */
-struct bmx_acc_conf
+struct bmx_acc_conf_t
 {
     /*! Accel g-range selection
      *  Assignable macros :
@@ -435,7 +425,7 @@ struct bmx_acc_conf
 /*!
  * @brief BMX Fifo frame configuration
  */
-struct bmx_fifo_conf
+struct bmx_fifo_conf_t
 {
     /*! While calling the API  "bma2_get_fifo_data" , length stores
      *  number of bytes in FIFO to be read (specified by user as input)
@@ -474,7 +464,7 @@ struct bmx_fifo_conf
 /*!
  * @brief BMX sensor data
  */
-struct sensor_3D_data
+struct sensor_3D_data_t
 {
     /*! X-axis sensor data */
     int16_t x;
@@ -489,7 +479,7 @@ struct sensor_3D_data
 /*!
  * @brief BMX interrupt status
  */
-struct bmx_int_status
+struct bmx_int_status_t
 {
     /*! Variable that holds the interrupt status
      * of flat, orientation, single tap, double tap, slow/no-motion, slope,
@@ -516,7 +506,7 @@ struct bmx_int_status
 /*!
  * @brief BMX interrupt sources
  */
-union bmx_int_scr
+union bmx_int_scr_u
 {
     /* Bit inversion because ESP32 work with msb architecture. In this way it's easier to manage
     memcpy conversions */

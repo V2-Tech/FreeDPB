@@ -16,9 +16,9 @@ Accel::Accel(BMX055 *accel)
     /* Initialize the communication bus */
     spi_bus_config_t buscfg =
         {
-            .mosi_io_num = HSPI_MOSI,
-            .miso_io_num = HSPI_MISO,
-            .sclk_io_num = HSPI_SCLK,
+            .mosi_io_num = ACC_SPI_MOSI,
+            .miso_io_num = ACC_SPI_MISO,
+            .sclk_io_num = ACC_SPI_SCLK,
             .quadwp_io_num = -1,
             .quadhd_io_num = -1};
     spi_device_interface_config_t devcfg =
@@ -29,8 +29,8 @@ Accel::Accel(BMX055 *accel)
             .mode = 0, // SPI mode 0
             .cs_ena_pretrans = 0,
             .cs_ena_posttrans = 0,
-            .clock_speed_hz = 10 * 1000 * 1000, // Clock out at 10 MHz
-            .spics_io_num = HSPI_SS,            // CS pin
+            .clock_speed_hz = ACC_SPI_SPEED * 1000 * 1000, // Clock out at 10 MHz
+            .spics_io_num = ACC_SPI_CS,            // CS pin
             .queue_size = 1,
             .pre_cb = NULL,
             .post_cb = NULL,
@@ -43,20 +43,20 @@ Accel::Accel(BMX055 *accel)
     ESP_LOGI(TAG, "Device added to HSPI bus");
 }
 
-uint8_t Accel::get_int_status(bmx_int_status *int_status)
+uint8_t Accel::get_int_status(bmx_int_status_t *int_status)
 {
     return _accel->get_int_status(int_status);
 }
 
 uint8_t Accel::read_acceleration_data(acc_data_i_t *dataBuffer)
 {
-    return _accel->read_acc_data((sensor_3D_data *)dataBuffer);
+    return _accel->read_acc_data((sensor_3D_data_t *)dataBuffer);
 }
 
 void Accel::get_acc_settings(accel_settings_t *actSettings)
 {
 #ifdef USE_BMX055
-    bmx_acc_conf conf;
+    bmx_acc_conf_t conf;
 
     _accel->get_accel_conf(&conf);
     *actSettings = regs_to_settings(conf.range, conf.bw, BMX);
@@ -153,7 +153,7 @@ uint8_t Accel::set_default_config(void)
 // uint8_t acceleration_update(void)
 // {
 // #ifdef USE_BMX055
-//     bmx_int_status int_status;
+//     bmx_int_status_t int_status;
 // #endif
 //
 //     accel.get_int_status(&int_status);
@@ -216,7 +216,7 @@ uint8_t Accel::set_default_config(void)
 //     uint8_t ret = 0;
 //
 // #ifdef USE_BMX055
-//     bmx_fifo_conf _fifo_conf;
+//     bmx_fifo_conf_t _fifo_conf;
 //
 //     ret += accel.get_fifo_config(&_fifo_conf);
 //     ret += accel.set_fifo_config(&_fifo_conf);
@@ -242,7 +242,7 @@ uint8_t Accel::set_default_config(void)
 //     const char *TAG = "acceleration_start_read";
 //
 // #ifdef USE_BMX055
-//     bmx_fifo_conf _fifo_conf;
+//     bmx_fifo_conf_t _fifo_conf;
 //
 //     ESP_LOGI(TAG, "Get actual FIFO configuration");
 //     ret += accel.get_fifo_config(&_fifo_conf);
@@ -265,7 +265,7 @@ uint8_t Accel::set_default_config(void)
 //     uint8_t ret = 0;
 //
 // #ifdef USE_BMX055
-//     bmx_fifo_conf _fifo_conf;
+//     bmx_fifo_conf_t _fifo_conf;
 //
 //     ret += accel.get_fifo_config(&_fifo_conf);
 //
