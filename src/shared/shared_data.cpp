@@ -5,9 +5,10 @@ DPBShared::DPBShared() : _data(new Data)
     _data->_rotCount = 0;
     _data->_rpm = 0;
     _data->_step = IDLE;
-    _data->_sampleRate = 0;
+    _data->_bandWidth = 0;
     _data->_range = 0;
     _data->_unbalanceAngle = 0;
+    _data->_unbalanceFreq = 0;
     _data->_x_peak_count = 0;
     _data->_y_peak_count = 0;
     _data->_acc_x_max_index = 0;
@@ -247,17 +248,17 @@ float_t *DPBShared::getFFTYBuffer_us(void)
     return _data->_fft_y;
 }
 
-void DPBShared::setSampleRate(uint16_t v)
+void DPBShared::setBandWidth(uint16_t v)
 {
     _lockComm();
-    _data->_sampleRate = v;
+    _data->_bandWidth = v;
     _unlockComm();
 }
 
-uint16_t DPBShared::getSampleRate()
+uint16_t DPBShared::getBandWidth()
 {
     _lockComm();
-    uint16_t v = _data->_sampleRate;
+    uint16_t v = _data->_bandWidth;
     _unlockComm();
     return v;
 }
@@ -277,17 +278,32 @@ uint16_t DPBShared::getRange()
     return v;
 }
 
-void DPBShared::setUnbalanceAngle(uint16_t v)
+void DPBShared::setUnbalanceAngle(float_t v)
 {
     _lockComm();
     _data->_unbalanceAngle = v;
     _unlockComm();
 }
 
-uint16_t DPBShared::getUnbalanceAngle()
+float_t DPBShared::getUnbalanceAngle()
 {
     _lockComm();
-    uint16_t v = _data->_unbalanceAngle;
+    float_t v = _data->_unbalanceAngle;
+    _unlockComm();
+    return v;
+}
+
+void DPBShared::setUnbalanceFreq(float_t v) 
+{
+    _lockComm();
+    _data->_unbalanceFreq = v;
+    _unlockComm();
+}
+
+float_t DPBShared::getUnbalanceFreq()
+{
+    _lockComm();
+    float_t v = _data->_unbalanceFreq;
     _unlockComm();
     return v;
 }

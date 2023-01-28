@@ -100,7 +100,7 @@ int16_t DPB::init_accel()
     }
     Accel::get_acc_settings(&as);
 
-    _xShared.setSampleRate(as.sampleRate);
+    _xShared.setBandWidth(as.band);
     _xShared.setRange(as.range);
 
     _init_status |= INIT_ACCEL_DONE;
@@ -571,8 +571,9 @@ void DPB::signal_peak_finder(void)
 
     //* Calc min distance between two real local peak
     //? Supposing time resolution of the acc data equal to 1us
-    float_t fund = _get_fundamental_freq(_xShared.getSampleRate(), FFT_DATA_BUFFER_SIZE);
+    float_t fund = _get_fundamental_freq(_xShared.getBandWidth(), FFT_DATA_BUFFER_SIZE);
     float_t peak_min_dist = ((0.9 * 1000000.0) / fund);
+    _xShared.setUnbalanceFreq(fund);
 
     //* Remove peak indexs that dont meet the min required distance
     size_t *height_sorted_Xpeak_index = new size_t[_XpeakCount](); //? Index of peak index

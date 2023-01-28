@@ -23,8 +23,8 @@
 //*******************************/
 struct accel_settings_t
 {
-    uint16_t range;      // G
-    uint16_t sampleRate; // sample/sec
+    uint16_t range; // g-forge
+    uint16_t band;  // ODR/2
 };
 
 enum acc_model_e

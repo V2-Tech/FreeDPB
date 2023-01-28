@@ -101,7 +101,6 @@ template <typename T>
 int16_t peaks_finder(T *inputArray, size_t *localPeaks, size_t *peaksCount, size_t *absMaxPeak, size_t inArraySize, size_t outArraySize)
 {
     size_t _peakCount = 0, _maxPeak = 0;
-    T last, actual, next;
 
     if ((inputArray == NULL) || (localPeaks == NULL) || (absMaxPeak == NULL) || (inArraySize == 0) || (outArraySize == 0))
     {
@@ -110,8 +109,13 @@ int16_t peaks_finder(T *inputArray, size_t *localPeaks, size_t *peaksCount, size
 
     for (size_t i = 1; i < inArraySize - 1; i++)
     {
-        // Find all local peaks index
-        if (inputArray[i] > inputArray[i - 1] && inputArray[i] > inputArray[i + 1])
+        //* Find all local peaks index
+        // Calc the derivatives
+        T deriv_act = inputArray[i] - inputArray[i - 1];
+        T deriv_next = inputArray[i + 1] - inputArray[i];
+
+        // Compare
+        if (deriv_act > 0 && deriv_next <= 0)
         {
             localPeaks[_peakCount] = i;
 
@@ -123,7 +127,7 @@ int16_t peaks_finder(T *inputArray, size_t *localPeaks, size_t *peaksCount, size
             _peakCount++;
         }
 
-        // Find absolute peak index
+        //* Find absolute peak index
         if ((inputArray[i] > inputArray[_maxPeak]))
         {
             _maxPeak = i;
@@ -135,6 +139,5 @@ int16_t peaks_finder(T *inputArray, size_t *localPeaks, size_t *peaksCount, size
 
     return 0;
 }
-
 
 #endif

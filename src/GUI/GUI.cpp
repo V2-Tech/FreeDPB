@@ -30,6 +30,7 @@ int16_t fftX_sample[ACC_DATA_BUFFER_SIZE / 2] = {0};
 int16_t fftY_sample[ACC_DATA_BUFFER_SIZE / 2] = {0};
 
 lv_obj_t *gui_RPMLabel = NULL;
+lv_obj_t *gui_FundLabel = NULL;
 
 lv_obj_t *gui_StartButLabel = NULL;
 
@@ -229,7 +230,7 @@ void gui_FFTScreen_init(void)
     lv_obj_set_style_shadow_spread(gui_FFTYChart, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_size(gui_FFTYChart, 0, LV_PART_INDICATOR); // Do not display points on the data
     lv_chart_set_range(gui_FFTYChart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
-    lv_chart_set_axis_tick(gui_FFTYChart, LV_CHART_AXIS_PRIMARY_X, 10, 5, FFT_MAJOR_TICK_COUNT, 5, true, 50);
+    lv_chart_set_axis_tick(gui_FFTYChart, LV_CHART_AXIS_PRIMARY_X, 12, 5, FFT_MAJOR_TICK_COUNT, 10, true, 20);
     lv_obj_add_event_cb(gui_FFTYChart, FFTYChart_draw_event_cb, LV_EVENT_DRAW_PART_BEGIN, NULL); //? Event to be able to customized the tick's labels
 
     serFFTY = lv_chart_add_series(gui_FFTYChart, lv_palette_main(LV_PALETTE_BLUE), LV_CHART_AXIS_PRIMARY_Y);
@@ -250,6 +251,20 @@ void gui_FFTScreen_init(void)
     lv_obj_t *label = lv_label_create(btn); /*Add a label to the button*/
     lv_label_set_text(label, "Back");       /*Set the labels text*/
     lv_obj_center(label);
+
+    //* Create fundamental freq label
+    gui_FundLabel = lv_label_create(gui_FFTScreen); /*Add a label to the button*/
+    static lv_style_t label_style;
+    lv_style_init(&label_style);
+    lv_style_set_bg_color(&label_style, lv_palette_main(LV_PALETTE_BLUE));
+    // lv_style_set_bg_opa(&label_style, LV_OPA_100);
+    lv_style_set_text_color(&label_style, lv_palette_main(LV_PALETTE_GREEN));
+    lv_style_set_text_font(&label_style, &lv_font_montserrat_14);
+
+    lv_obj_add_style(gui_FundLabel, &label_style, 0);
+    lv_obj_set_pos(gui_FundLabel, screenWidth - 100, 2);
+    lv_obj_set_size(gui_FundLabel, 100, 20);
+    lv_label_set_text(gui_FundLabel, "0Hz"); /*Set the labels text*/
 }
 
 void slider_x_event_cb(lv_event_t *e)
@@ -324,14 +339,19 @@ void FFTXChart_draw_event_cb(lv_event_t *e)
         lv_obj_draw_part_dsc_t *dsc = lv_event_get_draw_part_dsc(e);
 
         if (!lv_obj_draw_part_check_type(dsc, &lv_chart_class, LV_CHART_DRAW_PART_TICK_LABEL))
+        {
             return;
+        }
 
         if (dsc->id == LV_CHART_AXIS_PRIMARY_X && dsc->text)
         {
-            // TODO funzione che crea automaticamente le stringhe in base a sample rate selezionato
-            uint16_t sampleRate = _xShared.getSampleRate();
-            const char *labels[FFT_MAJOR_TICK_COUNT] = {"0", "50", "100", "150", "200", "250", "300", "350", "400", "450", "500"};
-            lv_snprintf(dsc->text, dsc->text_length, "%s", labels[dsc->value]);
+            uint16_t band = _xShared.getBandWidth();
+            int16_t labels[FFT_MAJOR_TICK_COUNT];
+            for (size_t i = 0; i < FFT_MAJOR_TICK_COUNT; i++)
+            {
+                labels[i] = i * (band / (FFT_MAJOR_TICK_COUNT - 1));
+            }
+            lv_snprintf(dsc->text, dsc->text_length, "%d", labels[dsc->value]);
         }
     }
 }
@@ -361,7 +381,7 @@ void AccelChart_draw_event_cb(lv_event_t *e)
 
         //? Show points only when chart is pressed
         int32_t id = lv_chart_get_pressed_point(chart);
-        if(id == LV_CHART_POINT_NONE) 
+        if (id == LV_CHART_POINT_NONE)
         {
             return;
         }
@@ -481,7 +501,6 @@ void gui_update(void)
     {
         return;
     }
-
     gui_check_commands();
     gui_values_update();
 }
@@ -530,16 +549,9 @@ void gui_show_page(dpb_page_t page)
 
 void gui_values_update(void)
 {
-    app_steps_e status = _xShared.getAppStatus();
-    lv_label_set_text_fmt(gui_StartButLabel, status == IDLE ? "START" : "STOP");
-    if (status == IDLE)
-    {
-        lv_label_set_text_fmt(gui_RPMLabel, "%d", 0);
-    }
-    else
-    {
-        lv_label_set_text_fmt(gui_RPMLabel, "%d", _xShared.getRPM());
-    }
+    _update_but_labels();
+    _update_rpm();
+    _update_fund();
 }
 
 void gui_charts_update(void)
@@ -668,4 +680,31 @@ void _chart_Y_autorange(lv_obj_t *chart_obj, lv_chart_series_t *ser)
 void _ask_peak_draw(void)
 {
     _peak_draw_done = 0;
+}
+
+void _update_rpm(void)
+{
+    app_steps_e status = _xShared.getAppStatus();
+    if (status == IDLE)
+    {
+        lv_label_set_text_fmt(gui_RPMLabel, "%d", 0);
+    }
+    else
+    {
+        lv_label_set_text_fmt(gui_RPMLabel, "%d", _xShared.getRPM());
+    }
+}
+
+void _update_fund(void)
+{
+    if (_gui_act_page == FFT_PAGE)
+    {
+        lv_label_set_text_fmt(gui_FundLabel, "%.1fHz", _xShared.getUnbalanceFreq());
+    }
+}
+
+void _update_but_labels(void)
+{
+    app_steps_e status = _xShared.getAppStatus();
+    lv_label_set_text_fmt(gui_StartButLabel, status == IDLE ? "START" : "STOP");
 }

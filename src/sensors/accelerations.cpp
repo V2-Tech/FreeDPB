@@ -129,9 +129,11 @@ accel_settings_t Accel::regs_to_settings(uint8_t range_reg, uint8_t bw_reg, acc_
     {
     case BMX:
         as.range = bmx_range_converter(range_reg);
-        as.sampleRate = bmx_bw_converter(bw_reg);
+        as.band = bmx_bw_converter(bw_reg);
         break;
     case ADXL:
+        as.range = adxl_range_converter(range_reg);
+        as.band = adxl_bw_converter(bw_reg);
         break;
     default:
         break;
@@ -196,134 +198,61 @@ int16_t Accel::bmx_bw_converter(uint8_t bw_reg)
     }
 }
 
+int16_t Accel::adxl_range_converter(uint8_t range_reg)
+{
+    switch (range_reg)
+    {
+    case ADXL345_RANGE_2_G:
+        return 2;
+        break;
+    case ADXL345_RANGE_4_G:
+        return 4;
+        break;
+    case ADXL345_RANGE_8_G:
+        return 8;
+        break;
+    case ADXL345_RANGE_16_G:
+        return 16;
+        break;
+    default:
+        return 0;
+        break;
+    }
+}
+
+int16_t Accel::adxl_bw_converter(uint8_t bw_reg)
+{
+    switch (bw_reg)
+    {
+    case ADXL345_DATARATE_50_HZ:
+        return 25;
+        break;
+    case ADXL345_DATARATE_100_HZ:
+        return 50;
+        break;
+    case ADXL345_DATARATE_200_HZ:
+        return 100;
+        break;
+    case ADXL345_DATARATE_400_HZ:
+        return 200;
+        break;
+    case ADXL345_DATARATE_800_HZ:
+        return 400;
+        break;
+    case ADXL345_DATARATE_1600_HZ:
+        return 800;
+        break;
+    case ADXL345_DATARATE_3200_HZ:
+        return 1600;
+        break;
+    default:
+        return 0;
+        break;
+    }
+}
+
 uint8_t Accel::set_default_config(void)
 {
     ESP_LOGI(TAG, "Initalizing accelerometer's registers with app default values");
     return _accel->init(_spi);
 }
-
-// uint8_t acceleration_update(void)
-// {
-// #ifdef USE_BMX055
-//     bmx_int_status_t int_status;
-// #endif
-//
-//     accel.get_int_status(&int_status);
-//     if (int_status.int_status_1 & BMX_INT_1_ASSERTED_FIFO_WM)
-//     {
-//         acceleration_read_data();
-//     }
-//
-//     return 0;
-// }
-//
-// uint8_t acceleration_read_data()
-// {
-// #ifdef USE_BMX055
-//     /* Read fifo data */
-//     accel.read_fifo_data();
-//
-//     /* Convert fifo data into accelerations packets */
-//     accel.fifo_extract_frames(accel_data, &acc_index);
-//
-//     /* Add value to analized buffer */
-//     acceleration_send2FIFO();
-// #endif
-//
-//     return ESP_OK;
-// }
-//
-// uint8_t acceleration_send2FIFO()
-// {
-//     uint8_t idx;
-//     acc_sensor_data data;
-//     command_data_t command;
-//
-//     for (idx = 0; idx < acc_index; idx++)
-//     {
-//         data.accel_data[0] = static_cast<float>(accel_data[idx].x);
-//         data.accel_data[1] = static_cast<float>(accel_data[idx].y);
-//         data.accel_data[2] = static_cast<float>(accel_data[idx].z);
-//
-//         _pDataBuffer->push(data);
-//
-//         if (_pDataBuffer->full())
-//         {
-//             acceleration_stop_read();
-//
-//             command.command = APP_CMD;
-//             command.value = ANALYSING;
-//
-//             xQueueSend(_xQueueAcc2Sys, &command, portMAX_DELAY);
-//
-//             return ESP_OK;
-//         }
-//     }
-//
-//     return ESP_OK;
-// }
-//
-// uint8_t acceleration_FIFOFlush(void)
-// {
-//     uint8_t ret = 0;
-//
-// #ifdef USE_BMX055
-//     bmx_fifo_conf_t _fifo_conf;
-//
-//     ret += accel.get_fifo_config(&_fifo_conf);
-//     ret += accel.set_fifo_config(&_fifo_conf);
-//     ret += accel.get_fifo_config(&_fifo_conf);
-//
-//     if (_fifo_conf.fifo_frame_count != 0)
-//     {
-//         ret++;
-//     }
-// #endif
-//
-// #ifdef APP_DEBUG_MODE
-//     printf("%s\n", (_fifo_conf.fifo_frame_count == 0) ? "FIFO flushed" : "FIFO flushing: error occured");
-// #endif
-//
-//     return ret;
-// }
-//
-// uint8_t acceleration_start_read(void)
-// {
-//     uint8_t ret = 0;
-//     command_data_t command;
-//     const char *TAG = "acceleration_start_read";
-//
-// #ifdef USE_BMX055
-//     bmx_fifo_conf_t _fifo_conf;
-//
-//     ESP_LOGI(TAG, "Get actual FIFO configuration");
-//     ret += accel.get_fifo_config(&_fifo_conf);
-//
-//     ESP_LOGI(TAG, "Enabling FIFO data collection ");
-//     _fifo_conf.fifo_mode_select = BMX_MODE_FIFO;
-//     ret += accel.set_fifo_config(&_fifo_conf);
-// #endif
-//
-//     command.command = APP_CMD;
-//     command.value = VIBES_REC;
-//
-//     xQueueSend(_xQueueAcc2Sys, &command, portMAX_DELAY);
-//
-//     return ret;
-// }
-//
-// uint8_t acceleration_stop_read(void)
-// {
-//     uint8_t ret = 0;
-//
-// #ifdef USE_BMX055
-//     bmx_fifo_conf_t _fifo_conf;
-//
-//     ret += accel.get_fifo_config(&_fifo_conf);
-//
-//     _fifo_conf.fifo_mode_select = BMX_MODE_BYPASS;
-//     ret += accel.set_fifo_config(&_fifo_conf);
-// #endif
-//
-//     return ret;
-// }

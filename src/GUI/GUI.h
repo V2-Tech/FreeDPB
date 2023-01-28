@@ -12,7 +12,7 @@
 //*      DEFINES         */
 //************************/
 #define LV_TICK_PERIOD_MS 1
-#define FFT_MAJOR_TICK_COUNT 11
+#define FFT_MAJOR_TICK_COUNT 5 + 1
 
 static const uint16_t screenWidth = 320;
 static const uint16_t screenHeight = 240;
@@ -148,5 +148,7 @@ void gui_fft_update(void);
 void _display_init(void);
 void _chart_Y_autorange(lv_obj_t *chart_obj, lv_chart_series_t *ser);
 void _ask_peak_draw(void);
-
+void _update_rpm(void);
+void _update_fund(void);
+void _update_but_labels(void);
 #endif

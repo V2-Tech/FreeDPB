@@ -52,13 +52,15 @@ public:
     float_t *getFFTXBuffer_us(void);
     float_t *getFFTYBuffer_us(void);
 
-    void setSampleRate(uint16_t v);
-    uint16_t getSampleRate();
+    void setBandWidth(uint16_t v);
+    uint16_t getBandWidth();
     void setRange(uint16_t v);
     uint16_t getRange();
 
-    void setUnbalanceAngle(uint16_t v);
-    uint16_t getUnbalanceAngle();
+    void setUnbalanceAngle(float_t v);
+    float_t getUnbalanceAngle();
+    void setUnbalanceFreq(float_t v);
+    float_t getUnbalanceFreq();
 
     void setXPeaksIndex(size_t v, uint32_t index);
     size_t getXPeakIndex(uint32_t index);
@@ -100,9 +102,10 @@ private:
         uint64_t _dpb_time[ACC_DATA_BUFFER_SIZE] = {0};
         float_t _fft_x[FFT_DATA_BUFFER_SIZE] = {0};
         float_t _fft_y[FFT_DATA_BUFFER_SIZE] = {0};
-        uint16_t _sampleRate;
+        uint16_t _bandWidth;
         uint16_t _range;
-        uint16_t _unbalanceAngle;
+        float_t _unbalanceAngle;
+        float_t _unbalanceFreq;
         size_t _x_peak_index[ACC_DATA_BUFFER_SIZE] = {0};
         size_t _y_peak_index[ACC_DATA_BUFFER_SIZE] = {0};
         size_t _x_peak_count;
