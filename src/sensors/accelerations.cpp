@@ -11,8 +11,9 @@ static const char *TAG = "ACCELERATIONS";
 
 Accel::Accel(BMX055 *accel)
 {
+#ifdef USE_BMX055
     _accel = accel;
-
+#endif
     /* Initialize the communication bus */
     spi_bus_config_t buscfg =
         {
@@ -30,7 +31,43 @@ Accel::Accel(BMX055 *accel)
             .cs_ena_pretrans = 0,
             .cs_ena_posttrans = 0,
             .clock_speed_hz = ACC_SPI_SPEED * 1000 * 1000, // Clock out at 10 MHz
-            .spics_io_num = ACC_SPI_CS,            // CS pin
+            .spics_io_num = ACC_SPI_CS,                    // CS pin
+            .queue_size = 1,
+            .pre_cb = NULL,
+            .post_cb = NULL,
+        };
+    ESP_ERROR_CHECK(spi_bus_initialize(HSPI_HOST, &buscfg, SPI_DMA_CH_AUTO));
+    ESP_LOGI(TAG, "Bus initialized");
+
+    // Attach the Accelerometer to the SPI bus
+    ESP_ERROR_CHECK(spi_bus_add_device(HSPI_HOST, &devcfg, &_spi));
+    ESP_LOGI(TAG, "Device added to HSPI bus");
+}
+
+Accel::Accel(ADXL345 *accel)
+{
+#ifdef USE_ADXL345
+    _accel = accel;
+#endif
+
+    /* Initialize the communication bus */
+    spi_bus_config_t buscfg =
+        {
+            .mosi_io_num = ACC_SPI_MOSI,
+            .miso_io_num = ACC_SPI_MISO,
+            .sclk_io_num = ACC_SPI_SCLK,
+            .quadwp_io_num = -1,
+            .quadhd_io_num = -1};
+    spi_device_interface_config_t devcfg =
+        {
+            .command_bits = 0,
+            .address_bits = 8,
+            .dummy_bits = 0,
+            .mode = 3, // SPI mode 0
+            .cs_ena_pretrans = 0,
+            .cs_ena_posttrans = 0,
+            .clock_speed_hz = ACC_SPI_SPEED * 1000 * 1000, // Clock out at 10 MHz
+            .spics_io_num = ACC_SPI_CS,                    // CS pin
             .queue_size = 1,
             .pre_cb = NULL,
             .post_cb = NULL,
@@ -45,12 +82,27 @@ Accel::Accel(BMX055 *accel)
 
 uint8_t Accel::get_int_status(bmx_int_status_t *int_status)
 {
+#ifdef USE_BMX055
     return _accel->get_int_status(int_status);
+#endif
+    return ESP_FAIL;
+}
+
+uint8_t Accel::get_int_status(adxl_int_status_t *int_status)
+{
+#ifdef USE_ADXL345
+    return _accel->get_int_status(int_status);
+#endif
+    return ESP_FAIL;
 }
 
 uint8_t Accel::read_acceleration_data(acc_data_i_t *dataBuffer)
 {
+#ifdef USE_BMX055
     return _accel->read_acc_data((sensor_3D_data_t *)dataBuffer);
+#elif USE_ADXL345
+    return _accel->read_acc_data((adxl_3D_data_t *)dataBuffer);
+#endif
 }
 
 void Accel::get_acc_settings(accel_settings_t *actSettings)
@@ -62,7 +114,7 @@ void Accel::get_acc_settings(accel_settings_t *actSettings)
     *actSettings = regs_to_settings(conf.range, conf.bw, BMX);
 
 #elif USE_ADXL345
-    adxl_acc_conf conf;
+    adxl_acc_conf_t conf;
 
     _accel->get_accel_conf(&conf);
     *actSettings = regs_to_settings(conf.range, conf.bw, ADXL);

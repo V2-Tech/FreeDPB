@@ -26,7 +26,7 @@ DPB::DPB(uint8_t escGPIO, dshot_mode_t escSpeed, gpio_num_t rotSensorGPIO, BMX05
     ESP_ERROR_CHECK(gptimer_start(_rpmTimer));
 }
 
-DPB::DPB(uint8_t escGPIO, dshot_mode_t escSpeed, gpio_num_t rotSensorGPIO, ADXL345 *accel) : Motor(escGPIO, escSpeed), RotSense(rotSensorGPIO), Accel(accelDev)
+DPB::DPB(uint8_t escGPIO, dshot_mode_t escSpeed, gpio_num_t rotSensorGPIO, ADXL345 *accelDev) : Motor(escGPIO, escSpeed), RotSense(rotSensorGPIO), Accel(accelDev)
 {
     _motorStartupTimer = xTimerCreate("MotorStartupTimer", MOTOR_STARTUP_DELAY_MS, pdFALSE, this, __motorStartupTimerCallback_static);
     assert(_motorStartupTimer);

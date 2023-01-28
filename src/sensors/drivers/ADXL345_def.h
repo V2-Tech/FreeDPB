@@ -6,7 +6,7 @@
 /*******************************************************/
 
 /*! @name Registers list */
-#define ADXL345_REG_CHIPID (0x00)          ///< Device ID
+#define ADXL345_REG_CHIPID (0x00)         ///< Device ID
 #define ADXL345_REG_THRESH_TAP (0x1D)     ///< Tap threshold
 #define ADXL345_REG_OFSX (0x1E)           ///< X-axis offset
 #define ADXL345_REG_OFSY (0x1F)           ///< Y-axis offset
@@ -54,13 +54,38 @@
 #define ADXL345_CHIPID UINT8_C(0xE5)
 #define ADXL345_MG2G_MULTIPLIER (0.004) ///< 4mg per lsb
 
+/**********************************************************/
+/*!  @name         COMMON MACROS                          */
+/**********************************************************/
+#define ADXL345_RES_MAX_VAL UINT8_C(511)
+#define ADXL345_RES_NEG_VAL UINT8_C(1024)
+#define ADXL345_RES_MASK UINT8_C(0x7FF)
+
+/********************************************************/
+/*! @name Macro to SET and GET BITS of registers        */
+/********************************************************/
+/* Bits GET and SET functions */
+#define ADXL_SET_BITS(reg_data, bitname, data) ((reg_data & ~(bitname##_MSK)) | ((data << bitname##_POS) & bitname##_MSK))
+
+#define ADXL_GET_BITS(reg_data, bitname) ((reg_data & (bitname##_MSK)) >> (bitname##_POS))
+
+#define ADXL_SET_BITS_POS_0(reg_data, bitname, data) ((reg_data & ~(bitname##_MSK)) | (data & bitname##_MSK))
+
+#define ADXL_GET_BITS_POS_0(reg_data, bitname) (reg_data & (bitname##_MSK))
+
+#define ADXL_SET_BIT_VAL_0(reg_data, bitname) (reg_data & ~(bitname##_MSK))
+
+/* Accelerometer confgiurations MASK */
+#define ADXL_RANGE_MSK UINT8_C(0x03)
+#define ADXL_BW_MSK UINT8_C(0x0F)
+
 /***********************************************************************/
 /*!  @name         Enum Declarations                                  */
 /***********************************************************************/
 /**
  * @brief Used with register 0x2C (ADXL345_REG_BW_RATE) to set bandwidth
  */
-typedef enum
+enum dataRate_e
 {
     ADXL345_DATARATE_3200_HZ = 0b1111, ///< 1600Hz Bandwidth
     ADXL345_DATARATE_1600_HZ = 0b1110, ///<  800Hz Bandwidth
@@ -78,18 +103,18 @@ typedef enum
     ADXL345_DATARATE_0_39_HZ = 0b0010, ///< 0.20Hz Bandwidth
     ADXL345_DATARATE_0_20_HZ = 0b0001, ///< 0.10Hz Bandwidth
     ADXL345_DATARATE_0_10_HZ = 0b0000  ///< 0.05Hz Bandwidth (default value)
-} dataRate_e;
+};
 
 /**
  * @brief  Used with register 0x31 (ADXL345_REG_DATA_FORMAT) to set g range
  */
-typedef enum
+enum range_e
 {
     ADXL345_RANGE_16_G = 0b11, ///< +/- 16g
     ADXL345_RANGE_8_G = 0b10,  ///< +/- 8g
     ADXL345_RANGE_4_G = 0b01,  ///< +/- 4g
     ADXL345_RANGE_2_G = 0b00   ///< +/- 2g (default value)
-} range_e;
+};
 
 /*!
  * @brief Enum to function's return errors
@@ -111,9 +136,34 @@ enum adxl_error_e
     ADXL_ERR_NO_NEW_AVAILABLE,
 };
 
+/*!
+ * @brief Enum to define device power modes
+ */
+enum adxl_power_mode_e
+{
+    ADXL_NORMAL_MODE,
+    ADXL_STANDBY_MODE,
+    ADXL_SLEEP_MODE
+};
+
 /************************************************/
 /*!  @name        Struct Declarations           */
 /************************************************/
+/*!
+ * @brief ADXL345 sensor data
+ */
+struct adxl_3D_data_t
+{
+    /*! X-axis sensor data */
+    int16_t x;
+
+    /*! Y-axis sensor data */
+    int16_t y;
+
+    /*! Z-axis sensor data */
+    int16_t z;
+};
+
 /*!
  * @brief ADXL345 accel configuration structure
  */
@@ -122,8 +172,27 @@ struct adxl_acc_conf_t
     /*! Accel g-range selection */
     uint8_t range;
 
-    /*! Sample rate (output data rate) */
-    uint8_t odr;
+    /*! Bandwidth */
+    uint8_t bw;
+};
+
+struct adxl_int_status_t
+{
+    union
+    {
+        uint8_t int_status;
+        struct
+        {
+            unsigned ovr : 1;
+            unsigned wtm : 1;
+            unsigned free_fall : 1;
+            unsigned inactivity : 1;
+            unsigned activity : 1;
+            unsigned double_tap : 1;
+            unsigned single_tap : 1;
+            unsigned data_rdy : 1;
+        };
+    };
 };
 
 #endif

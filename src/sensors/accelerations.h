@@ -39,14 +39,12 @@ enum acc_model_e
 class Accel
 {
 public:
-#ifdef USE_BMX055
     Accel(BMX055 *accel);
-#elif USE_ADXL345
     Accel(ADXL345 *accel);
-#endif
 
     uint8_t set_default_config(void);
     uint8_t get_int_status(bmx_int_status_t *int_status);
+    uint8_t get_int_status(adxl_int_status_t *int_status);
     uint8_t read_acceleration_data(acc_data_i_t *dataBuffer);
 
     void get_acc_settings(accel_settings_t *actSettings);

@@ -472,12 +472,12 @@ void DPBShared::_unlockPeaksIndex()
     xSemaphoreGive(_xSemPeaksIndex);
 }
 
-void DPBShared::_unlockFFT()
+void DPBShared::_lockFFT()
 {
     xSemaphoreTake(_xSemFFT, portMAX_DELAY);
 }
 
-void DPBShared::_lockFFT()
+void DPBShared::_unlockFFT()
 {
     xSemaphoreGive(_xSemFFT);
 }
