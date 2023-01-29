@@ -1,6 +1,9 @@
 file(GLOB SRCS
     tasks/*.cpp
     GUI/*.cpp
+    GUI/images/*.c
+    GUI/icons/*.c
+    GUI/pages/*.cpp
     sensors/*.cpp
     sensors/drivers/*.cpp
     motor/*.cpp
@@ -14,6 +17,9 @@ file(GLOB SRCS
 file(GLOB INCL
     tasks
     GUI
+    GUI/icons
+    GUI/images
+    GUI/pages
     sensors
     sensors/drivers
     motor

@@ -114,8 +114,10 @@ public:
 //*******************************/
 enum dpb_page_t
 {
-    IDLE_PAGE,
-    FFT_PAGE,
+  LOADING_PAGE,
+  MAIN_PAGE,
+  IDLE_PAGE,
+  FFT_PAGE,
 };
 
 //*********************************/
@@ -125,6 +127,8 @@ void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color
 void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data);
 
 uint8_t gui_init(QueueHandle_t xQueueComp2Sys_handle, QueueHandle_t xQueueSys2Comp_handle);
+void gui_LoadingScreen_init(void);
+void gui_MainScreen_init(void);
 void gui_IdleScreen_init(void);
 void gui_FFTScreen_init(void);
 void slider_x_event_cb(lv_event_t *e);
@@ -146,6 +150,7 @@ void gui_charts_update(void);
 void gui_fft_update(void);
 
 void _display_init(void);
+void _create_main_menu(void);
 void _chart_Y_autorange(lv_obj_t *chart_obj, lv_chart_series_t *ser);
 void _ask_peak_draw(void);
 void _update_rpm(void);

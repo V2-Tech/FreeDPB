@@ -37,6 +37,7 @@ public:
     void exe(command_data_t command);
     void ask_acc_charts_update(void);
     void ask_fft_chart_update(void);
+    void ask_main_page(void);
     int16_t filter_data_iir(data_orig_e data_type);
     int16_t filter_data_iir_zero(data_orig_e data_type);
     int16_t fft_calc(data_orig_e data_type);

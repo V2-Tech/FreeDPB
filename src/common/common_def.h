@@ -75,10 +75,14 @@ enum sys_command_e
     APP_CMD,
     MOTOR_CMD,
     START_BUT_CMD,
-    ACC_CHART_UPDATE_CMD,
+    GUI_ACC_CHART_UPDATE_CMD,
     FFT_REQUEST_CMD,
-    FFT_CHART_UPDATE_CMD,
+    GUI_FFT_CHART_UPDATE_CMD,
     LPF_REQUEST_CMD,
+    GUI_INIT_COMPLETE_CMD,
+    GUI_INIT_ACC_CMD, //ToDo
+    GUI_INIT_RPM_CMD, //ToDo
+    GUI_INIT_ESC_CMD, //ToDo
 };
 
 enum app_command_e

@@ -3,42 +3,54 @@
 //************************/
 //*      VARIABLES       */
 //************************/
+//* Inter-pages usage
 static LGFX tft;
+DPBShared &_xShared = DPBShared::getInstance();
 static lv_disp_draw_buf_t draw_buf;
 static lv_color_t buf[screenWidth * 10];
 static QueueHandle_t _xQueueCom2Sys = NULL;
 static QueueHandle_t _xQueueSys2Comp = NULL;
 static uint8_t _gui_init_done = 0;
-DPBShared &_xShared = DPBShared::getInstance();
-static dpb_page_t _gui_act_page = IDLE_PAGE;
+static dpb_page_t _gui_act_page = LOADING_PAGE;
 static uint8_t _peak_draw_done = 0;
 
+//* Pages handler
+lv_obj_t *gui_LoadingScreen = NULL;
+lv_obj_t *gui_MainScreen = NULL;
 lv_obj_t *gui_IdleScreen = NULL;
 lv_obj_t *gui_FFTScreen = NULL;
 
+//* Idle screen objects
+// Acceleration charts
 lv_obj_t *gui_AccelChart = NULL;
-lv_obj_t *gui_AccelChart_Xslider = NULL;
-lv_obj_t *gui_AccelChart_Yslider = NULL;
 lv_chart_series_t *serAccX = NULL;
 lv_chart_series_t *serAccY = NULL;
+int16_t accX_sample[ACC_CHART_POINT_COUNT] = {0};
+int16_t accY_sample[ACC_CHART_POINT_COUNT] = {0};
+lv_obj_t *gui_AccelChart_Xslider = NULL;
+lv_obj_t *gui_AccelChart_Yslider = NULL;
+// Buttons
+lv_obj_t *gui_StartButLabel = NULL;
+// Labels
+lv_obj_t *gui_RPMLabel = NULL;
+lv_obj_t *gui_angleXLabel = NULL;
+lv_obj_t *gui_angleYLabel = NULL;
 
+//* FFT screen objects
+// Fourier charts
 lv_obj_t *gui_FFTXChart = NULL;
 lv_obj_t *gui_FFTYChart = NULL;
 lv_chart_series_t *serFFTX = NULL;
 lv_chart_series_t *serFFTY = NULL;
-int16_t fftX_sample[ACC_DATA_BUFFER_SIZE / 2] = {0};
-int16_t fftY_sample[ACC_DATA_BUFFER_SIZE / 2] = {0};
+int16_t fftX_sample[FFT_DATA_BUFFER_SIZE] = {0};
+int16_t fftY_sample[FFT_DATA_BUFFER_SIZE] = {0};
+// Buttons
 
-lv_obj_t *gui_RPMLabel = NULL;
+// Labels
 lv_obj_t *gui_FundLabel = NULL;
-lv_obj_t *gui_angleXLabel = NULL;
-lv_obj_t *gui_angleYLabel = NULL;
 
-lv_obj_t *gui_StartButLabel = NULL;
-
-size_t pcnt;
-int16_t accX_sample[ACC_CHART_POINT_COUNT] = {0};
-int16_t accY_sample[ACC_CHART_POINT_COUNT] = {0};
+//* Images declarations
+LV_IMG_DECLARE(prop);
 
 //?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
 //?         FUNCTIONS DEFINITION        /
@@ -93,18 +105,58 @@ uint8_t gui_init(QueueHandle_t xQueueComp2Sys_handle, QueueHandle_t xQueueSys2Co
 
     _display_init();
 
-    lv_disp_t *dispp = lv_disp_get_default();
-    lv_theme_t *theme = lv_theme_default_init(dispp, lv_palette_main(LV_PALETTE_BLUE), lv_palette_main(LV_PALETTE_RED),
+    lv_disp_t *disp = lv_disp_get_default();
+    lv_theme_t *theme = lv_theme_default_init(disp, lv_palette_main(LV_PALETTE_BLUE), lv_palette_main(LV_PALETTE_RED),
                                               true, LV_FONT_DEFAULT);
 
-    lv_disp_set_theme(dispp, theme);
+    lv_disp_set_theme(disp, theme);
+    gui_LoadingScreen_init();
+    gui_MainScreen_init();
     gui_IdleScreen_init();
     gui_FFTScreen_init();
-    gui_show_page(IDLE_PAGE);
+    gui_show_page(LOADING_PAGE);
 
     _gui_init_done = 1;
 
     return ret;
+}
+
+void gui_LoadingScreen_init(void)
+{
+    //* Create LOADING SCREEN object
+    gui_LoadingScreen = lv_obj_create(NULL);
+    lv_obj_clear_flag(gui_LoadingScreen, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_bg_color(gui_LoadingScreen, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+
+    //* Create spinner*/
+    lv_obj_t *spinner = lv_spinner_create(gui_LoadingScreen, 1000, 60);
+    lv_obj_set_size(spinner, 180, 180);
+    lv_obj_align_to(spinner, gui_LoadingScreen, LV_ALIGN_TOP_MID, 0, 10);
+}
+
+void gui_MainScreen_init(void)
+{
+    //* Create MAIN SCREEN object
+    gui_MainScreen = lv_obj_create(NULL);
+    lv_obj_clear_flag(gui_MainScreen, LV_OBJ_FLAG_SCROLLABLE);
+
+    //* Create the menu
+    _create_main_menu();
+
+    //* Create propeller image
+    lv_obj_t * prop_img = lv_img_create(gui_MainScreen);
+    lv_img_set_src(prop_img, &prop);
+    lv_img_set_angle(prop_img, 90 * 10);
+    //lv_img_set_pivot(prop_img, 0, 0);  //To zoom from the left top corner
+    float_t k = 256 * 0.8;
+    lv_img_set_zoom(prop_img, (uint16_t)k);
+    lv_obj_align(prop_img, LV_ALIGN_LEFT_MID, -25, 0);
+
+    //* Create start button
+#error //TODO continua con la creazione delle varie pagine pensando a come implementare un menu. Crea vari file .h e .cpp per ogni pagina.
+    //* Create magnitude label
+
+    //* Create unbalance angle label
 }
 
 void gui_IdleScreen_init(void)
@@ -134,8 +186,7 @@ void gui_IdleScreen_init(void)
     serAccX = lv_chart_add_series(gui_AccelChart, ACCX_TRACE_COLOR, LV_CHART_AXIS_PRIMARY_Y);
     serAccY = lv_chart_add_series(gui_AccelChart, ACCY_TRACE_COLOR, LV_CHART_AXIS_PRIMARY_Y);
 
-    pcnt = sizeof(accX_sample) / sizeof(accX_sample[0]);
-    lv_chart_set_point_count(gui_AccelChart, pcnt);
+    lv_chart_set_point_count(gui_AccelChart, ACC_CHART_POINT_COUNT);
     lv_chart_set_ext_y_array(gui_AccelChart, serAccX, (lv_coord_t *)accX_sample);
     lv_chart_set_ext_y_array(gui_AccelChart, serAccY, (lv_coord_t *)accY_sample);
 
@@ -241,7 +292,7 @@ void gui_FFTScreen_init(void)
 
     serFFTX = lv_chart_add_series(gui_FFTXChart, lv_palette_main(LV_PALETTE_RED), LV_CHART_AXIS_PRIMARY_Y);
 
-    lv_chart_set_point_count(gui_FFTXChart, ACC_DATA_BUFFER_SIZE / 2);
+    lv_chart_set_point_count(gui_FFTXChart, FFT_DATA_BUFFER_SIZE);
     lv_chart_set_ext_y_array(gui_FFTXChart, serFFTX, (lv_coord_t *)fftX_sample);
 
     //* Create chart with traces for FFTY
@@ -263,7 +314,7 @@ void gui_FFTScreen_init(void)
 
     serFFTY = lv_chart_add_series(gui_FFTYChart, lv_palette_main(LV_PALETTE_BLUE), LV_CHART_AXIS_PRIMARY_Y);
 
-    lv_chart_set_point_count(gui_FFTYChart, pcnt / 2);
+    lv_chart_set_point_count(gui_FFTYChart, FFT_DATA_BUFFER_SIZE);
     lv_chart_set_ext_y_array(gui_FFTYChart, serFFTY, (lv_coord_t *)fftX_sample);
 
     //! Hidden
@@ -547,11 +598,15 @@ void gui_exe(command_data_t command)
 {
     switch (command.command)
     {
-    case ACC_CHART_UPDATE_CMD:
+    case GUI_ACC_CHART_UPDATE_CMD:
         gui_charts_update();
         break;
-    case FFT_CHART_UPDATE_CMD:
+    case GUI_FFT_CHART_UPDATE_CMD:
         gui_fft_update();
+        break;
+    case GUI_INIT_COMPLETE_CMD:
+        // gui_show_page(IDLE_PAGE);
+        gui_show_page(MAIN_PAGE);
         break;
     default:
         break;
@@ -567,6 +622,12 @@ void gui_show_page(dpb_page_t page)
         break;
     case FFT_PAGE:
         lv_disp_load_scr(gui_FFTScreen);
+        break;
+    case LOADING_PAGE:
+        lv_disp_load_scr(gui_LoadingScreen);
+        break;
+    case MAIN_PAGE:
+        lv_disp_load_scr(gui_MainScreen);
         break;
     default:
         break;
@@ -595,7 +656,7 @@ void gui_charts_update(void)
     pAccXBuff = _xShared.getDPBDataFltAccXBuffer_us();
     pAccYBuff = _xShared.getDPBDataFltAccYBuffer_us();
 
-    for (size_t i = 0; i < pcnt; i++)
+    for (size_t i = 0; i < ACC_CHART_POINT_COUNT; i++)
     {
         accX_sample[i] = pAccXBuff[i];
         accY_sample[i] = pAccYBuff[i];
@@ -679,6 +740,104 @@ void _display_init(void)
     lv_indev_drv_register(&indev_drv);
 }
 
+void _create_main_menu(void)
+{
+//  //* Create menu object
+//  lv_obj_t *menu = lv_menu_create(lv_scr_act());
+//
+//  //* Set menu background color
+//  lv_color_t bg_color = lv_obj_get_style_bg_color(menu, 0);
+//  if (lv_color_brightness(bg_color) > 127)
+//  {
+//      lv_obj_set_style_bg_color(menu, lv_color_darken(lv_obj_get_style_bg_color(menu, 0), 10), 0);
+//  }
+//  else
+//  {
+//      lv_obj_set_style_bg_color(menu, lv_color_darken(lv_obj_get_style_bg_color(menu, 0), 50), 0);
+//  }
+//  lv_menu_set_mode_root_back_btn(menu, LV_MENU_ROOT_BACK_BTN_DISABLED);
+//  lv_obj_set_size(menu, lv_disp_get_hor_res(NULL), lv_disp_get_ver_res(NULL));
+//  lv_obj_center(menu);
+//  //lv_obj_add_event_cb(menu, back_event_handler, LV_EVENT_CLICKED, menu);
+//
+//  lv_obj_t *cont;
+//  lv_obj_t *section;
+//
+//  /*Create sub pages*/
+//  lv_obj_t *sub_mechanics_page = lv_menu_page_create(menu, NULL);
+//  lv_obj_set_style_pad_hor(sub_mechanics_page, lv_obj_get_style_pad_left(lv_menu_get_main_header(menu), 0), 0);
+//  lv_menu_separator_create(sub_mechanics_page);
+//  section = lv_menu_section_create(sub_mechanics_page);
+//  create_slider(section, LV_SYMBOL_SETTINGS, "Velocity", 0, 150, 120);
+//  create_slider(section, LV_SYMBOL_SETTINGS, "Acceleration", 0, 150, 50);
+//  create_slider(section, LV_SYMBOL_SETTINGS, "Weight limit", 0, 150, 80);
+//
+//  lv_obj_t *sub_sound_page = lv_menu_page_create(menu, NULL);
+//  lv_obj_set_style_pad_hor(sub_sound_page, lv_obj_get_style_pad_left(lv_menu_get_main_header(menu), 0), 0);
+//  lv_menu_separator_create(sub_sound_page);
+//  section = lv_menu_section_create(sub_sound_page);
+//  create_switch(section, LV_SYMBOL_AUDIO, "Sound", false);
+//
+//  lv_obj_t *sub_display_page = lv_menu_page_create(menu, NULL);
+//  lv_obj_set_style_pad_hor(sub_display_page, lv_obj_get_style_pad_left(lv_menu_get_main_header(menu), 0), 0);
+//  lv_menu_separator_create(sub_display_page);
+//  section = lv_menu_section_create(sub_display_page);
+//  create_slider(section, LV_SYMBOL_SETTINGS, "Brightness", 0, 150, 100);
+//
+//  lv_obj_t *sub_software_info_page = lv_menu_page_create(menu, NULL);
+//  lv_obj_set_style_pad_hor(sub_software_info_page, lv_obj_get_style_pad_left(lv_menu_get_main_header(menu), 0), 0);
+//  section = lv_menu_section_create(sub_software_info_page);
+//  create_text(section, NULL, "Version 1.0", LV_MENU_ITEM_BUILDER_VARIANT_1);
+//
+//  lv_obj_t *sub_legal_info_page = lv_menu_page_create(menu, NULL);
+//  lv_obj_set_style_pad_hor(sub_legal_info_page, lv_obj_get_style_pad_left(lv_menu_get_main_header(menu), 0), 0);
+//  section = lv_menu_section_create(sub_legal_info_page);
+//  for (uint32_t i = 0; i < 15; i++)
+//  {
+//      create_text(section, NULL,
+//                  "This is a long long long long long long long long long text, if it is long enough it may scroll.",
+//                  LV_MENU_ITEM_BUILDER_VARIANT_1);
+//  }
+//
+//  lv_obj_t *sub_about_page = lv_menu_page_create(menu, NULL);
+//  lv_obj_set_style_pad_hor(sub_about_page, lv_obj_get_style_pad_left(lv_menu_get_main_header(menu), 0), 0);
+//  lv_menu_separator_create(sub_about_page);
+//  section = lv_menu_section_create(sub_about_page);
+//  cont = create_text(section, NULL, "Software information", LV_MENU_ITEM_BUILDER_VARIANT_1);
+//  lv_menu_set_load_page_event(menu, cont, sub_software_info_page);
+//  cont = create_text(section, NULL, "Legal information", LV_MENU_ITEM_BUILDER_VARIANT_1);
+//  lv_menu_set_load_page_event(menu, cont, sub_legal_info_page);
+//
+//  lv_obj_t *sub_menu_mode_page = lv_menu_page_create(menu, NULL);
+//  lv_obj_set_style_pad_hor(sub_menu_mode_page, lv_obj_get_style_pad_left(lv_menu_get_main_header(menu), 0), 0);
+//  lv_menu_separator_create(sub_menu_mode_page);
+//  section = lv_menu_section_create(sub_menu_mode_page);
+//  cont = create_switch(section, LV_SYMBOL_AUDIO, "Sidebar enable", true);
+//  lv_obj_add_event_cb(lv_obj_get_child(cont, 2), switch_handler, LV_EVENT_VALUE_CHANGED, menu);
+//
+//  /*Create a root page*/
+//  root_page = lv_menu_page_create(menu, "Settings");
+//  lv_obj_set_style_pad_hor(root_page, lv_obj_get_style_pad_left(lv_menu_get_main_header(menu), 0), 0);
+//  section = lv_menu_section_create(root_page);
+//  cont = create_text(section, LV_SYMBOL_SETTINGS, "Mechanics", LV_MENU_ITEM_BUILDER_VARIANT_1);
+//  lv_menu_set_load_page_event(menu, cont, sub_mechanics_page);
+//  cont = create_text(section, LV_SYMBOL_AUDIO, "Sound", LV_MENU_ITEM_BUILDER_VARIANT_1);
+//  lv_menu_set_load_page_event(menu, cont, sub_sound_page);
+//  cont = create_text(section, LV_SYMBOL_SETTINGS, "Display", LV_MENU_ITEM_BUILDER_VARIANT_1);
+//  lv_menu_set_load_page_event(menu, cont, sub_display_page);
+//
+//  create_text(root_page, NULL, "Others", LV_MENU_ITEM_BUILDER_VARIANT_1);
+//  section = lv_menu_section_create(root_page);
+//  cont = create_text(section, NULL, "About", LV_MENU_ITEM_BUILDER_VARIANT_1);
+//  lv_menu_set_load_page_event(menu, cont, sub_about_page);
+//  cont = create_text(section, LV_SYMBOL_SETTINGS, "Menu mode", LV_MENU_ITEM_BUILDER_VARIANT_1);
+//  lv_menu_set_load_page_event(menu, cont, sub_menu_mode_page);
+//
+//  lv_menu_set_sidebar_page(menu, root_page);
+//
+//  lv_event_send(lv_obj_get_child(lv_obj_get_child(lv_menu_get_cur_sidebar_page(menu), 0), 0), LV_EVENT_CLICKED, NULL);
+}
+
 void _chart_Y_autorange(lv_obj_t *chart_obj, lv_chart_series_t *ser)
 {
     //! INCORRECT !//
@@ -738,7 +897,7 @@ void _update_but_labels(void)
     lv_label_set_text_fmt(gui_StartButLabel, status == IDLE ? "START" : "STOP");
 }
 
-void _update_unbalance(void) 
+void _update_unbalance(void)
 {
     lv_label_set_text_fmt(gui_angleXLabel, "X-angle: %.1f°", _xShared.getUnbalanceXAngle());
     lv_label_set_text_fmt(gui_angleYLabel, "Y-angle: %.1f°", _xShared.getUnbalanceYAngle());

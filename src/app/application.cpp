@@ -54,17 +54,19 @@ int16_t DPB::init(QueueHandle_t xQueueSysInput_handle, QueueHandle_t xQueueSysOu
     _xQueueSysInput = xQueueSysInput_handle;
     _xQueueSysOutput = xQueueSysOutput_handle;
     _xSuppTask = supportTask_handle;
-
+    
+    ESP_LOGI(TAG, "Wait until all has been initialized");
     init_accel();
     init_esc();
     init_rpm(_xSuppTask, _rpmTimer, DEFAULT_PROP_NUM);
 
     /* Wait until all has been initialized */
-    ESP_LOGI(TAG, "Wait until all has been initialized");
+
     while (_init_status != (INIT_ESC_DONE | INIT_ACCEL_DONE | INIT_RPM_S_DONE))
         ;
 
     ESP_LOGI(TAG, "DPB intialization completed");
+    ask_main_page();
 
     _init_done = 1;
     setStep(IDLE);
@@ -96,6 +98,7 @@ int16_t DPB::init_accel()
 
     if (Accel::set_default_config() != ESP_OK)
     {
+        // ToDo: implement error message in loading screen
         return ESP_FAIL;
     }
     Accel::get_acc_settings(&as);
@@ -338,9 +341,9 @@ void DPB::_exe_unbalance_finder(void)
         timePeak = pTimeBuf[pXPeakIndexBuf[i]];
         timeRot = pTimeBuf[rotDoneIndexBuf[j]];
         int64_t currDelta = (int64_t)(timeRot - timePeak);
-        //? It s not possible to have a sign inversion: some data is missing: shift ahead.
         if ((lastDelta < 0 && currDelta >= 0) || (lastDelta > 0 && currDelta < 0))
         {
+            //? It s not possible to have a sign inversion: some data are missing: shift ahead.
 #ifdef APP_DEBUG_MODE
             ESP_LOGW(TAG, "X-Peak [%d] missing", j);
 #endif
@@ -383,9 +386,9 @@ void DPB::_exe_unbalance_finder(void)
         timePeak = pTimeBuf[pYPeakIndexBuf[i]];
         timeRot = pTimeBuf[rotDoneIndexBuf[j]];
         int64_t currDelta = (int64_t)(timeRot - timePeak);
-        //? It s not possible to have a sign inversion: some data is missing: shift ahead.
         if ((lastDelta < 0 && currDelta >= 0) || (lastDelta > 0 && currDelta < 0))
         {
+            //? It s not possible to have a sign inversion: some data are missing: shift ahead.
 #ifdef APP_DEBUG_MODE
             ESP_LOGW(TAG, "Y-Peak [%d] missing", j);
 #endif
@@ -446,7 +449,7 @@ void DPB::ask_acc_charts_update(void)
 {
     command_data_t command;
 
-    command.command = ACC_CHART_UPDATE_CMD;
+    command.command = GUI_ACC_CHART_UPDATE_CMD;
     command.value.ull = 1;
     xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
 }
@@ -455,7 +458,16 @@ void DPB::ask_fft_chart_update(void)
 {
     command_data_t command;
 
-    command.command = FFT_CHART_UPDATE_CMD;
+    command.command = GUI_FFT_CHART_UPDATE_CMD;
+    command.value.ull = 1;
+    xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
+}
+
+void DPB::ask_main_page(void)
+{
+    command_data_t command;
+
+    command.command = GUI_INIT_COMPLETE_CMD;
     command.value.ull = 1;
     xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
 }
