@@ -27,10 +27,10 @@
 //!         PROJECT DEFINES         /
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!/
 //* Debug serial loggin enabler
-// #define APP_DEBUG_MODE
+//#define APP_DEBUG_MODE
 
 //* Accelerometer type
-// #define USE_BMX055 1
+//#define USE_BMX055 1
 #define USE_ADXL345 1
 
 //* I/O
@@ -70,7 +70,7 @@
 //*******************************/
 //*         TYPE DEFINES        */
 //*******************************/
-enum app_command_e
+enum sys_command_e
 {
     APP_CMD,
     MOTOR_CMD,
@@ -81,6 +81,14 @@ enum app_command_e
     LPF_REQUEST_CMD,
 };
 
+enum app_command_e
+{
+    SYS_START,
+    SYS_STOP,
+    SYS_RESET,
+    SYS_ANALYZE_DATA,
+};
+
 enum app_steps_e
 {
     IDLE,
@@ -88,6 +96,7 @@ enum app_steps_e
     VIBES_REC,
     FILTERING,
     ANALYSING,
+    UNBALANCE_FIND,
     DECEL,
 };
 
@@ -106,7 +115,7 @@ union dpb_generic_u
 
 struct command_data_t
 {
-    app_command_e command;
+    sys_command_e command;
     dpb_generic_u value;
 };
 

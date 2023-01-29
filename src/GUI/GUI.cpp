@@ -31,6 +31,8 @@ int16_t fftY_sample[ACC_DATA_BUFFER_SIZE / 2] = {0};
 
 lv_obj_t *gui_RPMLabel = NULL;
 lv_obj_t *gui_FundLabel = NULL;
+lv_obj_t *gui_angleXLabel = NULL;
+lv_obj_t *gui_angleYLabel = NULL;
 
 lv_obj_t *gui_StartButLabel = NULL;
 
@@ -183,8 +185,34 @@ void gui_IdleScreen_init(void)
 
     lv_obj_add_style(gui_RPMLabel, &label_style, 0);
     lv_obj_set_pos(gui_RPMLabel, 15, 2);
-    lv_obj_set_size(gui_RPMLabel, 100, 20);
-    lv_label_set_text(gui_RPMLabel, "0"); /*Set the labels text*/
+    lv_obj_set_size(gui_RPMLabel, 35, 20);
+    lv_label_set_text(gui_RPMLabel, "0rpm"); /*Set the labels text*/
+
+    //* Create unbalance X angle
+    gui_angleXLabel = lv_label_create(gui_IdleScreen); /*Add a label to the button*/
+    lv_style_init(&label_style);
+    lv_style_set_bg_color(&label_style, lv_palette_main(LV_PALETTE_BLUE));
+    // lv_style_set_bg_opa(&label_style, LV_OPA_100);
+    lv_style_set_text_color(&label_style, lv_palette_main(LV_PALETTE_TEAL));
+    lv_style_set_text_font(&label_style, &lv_font_montserrat_14);
+
+    lv_obj_add_style(gui_angleXLabel, &label_style, 0);
+    lv_obj_align_to(gui_angleXLabel, gui_RPMLabel, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
+    lv_obj_set_size(gui_angleXLabel, 100, 20);
+    lv_label_set_text(gui_angleXLabel, "X-angle: NaN°"); /*Set the labels text*/
+
+    //* Create unbalance X angle
+    gui_angleYLabel = lv_label_create(gui_IdleScreen); /*Add a label to the button*/
+    lv_style_init(&label_style);
+    lv_style_set_bg_color(&label_style, lv_palette_main(LV_PALETTE_BLUE));
+    // lv_style_set_bg_opa(&label_style, LV_OPA_100);
+    lv_style_set_text_color(&label_style, lv_palette_main(LV_PALETTE_PURPLE));
+    lv_style_set_text_font(&label_style, &lv_font_montserrat_14);
+
+    lv_obj_add_style(gui_angleYLabel, &label_style, 0);
+    lv_obj_align_to(gui_angleYLabel, gui_angleXLabel, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
+    lv_obj_set_size(gui_angleYLabel, 100, 20);
+    lv_label_set_text(gui_angleYLabel, "Y-angle: NaN°"); /*Set the labels text*/
 }
 
 void gui_FFTScreen_init(void)
@@ -552,6 +580,7 @@ void gui_values_update(void)
     _update_but_labels();
     _update_rpm();
     _update_fund();
+    _update_unbalance();
 }
 
 void gui_charts_update(void)
@@ -707,4 +736,10 @@ void _update_but_labels(void)
 {
     app_steps_e status = _xShared.getAppStatus();
     lv_label_set_text_fmt(gui_StartButLabel, status == IDLE ? "START" : "STOP");
+}
+
+void _update_unbalance(void) 
+{
+    lv_label_set_text_fmt(gui_angleXLabel, "X-angle: %.1f°", _xShared.getUnbalanceXAngle());
+    lv_label_set_text_fmt(gui_angleYLabel, "Y-angle: %.1f°", _xShared.getUnbalanceYAngle());
 }

@@ -144,6 +144,7 @@ void DPB::loop_accel(void)
     int16_t *pAccYBuf = _xShared.getDPBDataAccYBuffer_us();
     uint8_t *pRotBuf = _xShared.getDPBRotDoneBuffer_us();
     uint64_t *pTimeBuf = _xShared.getDPBTimeBuffer_us();
+    uint16_t rotCount = 0;
 
     if (!_init_done)
     {
@@ -153,8 +154,11 @@ void DPB::loop_accel(void)
     ulTaskNotifyTakeIndexed(0, pdTRUE, portMAX_DELAY);
     _app_step = VIBES_REC;
     i = 0;
+    rotCount = 0;
 
     _xShared.lockDPBDataAcc();
+
+    RotSense::get_rotation_done(); //? call to clear dummy set of bit
     while (i < ACC_DATA_BUFFER_SIZE)
     {
         if (read_acceleration_data(&acc_data) == ESP_OK)
@@ -170,15 +174,22 @@ void DPB::loop_accel(void)
             pRotBuf[i] = r_d;
             pTimeBuf[i] = time;
 
+            if (r_d)
+            {
+                rotCount++;
+            }
+
             i++;
         }
     }
     _xShared.unlockDPBDataAcc();
 
+    _xShared.setRotCount(rotCount);
+
     command_data_t command;
 
     command.command = APP_CMD;
-    command.value.ull = FILTERING;
+    command.value.ull = SYS_ANALYZE_DATA;
     xQueueSend(_xQueueSysInput, &command, portMAX_DELAY);
 }
 
@@ -187,17 +198,19 @@ void DPB::exe(command_data_t command)
     switch (command.command)
     {
     case APP_CMD:
-        if (command.value.ull == IDLE)
+        if (command.value.ull == SYS_RESET)
         {
             _exe_reset();
         }
-        if (command.value.ull == START_MOTOR)
+        if (command.value.ull == SYS_START)
         {
             _exe_start();
         }
-        if (command.value.ull == FILTERING)
+        if (command.value.ull == SYS_ANALYZE_DATA)
         {
             _exe_filter();
+            _exe_analyzing();
+            _exe_unbalance_finder();
             _exe_reset();
         }
         break;
@@ -252,6 +265,8 @@ void DPB::_exe_reset(void)
 
 void DPB::_exe_filter(void)
 {
+    setStep(FILTERING);
+
     Motor::motor_stop();
     _log_acc_data();
     if (filter_data_iir_zero(RAW_DATA) != ESP_OK)
@@ -260,6 +275,12 @@ void DPB::_exe_filter(void)
         return;
     }
     _log_acc_data_filtered();
+    ask_acc_charts_update(); // ? Show filtered data
+}
+
+void DPB::_exe_analyzing(void)
+{
+    setStep(ANALYSING);
     if (fft_calc(FILTERED_DATA) != ESP_OK)
     {
         // TODO Error message
@@ -267,7 +288,139 @@ void DPB::_exe_filter(void)
     }
     fft_peak_finder();
     signal_peak_finder();
-    ask_acc_charts_update(); // ? Show filtered data
+}
+
+void DPB::_exe_unbalance_finder(void)
+{
+    static const char *TAG = "EXE-UNBALANCE";
+    int64_t averageX = 0;
+    int64_t averageY = 0;
+    uint16_t averageQuantity = 0;
+    uint64_t averageRotTime = 0;
+    int64_t lastDelta = 0;
+    size_t maxLoops = 0;
+    uint8_t *pRotDoneBuf = _xShared.getDPBRotDoneBuffer_us();
+    uint64_t *pTimeBuf = _xShared.getDPBTimeBuffer_us();
+    size_t *pXPeakIndexBuf = _xShared.getXPeaksIndexPointer_us();
+    size_t *pYPeakIndexBuf = _xShared.getYPeaksIndexPointer_us();
+
+    setStep(UNBALANCE_FIND);
+
+    float_t count2deg = ((1 / _xShared.getUnbalanceFreq()) * 1000000.0) / 360.0;
+
+    size_t rotCount = _xShared.getRotCount();
+    size_t *rotDoneIndexBuf = new size_t[rotCount]();
+
+    _xShared.lockDPBDataAcc();
+    _xShared.lockPeaksIndex();
+
+    for (size_t i = 0, j = 0; i < ACC_DATA_BUFFER_SIZE; i++)
+    {
+        if (pRotDoneBuf[i] == 1)
+        {
+            rotDoneIndexBuf[j++] = i;
+        }
+    }
+
+    uint64_t timePeak, timeRot;
+    size_t i = 0, j = 0;
+    maxLoops = std::min(_xShared.getXPeakCount(), rotCount);
+    if (rotDoneIndexBuf[0] < pXPeakIndexBuf[0])
+    {
+        j++;
+    }
+#ifdef APP_DEBUG_MODE
+    ESP_LOGI(TAG, "X-Unbalance delta times:");
+#endif
+
+    while (i < maxLoops && j < maxLoops)
+    {
+        timePeak = pTimeBuf[pXPeakIndexBuf[i]];
+        timeRot = pTimeBuf[rotDoneIndexBuf[j]];
+        int64_t currDelta = (int64_t)(timeRot - timePeak);
+        //? It s not possible to have a sign inversion: some data is missing: shift ahead.
+        if ((lastDelta < 0 && currDelta >= 0) || (lastDelta > 0 && currDelta < 0))
+        {
+#ifdef APP_DEBUG_MODE
+            ESP_LOGW(TAG, "X-Peak [%d] missing", j);
+#endif
+            j++;
+            continue;
+        }
+
+        lastDelta = (int64_t)(timeRot - timePeak);
+#ifdef APP_DEBUG_MODE
+        printf("%lli\n", lastDelta);
+#endif
+
+        averageX += lastDelta;
+
+        averageQuantity++;
+
+        i++;
+        j++;
+    }
+    if (averageQuantity != 0)
+    {
+        averageX /= averageQuantity;
+    }
+#ifdef APP_DEBUG_MODE
+    printf("AVERAGE-X:%lli\n", averageX);
+#endif
+
+    i = j = averageQuantity = 0;
+    maxLoops = std::min(_xShared.getYPeakCount(), rotCount);
+    if (rotDoneIndexBuf[0] < pYPeakIndexBuf[0])
+    {
+        j++;
+    }
+#ifdef APP_DEBUG_MODE
+    ESP_LOGI(TAG, "Y-Unbalance delta times:");
+#endif
+
+    while (i < maxLoops && j < maxLoops)
+    {
+        timePeak = pTimeBuf[pYPeakIndexBuf[i]];
+        timeRot = pTimeBuf[rotDoneIndexBuf[j]];
+        int64_t currDelta = (int64_t)(timeRot - timePeak);
+        //? It s not possible to have a sign inversion: some data is missing: shift ahead.
+        if ((lastDelta < 0 && currDelta >= 0) || (lastDelta > 0 && currDelta < 0))
+        {
+#ifdef APP_DEBUG_MODE
+            ESP_LOGW(TAG, "Y-Peak [%d] missing", j);
+#endif
+            j++;
+            continue;
+        }
+
+        lastDelta = (int64_t)(timeRot - timePeak);
+#ifdef APP_DEBUG_MODE
+        printf("%lli\n", lastDelta);
+#endif
+
+        averageY += lastDelta;
+
+        averageQuantity++;
+
+        i++;
+        j++;
+    }
+    if (averageQuantity != 0)
+    {
+        averageY /= averageQuantity;
+    }
+
+#ifdef APP_DEBUG_MODE
+    printf("AVERAGE-Y:%lli\n", averageY);
+#endif
+
+    _xShared.unlockDPBDataAcc();
+    _xShared.unlockPeaksIndex();
+
+    _xShared.setUnbalanceXAngle((float_t)averageX / count2deg);
+    _xShared.setUnbalanceYAngle((float_t)averageY / count2deg);
+
+    delete[] rotDoneIndexBuf;
 }
 
 void DPB::_exe_fft(void)
@@ -386,7 +539,6 @@ int16_t DPB::filter_data_iir_zero(data_orig_e data_type)
     float_t coeffs_lpf[5];
     float_t w_lpf[5] = {0, 0};
 
-    setStep(FILTERING);
     _xShared.lockDPBDataAcc();
     _xShared.lockDPBDataFltAcc();
 
@@ -570,9 +722,8 @@ void DPB::signal_peak_finder(void)
     _xShared.unlockPeaksIndex();
 
     //* Calc min distance between two real local peak
-    //? Supposing time resolution of the acc data equal to 1us
     float_t fund = _get_fundamental_freq(_xShared.getBandWidth(), FFT_DATA_BUFFER_SIZE);
-    float_t peak_min_dist = ((0.9 * 1000000.0) / fund);
+    float_t peak_min_dist = ((0.8 * 1000000.0) / fund); //! _rpmTimer has 1us resolution
     _xShared.setUnbalanceFreq(fund);
 
     //* Remove peak indexs that dont meet the min required distance
@@ -584,7 +735,13 @@ void DPB::signal_peak_finder(void)
     ESP_ERROR_CHECK(array_map_incr<int16_t>(_xShared.getXPeaksIndexPointer_us(), _xShared.getDPBDataFltAccXBuffer_us(), height_sorted_Xpeak_index, _XpeakCount));
     ESP_ERROR_CHECK(array_map_incr<int16_t>(_xShared.getYPeaksIndexPointer_us(), _xShared.getDPBDataFltAccYBuffer_us(), height_sorted_Ypeak_index, _YpeakCount));
 
+#ifdef APP_DEBUG_MODE
+    ESP_LOGI(TAG, "Filter X-Peak");
+#endif
     _peaks_filter_by_distance(_xShared.getDPBTimeBuffer_us(), _xShared.getXPeaksIndexPointer_us(), height_sorted_Xpeak_index, _XpeakCount, peak_min_dist);
+#ifdef APP_DEBUG_MODE
+    ESP_LOGI(TAG, "Filter Y-Peak");
+#endif
     _peaks_filter_by_distance(_xShared.getDPBTimeBuffer_us(), _xShared.getYPeaksIndexPointer_us(), height_sorted_Ypeak_index, _YpeakCount, peak_min_dist);
     _xShared.unlockDPBDataAcc();
 
@@ -593,7 +750,7 @@ void DPB::signal_peak_finder(void)
     _xShared.unlockPeaksIndex();
 
     _xShared.setXPeakCount(_XpeakCount);
-    _xShared.setXPeakCount(_YpeakCount);
+    _xShared.setYPeakCount(_YpeakCount);
 
     delete[] height_sorted_Xpeak_index;
     delete[] height_sorted_Ypeak_index;
@@ -691,6 +848,7 @@ float_t DPB::_get_fundamental_freq(uint16_t sample_freq, size_t fft_lenght)
 
 void DPB::_peaks_filter_by_distance(uint64_t *ref_array, size_t *ref_peaks, size_t *sorted_peaks, size_t peak_num, uint64_t req_distance)
 {
+    const char *TAG = "PEAKS-FILTER-DIST";
     size_t current = 0;
     u_short *to_remove = new u_short[peak_num]();
 
@@ -725,6 +883,9 @@ void DPB::_peaks_filter_by_distance(uint64_t *ref_array, size_t *ref_peaks, size
     {
         if (to_remove[i] == 1)
         {
+#ifdef APP_DEBUG_MODE
+            ESP_LOGW(TAG, "Peak[%d] removed", i);
+#endif
             ref_peaks[i] = -1;
         }
     }

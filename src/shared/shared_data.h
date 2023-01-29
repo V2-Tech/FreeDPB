@@ -13,7 +13,7 @@ public:
     }
 
     //* Data access methods
-    //! "*_us" = unsafe, if you need a thread-safe access, please call related lock* method before it and unlock* at the end of operations.
+    //! "*_us" = unsafe, if you need a thread-safe access, please call related lock* method before operations and unlock* at the end of operations.
     void setRotCount(uint64_t v);
     uint64_t getRotCount();
 
@@ -57,8 +57,10 @@ public:
     void setRange(uint16_t v);
     uint16_t getRange();
 
-    void setUnbalanceAngle(float_t v);
-    float_t getUnbalanceAngle();
+    void setUnbalanceXAngle(float_t v);
+    float_t getUnbalanceXAngle();
+    void setUnbalanceYAngle(float_t v);
+    float_t getUnbalanceYAngle();
     void setUnbalanceFreq(float_t v);
     float_t getUnbalanceFreq();
 
@@ -104,7 +106,8 @@ private:
         float_t _fft_y[FFT_DATA_BUFFER_SIZE] = {0};
         uint16_t _bandWidth;
         uint16_t _range;
-        float_t _unbalanceAngle;
+        float_t _unbalanceXAngle;
+        float_t _unbalanceYAngle;
         float_t _unbalanceFreq;
         size_t _x_peak_index[ACC_DATA_BUFFER_SIZE] = {0};
         size_t _y_peak_index[ACC_DATA_BUFFER_SIZE] = {0};

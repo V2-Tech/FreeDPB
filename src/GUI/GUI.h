@@ -151,4 +151,5 @@ void _ask_peak_draw(void);
 void _update_rpm(void);
 void _update_fund(void);
 void _update_but_labels(void);
+void _update_unbalance(void);
 #endif

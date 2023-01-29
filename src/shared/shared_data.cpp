@@ -7,7 +7,8 @@ DPBShared::DPBShared() : _data(new Data)
     _data->_step = IDLE;
     _data->_bandWidth = 0;
     _data->_range = 0;
-    _data->_unbalanceAngle = 0;
+    _data->_unbalanceXAngle = 0;
+    _data->_unbalanceYAngle = 0;
     _data->_unbalanceFreq = 0;
     _data->_x_peak_count = 0;
     _data->_y_peak_count = 0;
@@ -278,22 +279,37 @@ uint16_t DPBShared::getRange()
     return v;
 }
 
-void DPBShared::setUnbalanceAngle(float_t v)
+void DPBShared::setUnbalanceXAngle(float_t v)
 {
     _lockComm();
-    _data->_unbalanceAngle = v;
+    _data->_unbalanceXAngle = v;
     _unlockComm();
 }
 
-float_t DPBShared::getUnbalanceAngle()
+float_t DPBShared::getUnbalanceXAngle()
 {
     _lockComm();
-    float_t v = _data->_unbalanceAngle;
+    float_t v = _data->_unbalanceXAngle;
     _unlockComm();
     return v;
 }
 
-void DPBShared::setUnbalanceFreq(float_t v) 
+void DPBShared::setUnbalanceYAngle(float_t v)
+{
+    _lockComm();
+    _data->_unbalanceYAngle = v;
+    _unlockComm();
+}
+
+float_t DPBShared::getUnbalanceYAngle()
+{
+    _lockComm();
+    float_t v = _data->_unbalanceYAngle;
+    _unlockComm();
+    return v;
+}
+
+void DPBShared::setUnbalanceFreq(float_t v)
 {
     _lockComm();
     _data->_unbalanceFreq = v;

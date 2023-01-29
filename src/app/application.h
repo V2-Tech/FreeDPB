@@ -62,6 +62,8 @@ private:
     void _exe_start(void);
     void _exe_reset(void);
     void _exe_filter(void);
+    void _exe_analyzing(void);
+    void _exe_unbalance_finder(void);
     void _exe_fft(void);
     void _exe_lpf(void);
 
