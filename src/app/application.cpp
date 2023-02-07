@@ -291,6 +291,7 @@ void DPB::_exe_analyzing(void)
     }
     fft_peak_finder();
     signal_peak_finder();
+    ask_fft_chart_update();
 }
 
 void DPB::_exe_unbalance_finder(void)
@@ -299,7 +300,6 @@ void DPB::_exe_unbalance_finder(void)
     int64_t averageX = 0;
     int64_t averageY = 0;
     uint16_t averageQuantity = 0;
-    uint64_t averageRotTime = 0;
     int64_t lastDelta = 0;
     size_t maxLoops = 0;
     uint8_t *pRotDoneBuf = _xShared.getDPBRotDoneBuffer_us();
@@ -420,10 +420,12 @@ void DPB::_exe_unbalance_finder(void)
     _xShared.unlockDPBDataAcc();
     _xShared.unlockPeaksIndex();
 
-    _xShared.setUnbalanceXAngle((float_t)averageX / count2deg);
-    _xShared.setUnbalanceYAngle((float_t)averageY / count2deg);
+    _xShared.setUnbalanceXAngle((float_t)(averageX / count2deg));
+    _xShared.setUnbalanceYAngle((float_t)(averageY / count2deg));
 
     delete[] rotDoneIndexBuf;
+
+    ask_unbalance_update();
 }
 
 void DPB::_exe_fft(void)
@@ -433,7 +435,6 @@ void DPB::_exe_fft(void)
         return;
     }
     fft_peak_finder();
-    ask_fft_chart_update();
 }
 
 void DPB::_exe_lpf(void)
@@ -459,6 +460,15 @@ void DPB::ask_fft_chart_update(void)
     command_data_t command;
 
     command.command = GUI_FFT_CHART_UPDATE_CMD;
+    command.value.ull = 1;
+    xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
+}
+
+void DPB::ask_unbalance_update(void) 
+{
+    command_data_t command;
+
+    command.command = GUI_UNBALANCE_UPDATE_CMD;
     command.value.ull = 1;
     xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
 }
@@ -632,7 +642,7 @@ int16_t DPB::fft_calc(data_orig_e data_type)
     int16_t *pAccXFltBuf = _xShared.getDPBDataFltAccXBuffer_us();
     int16_t *pAccYFltBuf = _xShared.getDPBDataFltAccYBuffer_us();
     float_t *pFFTXBuf = _xShared.getFFTXBuffer_us();
-    float_t *pFFTYBuf = _xShared.getFFTXBuffer_us();
+    float_t *pFFTYBuf = _xShared.getFFTYBuffer_us();
 
     setStep(ANALYSING);
 

@@ -17,6 +17,21 @@
 static const uint16_t screenWidth = 320;
 static const uint16_t screenHeight = 240;
 
+#define DEFAULT_BACKGROUND_COLOR lv_color_hex(0x031417)
+#define DEFAULT_ELEMENT_ACCENT_COLOR lv_color_hex(0x169FB1)
+#define SECONDARY_ELEMENT_ACCENT_COLOR lv_color_hex(0xFF9900)
+#define DEFAULT_TOOLBAR_HEIGHT 30U
+
+LV_IMG_DECLARE(propeller_img_png);
+LV_IMG_DECLARE(settings_icon);
+LV_IMG_DECLARE(nerd_face_icon);
+LV_IMG_DECLARE(motor_icon);
+LV_IMG_DECLARE(sensor_img);
+LV_IMG_DECLARE(chart_ico);
+LV_IMG_DECLARE(fft_ico);
+
+LV_FONT_DECLARE(gui_font_med);
+
 //*******************************/
 //*      CLASS DECLARATION      */
 //*******************************/
@@ -116,31 +131,25 @@ enum dpb_page_t
 {
   LOADING_PAGE,
   MAIN_PAGE,
-  IDLE_PAGE,
+  NERD_PAGE,
   FFT_PAGE,
 };
 
 //*********************************/
 //*     FUNCTIONS DECLARATION     */
 //*********************************/
+//* TFT utilities
 void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p);
 void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data);
 
+//* Initialization funcitons
 uint8_t gui_init(QueueHandle_t xQueueComp2Sys_handle, QueueHandle_t xQueueSys2Comp_handle);
 void gui_LoadingScreen_init(void);
 void gui_MainScreen_init(void);
-void gui_IdleScreen_init(void);
+void gui_NerdScreen_init(void);
 void gui_FFTScreen_init(void);
-void slider_x_event_cb(lv_event_t *e);
-void slider_y_event_cb(lv_event_t *e);
-void start_btn_event_cb(lv_event_t *e);
-void fft_btn_event_cb(lv_event_t *e);
-void filter_btn_event_cb(lv_event_t *e);
-void back_btn_event_cb(lv_event_t *e);
-void FFTXChart_draw_event_cb(lv_event_t *e);
-void FFTYChart_draw_event_cb(lv_event_t *e);
-void AccelChart_draw_event_cb(lv_event_t *e);
 
+//* GUI management
 void gui_update(void);
 void gui_check_commands(void);
 void gui_exe(command_data_t command);
@@ -148,13 +157,38 @@ void gui_show_page(dpb_page_t page);
 void gui_values_update(void);
 void gui_charts_update(void);
 void gui_fft_update(void);
+void gui_unbalance_arrow_update(void);
 
-void _display_init(void);
-void _create_main_menu(void);
-void _chart_Y_autorange(lv_obj_t *chart_obj, lv_chart_series_t *ser);
 void _ask_peak_draw(void);
 void _update_rpm(void);
 void _update_fund(void);
 void _update_but_labels(void);
 void _update_unbalance(void);
+
+//* Widget callbacks
+void chart_slider_x_event_cb(lv_event_t *e);
+void chart_slider_y_event_cb(lv_event_t *e);
+void start_btn_event_cb(lv_event_t *e);
+void nerd_btn_event_cb(lv_event_t *e);
+void fft_btn_event_cb(lv_event_t *e);
+void filter_btn_event_cb(lv_event_t *e);
+void root_back_btn_event_cb(lv_event_t *e);
+void FFTXChart_draw_event_cb(lv_event_t *e);
+void FFTYChart_draw_event_cb(lv_event_t *e);
+void AccelChart_draw_event_cb(lv_event_t *e);
+void chart_switch_btn_event_cb(lv_event_t *e);
+void list_btn_event_cb(lv_event_t *e);
+void btn_show_x_charts_event_cb(lv_event_t *e);
+void btn_show_y_charts_event_cb(lv_event_t *e);
+
+//* Utilities
+void _display_init(void);
+void _create_toolbars_main(void);
+void _create_anglechart_main(void);
+void _create_unbalance_arrow(float_t angle_value, uint8_t lenght, uint8_t mirrored);
+void _create_pages_nerd(void);
+void _create_toolbars_nerd(void);
+void _create_signal_chart(lv_obj_t **chart_handler, int16_t *data_array, lv_event_cb_t event_cb, size_t point_num, lv_obj_t **sliderX_handler, lv_obj_t **sliderY_handler, lv_obj_t *parent, lv_coord_t width, lv_coord_t height, lv_point_t position);
+void _create_analisys_chart(lv_obj_t **chart_handler, int16_t *data_array, lv_event_cb_t event_cb, size_t point_num, lv_obj_t *parent, lv_coord_t width, lv_coord_t height, lv_point_t position);
+void _chart_Y_autorange(lv_obj_t *chart_obj, lv_chart_series_t *ser);
 #endif

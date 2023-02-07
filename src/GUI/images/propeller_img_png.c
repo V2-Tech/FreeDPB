@@ -12,7 +12,7 @@
 #define LV_ATTRIBUTE_IMG_PROP
 #endif
 
-const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMG_PROP uint8_t prop_map[] = {
+const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMG_PROP uint8_t propeller_img_png_map[] = {
     /*Pixel format: Alpha 8 bit, Red: 5 bit, Green: 6 bit, Blue: 5 bit*/
     0x00,
     0x00,
@@ -149326,14 +149326,14 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMG_PROP uint
     0x00,
 };
 
-const lv_img_dsc_t prop = {
+const lv_img_dsc_t propeller_img_png = {
     .header.cf = LV_IMG_CF_TRUE_COLOR_ALPHA,
     .header.always_zero = 0,
     .header.reserved = 0,
     .header.w = 237,
     .header.h = 210,
     .data_size = 49770 * LV_IMG_PX_SIZE_ALPHA_BYTE,
-    .data = prop_map,
+    .data = propeller_img_png_map,
 };
 
 #endif

@@ -2,8 +2,7 @@ file(GLOB SRCS
     tasks/*.cpp
     GUI/*.cpp
     GUI/images/*.c
-    GUI/icons/*.c
-    GUI/pages/*.cpp
+    GUI/fonts/*.c
     sensors/*.cpp
     sensors/drivers/*.cpp
     motor/*.cpp
