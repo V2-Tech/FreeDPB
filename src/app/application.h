@@ -66,7 +66,7 @@ private:
     void _exe_filter(void);
     void _exe_analyzing(void);
     void _exe_unbalance_finder(void);
-    void _exe_fft(void);
+    void _exe_fft(uint8_t data_type);
     void _exe_lpf(void);
 
     void _log_acc_data(void);

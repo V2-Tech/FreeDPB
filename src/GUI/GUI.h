@@ -155,7 +155,7 @@ void gui_check_commands(void);
 void gui_exe(command_data_t command);
 void gui_show_page(dpb_page_t page);
 void gui_values_update(void);
-void gui_charts_update(void);
+void gui_charts_update(uint8_t data_type);
 void gui_fft_update(void);
 void gui_unbalance_arrow_update(void);
 
@@ -170,8 +170,6 @@ void chart_slider_x_event_cb(lv_event_t *e);
 void chart_slider_y_event_cb(lv_event_t *e);
 void start_btn_event_cb(lv_event_t *e);
 void nerd_btn_event_cb(lv_event_t *e);
-void fft_btn_event_cb(lv_event_t *e);
-void filter_btn_event_cb(lv_event_t *e);
 void root_back_btn_event_cb(lv_event_t *e);
 void FFTXChart_draw_event_cb(lv_event_t *e);
 void FFTYChart_draw_event_cb(lv_event_t *e);
@@ -180,6 +178,8 @@ void chart_switch_btn_event_cb(lv_event_t *e);
 void list_btn_event_cb(lv_event_t *e);
 void btn_show_x_charts_event_cb(lv_event_t *e);
 void btn_show_y_charts_event_cb(lv_event_t *e);
+void btn_show_raw_x_charts_event_cb(lv_event_t *e);
+void btn_show_raw_y_charts_event_cb(lv_event_t *e);
 
 //* Utilities
 void _display_init(void);

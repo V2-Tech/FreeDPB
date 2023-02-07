@@ -39,7 +39,6 @@ lv_obj_t *gui_page_fft_x = NULL;
 lv_obj_t *gui_page_fft_y = NULL;
 lv_obj_t *gui_action_list_nerd = NULL;
 
-//* Idle screen objects
 // Acceleration charts
 lv_obj_t *gui_AccelXChart = NULL;
 lv_obj_t *gui_AccelYChart = NULL;
@@ -50,7 +49,6 @@ int16_t accY_sample[ACC_CHART_POINT_COUNT] = {0};
 lv_obj_t *gui_AccelChart_Xslider = NULL;
 lv_obj_t *gui_AccelChart_Yslider = NULL;
 
-//* FFT screen objects
 // Fourier charts
 lv_obj_t *gui_FFTXChart = NULL;
 lv_obj_t *gui_FFTYChart = NULL;
@@ -62,9 +60,6 @@ int16_t fftY_sample[FFT_DATA_BUFFER_SIZE] = {0};
 
 // Labels
 lv_obj_t *gui_FundLabel = NULL;
-
-//* Images declarations
-LV_IMG_DECLARE(prop);
 
 //?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
 //?         FUNCTIONS DEFINITION        /
@@ -167,41 +162,6 @@ void gui_MainScreen_init(void)
 
     //* Create angle chart
     _create_anglechart_main();
-
-    //* Create settings button
-    gui_SettingsBut = lv_btn_create(gui_MainScreen);
-    lv_obj_set_width(gui_SettingsBut, 25);
-    lv_obj_set_height(gui_SettingsBut, 25);
-
-    // Add default styles
-    static lv_style_t styleSettingsBut;
-    lv_style_init(&styleSettingsBut);
-    lv_style_set_radius(&styleSettingsBut, 3);
-    lv_style_set_bg_opa(&styleSettingsBut, LV_OPA_TRANSP);
-    lv_style_set_border_opa(&styleSettingsBut, LV_OPA_TRANSP);
-    lv_style_set_outline_opa(&styleSettingsBut, LV_OPA_COVER);
-    lv_style_set_outline_color(&styleSettingsBut, DEFAULT_ELEMENT_ACCENT_COLOR);
-
-    // Add pressed styles
-    static lv_style_t styleSettingsBut_pressed;
-    lv_style_init(&styleSettingsBut_pressed);
-    lv_style_set_outline_width(&styleSettingsBut_pressed, 10);
-    lv_style_set_outline_opa(&styleSettingsBut_pressed, LV_OPA_TRANSP);
-
-    static lv_style_transition_dsc_t trans;
-    static lv_style_prop_t props[] = {LV_STYLE_OUTLINE_WIDTH, LV_STYLE_OUTLINE_OPA, LV_STYLE_PROP_INV};
-    lv_style_transition_dsc_init(&trans, props, lv_anim_path_linear, 300, 0, NULL);
-    lv_style_set_transition(&styleSettingsBut_pressed, &trans);
-
-    lv_obj_remove_style_all(gui_SettingsBut); /*Remove the style coming from the theme*/
-    lv_obj_add_style(gui_SettingsBut, &styleSettingsBut, 0);
-    lv_obj_add_style(gui_SettingsBut, &styleSettingsBut_pressed, LV_STATE_PRESSED);
-    lv_obj_align(gui_SettingsBut, LV_ALIGN_TOP_LEFT, 290, 0);
-
-    // Add icon
-    lv_obj_t *gui_SettingsButImg = lv_img_create(gui_SettingsBut);
-    lv_img_set_src(gui_SettingsButImg, &settings_icon);
-    lv_obj_center(gui_SettingsButImg);
 
     //* Create start button
     gui_StartBut = lv_btn_create(gui_MainScreen);
@@ -491,34 +451,6 @@ void nerd_btn_event_cb(lv_event_t *e)
     }
 }
 
-void fft_btn_event_cb(lv_event_t *e)
-{
-    lv_event_code_t code = lv_event_get_code(e);
-    if (code == LV_EVENT_CLICKED)
-    {
-        gui_show_page(FFT_PAGE);
-
-        command_data_t command;
-        command.command = FFT_REQUEST_CMD;
-        command.value.ull = 1;
-
-        xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
-    }
-}
-
-void filter_btn_event_cb(lv_event_t *e)
-{
-    lv_event_code_t code = lv_event_get_code(e);
-    if (code == LV_EVENT_CLICKED)
-    {
-        command_data_t command;
-        command.command = LPF_REQUEST_CMD;
-        command.value.ull = 1;
-
-        xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
-    }
-}
-
 void root_back_btn_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -750,7 +682,7 @@ void chart_switch_btn_event_cb(lv_event_t *e)
             {
                 lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
                 lv_obj_clear_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
-                
+
                 // Change icon
                 lv_img_set_src(lv_obj_get_child(obj, 0), &fft_ico);
             }
@@ -781,6 +713,16 @@ void btn_show_x_charts_event_cb(lv_event_t *e)
     lv_obj_t *obj = lv_event_get_target(e);
     if (code == LV_EVENT_CLICKED)
     {
+        // Request chart values update
+        command_data_t command;
+        command.command = FFT_REQUEST_CMD;
+        command.value.ull = FILTERED_DATA;
+
+        xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+        gui_charts_update(FILTERED_DATA);
+
+        // Change visibility of pages
         lv_obj_add_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
 
@@ -808,6 +750,89 @@ void btn_show_y_charts_event_cb(lv_event_t *e)
     lv_obj_t *obj = lv_event_get_target(e);
     if (code == LV_EVENT_CLICKED)
     {
+        // Request chart values update
+        command_data_t command;
+        command.command = FFT_REQUEST_CMD;
+        command.value.ull = FILTERED_DATA;
+
+        xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+        gui_charts_update(FILTERED_DATA);
+
+        // Change visibility of pages
+        lv_obj_add_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
+
+        lv_obj_clear_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
+
+        lv_obj_t *parent = lv_obj_get_parent(obj);
+        for (size_t i = 0; i < lv_obj_get_child_cnt(parent); i++)
+        {
+            lv_obj_t *child = lv_obj_get_child(parent, i);
+            if (child == obj)
+            {
+                lv_obj_add_state(child, LV_STATE_CHECKED);
+            }
+            else
+            {
+                lv_obj_clear_state(child, LV_STATE_CHECKED);
+            }
+        }
+    }
+}
+
+void btn_show_raw_x_charts_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *obj = lv_event_get_target(e);
+    if (code == LV_EVENT_CLICKED)
+    {
+        command_data_t command;
+        command.command = FFT_REQUEST_CMD;
+        command.value.ull = RAW_DATA;
+
+        xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+        gui_charts_update(RAW_DATA);
+
+        // Change visibility of pages
+        lv_obj_add_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
+
+        lv_obj_clear_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
+
+        lv_obj_t *parent = lv_obj_get_parent(obj);
+        for (size_t i = 0; i < lv_obj_get_child_cnt(parent); i++)
+        {
+            lv_obj_t *child = lv_obj_get_child(parent, i);
+            if (child == obj)
+            {
+                lv_obj_add_state(child, LV_STATE_CHECKED);
+            }
+            else
+            {
+                lv_obj_clear_state(child, LV_STATE_CHECKED);
+            }
+        }
+    }
+}
+
+void btn_show_raw_y_charts_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *obj = lv_event_get_target(e);
+    if (code == LV_EVENT_CLICKED)
+    {
+        // Request chart values update
+        command_data_t command;
+        command.command = FFT_REQUEST_CMD;
+        command.value.ull = RAW_DATA;
+
+        xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+        gui_charts_update(RAW_DATA);
+
+        // Change visibility of pages
         lv_obj_add_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
 
@@ -854,7 +879,7 @@ void gui_exe(command_data_t command)
     switch (command.command)
     {
     case GUI_ACC_CHART_UPDATE_CMD:
-        gui_charts_update();
+        gui_charts_update(command.value.ull);
         break;
     case GUI_FFT_CHART_UPDATE_CMD:
         gui_fft_update();
@@ -902,7 +927,7 @@ void gui_values_update(void)
     _update_fund();
 }
 
-void gui_charts_update(void)
+void gui_charts_update(uint8_t data_type)
 {
     int16_t min_x = 0;
     int16_t max_x = 0;
@@ -912,9 +937,18 @@ void gui_charts_update(void)
     int16_t *pAccXBuff = nullptr;
     int16_t *pAccYBuff = nullptr;
 
-    _xShared.lockDPBDataFltAcc();
-    pAccXBuff = _xShared.getDPBDataFltAccXBuffer_us();
-    pAccYBuff = _xShared.getDPBDataFltAccYBuffer_us();
+    if (data_type == RAW_DATA)
+    {
+        _xShared.lockDPBDataAcc();
+        pAccXBuff = _xShared.getDPBDataAccXBuffer_us();
+        pAccYBuff = _xShared.getDPBDataAccYBuffer_us();
+    }
+    else
+    {
+        _xShared.lockDPBDataFltAcc();
+        pAccXBuff = _xShared.getDPBDataFltAccXBuffer_us();
+        pAccYBuff = _xShared.getDPBDataFltAccYBuffer_us();
+    }
 
     for (size_t i = 0; i < ACC_CHART_POINT_COUNT; i++)
     {
@@ -937,7 +971,15 @@ void gui_charts_update(void)
             min_y = accY_sample[i];
         }
     }
-    _xShared.unlockDPBDataFltAcc();
+
+    if (data_type == RAW_DATA)
+    {
+        _xShared.unlockDPBDataAcc();
+    }
+    else
+    {
+        _xShared.unlockDPBDataFltAcc();
+    }
 
     lv_chart_set_range(gui_AccelXChart, LV_CHART_AXIS_PRIMARY_Y, min_x * 1.1, max_x * 1.1);
     lv_chart_refresh(gui_AccelXChart);
@@ -1063,6 +1105,41 @@ void _create_toolbars_main(void)
     lv_line_set_points(bottom_line, bottom_line_points, 3); /*Set the points*/
     lv_obj_add_style(bottom_line, &style_bottom_line, 0);
 
+    //* Create settings button
+    gui_SettingsBut = lv_btn_create(gui_MainScreen);
+    lv_obj_set_width(gui_SettingsBut, 25);
+    lv_obj_set_height(gui_SettingsBut, 25);
+
+    // Add default styles
+    static lv_style_t styleSettingsBut;
+    lv_style_init(&styleSettingsBut);
+    lv_style_set_radius(&styleSettingsBut, 3);
+    lv_style_set_bg_opa(&styleSettingsBut, LV_OPA_TRANSP);
+    lv_style_set_border_opa(&styleSettingsBut, LV_OPA_TRANSP);
+    lv_style_set_outline_opa(&styleSettingsBut, LV_OPA_COVER);
+    lv_style_set_outline_color(&styleSettingsBut, DEFAULT_ELEMENT_ACCENT_COLOR);
+
+    // Add pressed styles
+    static lv_style_t styleSettingsBut_pressed;
+    lv_style_init(&styleSettingsBut_pressed);
+    lv_style_set_outline_width(&styleSettingsBut_pressed, 10);
+    lv_style_set_outline_opa(&styleSettingsBut_pressed, LV_OPA_TRANSP);
+
+    static lv_style_transition_dsc_t trans;
+    static lv_style_prop_t props[] = {LV_STYLE_OUTLINE_WIDTH, LV_STYLE_OUTLINE_OPA, LV_STYLE_PROP_INV};
+    lv_style_transition_dsc_init(&trans, props, lv_anim_path_linear, 300, 0, NULL);
+    lv_style_set_transition(&styleSettingsBut_pressed, &trans);
+
+    lv_obj_remove_style_all(gui_SettingsBut); /*Remove the style coming from the theme*/
+    lv_obj_add_style(gui_SettingsBut, &styleSettingsBut, 0);
+    lv_obj_add_style(gui_SettingsBut, &styleSettingsBut_pressed, LV_STATE_PRESSED);
+    lv_obj_align(gui_SettingsBut, LV_ALIGN_TOP_LEFT, 290, 2);
+
+    // Add icon
+    lv_obj_t *gui_SettingsButImg = lv_img_create(gui_SettingsBut);
+    lv_img_set_src(gui_SettingsButImg, &settings_icon);
+    lv_obj_center(gui_SettingsButImg);
+
     //* Create nerd stuff button
     gui_NerdBut = lv_btn_create(gui_MainScreen);
     lv_obj_set_width(gui_NerdBut, 25);
@@ -1083,15 +1160,13 @@ void _create_toolbars_main(void)
     lv_style_set_outline_width(&styleNerdBut_pressed, 10);
     lv_style_set_outline_opa(&styleNerdBut_pressed, LV_OPA_TRANSP);
 
-    static lv_style_transition_dsc_t trans;
-    static lv_style_prop_t props[] = {LV_STYLE_OUTLINE_WIDTH, LV_STYLE_OUTLINE_OPA, LV_STYLE_PROP_INV};
     lv_style_transition_dsc_init(&trans, props, lv_anim_path_linear, 300, 0, NULL);
     lv_style_set_transition(&styleNerdBut_pressed, &trans);
 
     lv_obj_remove_style_all(gui_NerdBut); /*Remove the style coming from the theme*/
     lv_obj_add_style(gui_NerdBut, &styleNerdBut, 0);
     lv_obj_add_style(gui_NerdBut, &styleNerdBut_pressed, LV_STATE_PRESSED);
-    lv_obj_align(gui_NerdBut, LV_ALIGN_TOP_LEFT, 5, 0);
+    lv_obj_align(gui_NerdBut, LV_ALIGN_TOP_LEFT, 5, 2);
 
     // Add icon
     lv_obj_t *gui_NerdButImg = lv_img_create(gui_NerdBut);
@@ -1282,7 +1357,7 @@ void _create_pages_nerd(void)
     lv_obj_set_size(gui_page_signal_x, screenWidth, screenHeight - DEFAULT_TOOLBAR_HEIGHT);
     lv_obj_set_style_bg_opa(gui_page_signal_x, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_opa(gui_page_signal_x, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-    _create_signal_chart(&gui_AccelXChart, accX_sample, AccelChart_draw_event_cb, ACC_CHART_POINT_COUNT, &gui_AccelChart_Xslider, &gui_AccelChart_Yslider, gui_page_signal_x, 240, 145, {20, 25});
+    _create_signal_chart(&gui_AccelXChart, accX_sample, AccelChart_draw_event_cb, ACC_CHART_POINT_COUNT, &gui_AccelChart_Xslider, &gui_AccelChart_Yslider, gui_page_signal_x, 290, 145, {-4, 25});
     lv_obj_align(gui_page_signal_x, LV_ALIGN_TOP_MID, 0, 0);
 
     //* Acceleration-Y signal chart
@@ -1291,7 +1366,7 @@ void _create_pages_nerd(void)
     lv_obj_set_size(gui_page_signal_y, screenWidth, screenHeight - DEFAULT_TOOLBAR_HEIGHT);
     lv_obj_set_style_bg_opa(gui_page_signal_y, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_opa(gui_page_signal_y, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-    _create_signal_chart(&gui_AccelYChart, accY_sample, AccelChart_draw_event_cb, ACC_CHART_POINT_COUNT, &gui_AccelChart_Xslider, &gui_AccelChart_Yslider, gui_page_signal_y, 240, 145, {20, 25});
+    _create_signal_chart(&gui_AccelYChart, accY_sample, AccelChart_draw_event_cb, ACC_CHART_POINT_COUNT, &gui_AccelChart_Xslider, &gui_AccelChart_Yslider, gui_page_signal_y, 290, 145, {-4, 25});
 
     // Hide. Only one page must be active at the same time...
     lv_obj_add_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
@@ -1302,7 +1377,7 @@ void _create_pages_nerd(void)
     lv_obj_set_size(gui_page_fft_x, screenWidth, screenHeight - DEFAULT_TOOLBAR_HEIGHT);
     lv_obj_set_style_bg_opa(gui_page_fft_x, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_opa(gui_page_fft_x, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-    _create_analisys_chart(&gui_FFTXChart, fftX_sample, FFTXChart_draw_event_cb, FFT_DATA_BUFFER_SIZE, gui_page_fft_x, 240, 145, {20, 25});
+    _create_analisys_chart(&gui_FFTXChart, fftX_sample, FFTXChart_draw_event_cb, FFT_DATA_BUFFER_SIZE, gui_page_fft_x, 290, 145, {-4, 25});
 
     // Hide. Only one page must be active at the same time...
     lv_obj_add_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
@@ -1313,7 +1388,7 @@ void _create_pages_nerd(void)
     lv_obj_set_size(gui_page_fft_y, screenWidth, screenHeight - DEFAULT_TOOLBAR_HEIGHT);
     lv_obj_set_style_bg_opa(gui_page_fft_y, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_opa(gui_page_fft_y, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-    _create_analisys_chart(&gui_FFTYChart, fftY_sample, FFTYChart_draw_event_cb, FFT_DATA_BUFFER_SIZE, gui_page_fft_y, 240, 145, {20, 25});
+    _create_analisys_chart(&gui_FFTYChart, fftY_sample, FFTYChart_draw_event_cb, FFT_DATA_BUFFER_SIZE, gui_page_fft_y, 290, 145, {-4, 25});
 
     // Hide. Only one page must be active at the same time...
     lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
@@ -1449,7 +1524,12 @@ void _create_toolbars_nerd(void)
 
     // Add buttons to the list
     lv_obj_t *btn;
-    lv_list_add_text(gui_action_list_nerd, "Chart");
+    lv_list_add_text(gui_action_list_nerd, "Raw");
+    btn = lv_list_add_btn(gui_action_list_nerd, NULL, "X-axis");
+    lv_obj_add_event_cb(btn, btn_show_raw_x_charts_event_cb, LV_EVENT_CLICKED, NULL);
+    btn = lv_list_add_btn(gui_action_list_nerd, NULL, "Y-axis");
+    lv_obj_add_event_cb(btn, btn_show_raw_y_charts_event_cb, LV_EVENT_CLICKED, NULL);
+    lv_list_add_text(gui_action_list_nerd, "Filt");
     btn = lv_list_add_btn(gui_action_list_nerd, NULL, "X-axis");
     lv_obj_add_event_cb(btn, btn_show_x_charts_event_cb, LV_EVENT_CLICKED, NULL);
     btn = lv_list_add_btn(gui_action_list_nerd, NULL, "Y-axis");
@@ -1476,8 +1556,38 @@ void _create_toolbars_nerd(void)
 
     lv_obj_add_state(currentButton, LV_STATE_CHECKED);
 
-    // Add style to the X-axis button
+    // Add style to the Y-axis button
     currentButton = lv_obj_get_child(gui_action_list_nerd, 2);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_all(currentButton, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(currentButton, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+
+    lv_obj_set_style_bg_color(currentButton, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_CHECKED);
+
+    // Add style to the text
+    currentButton = lv_obj_get_child(gui_action_list_nerd, 3);
+    lv_obj_set_style_bg_color(currentButton, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_all(currentButton, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Add style to the X-axis button
+    currentButton = lv_obj_get_child(gui_action_list_nerd, 4);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_all(currentButton, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(currentButton, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+
+    lv_obj_set_style_bg_color(currentButton, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_CHECKED);
+
+    // Add style to the Y-axis button
+    currentButton = lv_obj_get_child(gui_action_list_nerd, 5);
     lv_obj_set_style_bg_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_outline_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -1508,19 +1618,19 @@ void _create_signal_chart(lv_obj_t **chart_handler, int16_t *data_array, lv_even
     lv_chart_set_point_count(*chart_handler, point_num);
     lv_chart_set_ext_y_array(*chart_handler, ser, (lv_coord_t *)data_array);
 
-    lv_obj_align(*chart_handler, LV_ALIGN_TOP_MID, position.x, position.y);
+    lv_obj_align(*chart_handler, LV_ALIGN_TOP_LEFT, position.x, position.y);
 
     //* Create X-ScrollBar
     *sliderX_handler = lv_slider_create(parent);
     lv_slider_set_range(*sliderX_handler, LV_IMG_ZOOM_NONE, LV_IMG_ZOOM_NONE * 10);
-    lv_obj_add_event_cb(*sliderX_handler, chart_slider_x_event_cb, LV_EVENT_VALUE_CHANGED, chart_handler);
+    lv_obj_add_event_cb(*sliderX_handler, chart_slider_x_event_cb, LV_EVENT_VALUE_CHANGED, *chart_handler);
     lv_obj_set_size(*sliderX_handler, width, 5);
     lv_obj_align_to(*sliderX_handler, *chart_handler, LV_ALIGN_OUT_BOTTOM_MID, 0, 5);
 
     //* Create Y-ScrollBar
     *sliderY_handler = lv_slider_create(parent);
     lv_slider_set_range(*sliderY_handler, LV_IMG_ZOOM_NONE, LV_IMG_ZOOM_NONE * 10);
-    lv_obj_add_event_cb(*sliderY_handler, chart_slider_y_event_cb, LV_EVENT_VALUE_CHANGED, chart_handler);
+    lv_obj_add_event_cb(*sliderY_handler, chart_slider_y_event_cb, LV_EVENT_VALUE_CHANGED, *chart_handler);
     lv_obj_set_size(*sliderY_handler, 5, height);
     lv_obj_align_to(*sliderY_handler, *chart_handler, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
 }
@@ -1535,17 +1645,18 @@ void _create_analisys_chart(lv_obj_t **chart_handler, int16_t *data_array, lv_ev
     lv_obj_set_style_bg_color(*chart_handler, DEFAULT_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(*chart_handler, LV_OPA_100, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_size(*chart_handler, 0, LV_PART_INDICATOR); // Do not display points on the data
+    lv_obj_set_style_size(*chart_handler, 1, LV_PART_ITEMS);
     lv_chart_set_update_mode(*chart_handler, LV_CHART_UPDATE_MODE_SHIFT);
     lv_chart_set_range(*chart_handler, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
     lv_chart_set_axis_tick(*chart_handler, LV_CHART_AXIS_PRIMARY_X, 7, 3, FFT_MAJOR_TICK_COUNT, 5, true, 50);
     lv_obj_add_event_cb(*chart_handler, event_cb, LV_EVENT_ALL, NULL); //? Event to be able to draw the peak points
 
-    lv_chart_series_t *ser = lv_chart_add_series(*chart_handler, DEFAULT_ELEMENT_ACCENT_COLOR, LV_CHART_AXIS_PRIMARY_Y);
+    lv_chart_series_t *ser = lv_chart_add_series(*chart_handler, SECONDARY_ELEMENT_ACCENT_COLOR, LV_CHART_AXIS_PRIMARY_Y);
 
     lv_chart_set_point_count(*chart_handler, point_num);
     lv_chart_set_ext_y_array(*chart_handler, ser, (lv_coord_t *)data_array);
 
-    lv_obj_align(*chart_handler, LV_ALIGN_TOP_MID, position.x, position.y);
+    lv_obj_align(*chart_handler, LV_ALIGN_TOP_LEFT, position.x, position.y);
 }
 
 void _chart_Y_autorange(lv_obj_t *chart_obj, lv_chart_series_t *ser)

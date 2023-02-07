@@ -232,7 +232,7 @@ void DPB::exe(command_data_t command)
         break;
 
     case FFT_REQUEST_CMD:
-        _exe_fft();
+        _exe_fft(command.value.ull);
         _exe_reset();
         break;
 
@@ -428,13 +428,14 @@ void DPB::_exe_unbalance_finder(void)
     ask_unbalance_update();
 }
 
-void DPB::_exe_fft(void)
+void DPB::_exe_fft(uint8_t data_type)
 {
-    if (fft_calc(FILTERED_DATA) != ESP_OK)
+    if (fft_calc((data_orig_e)data_type) != ESP_OK)
     {
         return;
     }
     fft_peak_finder();
+    ask_fft_chart_update();
 }
 
 void DPB::_exe_lpf(void)
@@ -451,7 +452,7 @@ void DPB::ask_acc_charts_update(void)
     command_data_t command;
 
     command.command = GUI_ACC_CHART_UPDATE_CMD;
-    command.value.ull = 1;
+    command.value.ull = RAW_DATA;
     xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
 }
 
