@@ -80,6 +80,7 @@ enum sys_command_e
     GUI_FFT_CHART_UPDATE_CMD,
     GUI_UNBALANCE_UPDATE_CMD,
     LPF_REQUEST_CMD,
+    SEARCH_TYPE_CMD,
     GUI_INIT_COMPLETE_CMD,
     GUI_INIT_ACC_CMD, //ToDo
     GUI_INIT_RPM_CMD, //ToDo
@@ -109,6 +110,12 @@ enum data_orig_e
 {
     RAW_DATA,
     FILTERED_DATA
+};
+
+enum app_search_type_e
+{
+    SEARCH_OPTICAL,
+    SEARCH_4_STEPS
 };
 
 union dpb_generic_u

@@ -16,7 +16,9 @@ DPBShared::DPBShared() : _data(new Data)
     _data->_acc_y_max_index = 0;
     _data->_fft_x_max_index = 0;
     _data->_fft_y_max_index = 0;
-
+    _data->_angleOffset = 0;
+    _data->_searchType = SEARCH_OPTICAL;
+    
     _xSemComm = xSemaphoreCreateMutex();
     _xSemDpbData = xSemaphoreCreateMutex();
     _xSemDpbDataFlt = xSemaphoreCreateMutex();
@@ -324,6 +326,21 @@ float_t DPBShared::getUnbalanceFreq()
     return v;
 }
 
+void DPBShared::setUnbalanceMag(float_t v) 
+{
+    _lockComm();
+    _data->_unbalanceMag = v;
+    _unlockComm();
+}
+
+float_t DPBShared::getUnbalanceMag()
+{
+   _lockComm();
+    float_t v = _data->_unbalanceMag;
+    _unlockComm();
+    return v;
+}
+
 void DPBShared::setXPeaksIndex(size_t v, uint32_t index)
 {
     _lockComm();
@@ -460,6 +477,36 @@ size_t DPBShared::getAccYMaxIndex(void)
 {
     _lockComm();
     size_t v = _data->_acc_y_max_index;
+    _unlockComm();
+    return v;
+}
+
+void DPBShared::setAngleOffset(int16_t v)
+{
+    _lockComm();
+    _data->_angleOffset = v;
+    _unlockComm();
+}
+
+int16_t DPBShared::getAngleOffset()
+{
+    _lockComm();
+    int16_t v = _data->_angleOffset;
+    _unlockComm();
+    return v;
+}
+
+void DPBShared::setSearchType(app_search_type_e v) 
+{
+    _lockComm();
+    _data->_searchType = v;
+    _unlockComm();
+}
+
+app_search_type_e DPBShared::getSearchType()
+{
+    _lockComm();
+    app_search_type_e v = _data->_searchType;
     _unlockComm();
     return v;
 }

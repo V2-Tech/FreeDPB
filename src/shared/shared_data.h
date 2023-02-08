@@ -63,6 +63,8 @@ public:
     float_t getUnbalanceYAngle();
     void setUnbalanceFreq(float_t v);
     float_t getUnbalanceFreq();
+    void setUnbalanceMag(float_t v);
+    float_t getUnbalanceMag();
 
     void setXPeaksIndex(size_t v, uint32_t index);
     size_t getXPeakIndex(uint32_t index);
@@ -82,11 +84,17 @@ public:
     size_t getFFTXMaxIndex(void);
     void setFFTYMaxIndex(size_t v);
     size_t getFFTYMaxIndex(void);
-    
+
     void setAccXMaxIndex(size_t v);
     size_t getAccXMaxIndex(void);
     void setAccYMaxIndex(size_t v);
     size_t getAccYMaxIndex(void);
+
+    void setAngleOffset(int16_t v);
+    int16_t getAngleOffset();
+
+    void setSearchType(app_search_type_e v);
+    app_search_type_e getSearchType();
 
 private:
     DPBShared();
@@ -95,6 +103,7 @@ private:
     //* Shared variables list
     struct Data
     {
+        // Internal
         uint64_t _rotCount;
         uint16_t _rpm;
         app_steps_e _step;
@@ -104,11 +113,10 @@ private:
         uint64_t _dpb_time[ACC_DATA_BUFFER_SIZE] = {0};
         float_t _fft_x[FFT_DATA_BUFFER_SIZE] = {0};
         float_t _fft_y[FFT_DATA_BUFFER_SIZE] = {0};
-        uint16_t _bandWidth;
-        uint16_t _range;
         float_t _unbalanceXAngle;
         float_t _unbalanceYAngle;
         float_t _unbalanceFreq;
+        float_t _unbalanceMag;
         size_t _x_peak_index[ACC_DATA_BUFFER_SIZE] = {0};
         size_t _y_peak_index[ACC_DATA_BUFFER_SIZE] = {0};
         size_t _x_peak_count;
@@ -117,6 +125,12 @@ private:
         size_t _acc_y_max_index;
         size_t _fft_x_max_index;
         size_t _fft_y_max_index;
+
+        // User
+        uint16_t _range;
+        uint16_t _bandWidth;
+        int16_t _angleOffset;
+        app_search_type_e _searchType;
     };
     Data *_data;
 

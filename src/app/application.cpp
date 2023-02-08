@@ -54,7 +54,7 @@ int16_t DPB::init(QueueHandle_t xQueueSysInput_handle, QueueHandle_t xQueueSysOu
     _xQueueSysInput = xQueueSysInput_handle;
     _xQueueSysOutput = xQueueSysOutput_handle;
     _xSuppTask = supportTask_handle;
-    
+
     ESP_LOGI(TAG, "Wait until all has been initialized");
     init_accel();
     init_esc();
@@ -465,7 +465,7 @@ void DPB::ask_fft_chart_update(void)
     xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
 }
 
-void DPB::ask_unbalance_update(void) 
+void DPB::ask_unbalance_update(void)
 {
     command_data_t command;
 
@@ -804,6 +804,9 @@ void DPB::fft_peak_finder(void)
             peak_y_index = i;
         }
     }
+
+    _xShared.setUnbalanceMag(pFFTXBuf[peak_x_index] + pFFTYBuf[peak_y_index]);
+
     _xShared.unlockFFT();
 
     _xShared.setFFTXMaxIndex(peak_x_index);

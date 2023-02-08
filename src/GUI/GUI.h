@@ -18,6 +18,7 @@ static const uint16_t screenWidth = 320;
 static const uint16_t screenHeight = 240;
 
 #define DEFAULT_BACKGROUND_COLOR lv_color_hex(0x031417)
+#define SECONDARY_BACKGROUND_COLOR lv_color_hex(0x083D44)
 #define DEFAULT_ELEMENT_ACCENT_COLOR lv_color_hex(0x169FB1)
 #define SECONDARY_ELEMENT_ACCENT_COLOR lv_color_hex(0xFF9900)
 #define DEFAULT_TOOLBAR_HEIGHT 30U
@@ -27,8 +28,8 @@ LV_IMG_DECLARE(settings_icon);
 LV_IMG_DECLARE(nerd_face_icon);
 LV_IMG_DECLARE(motor_icon);
 LV_IMG_DECLARE(sensor_img);
-LV_IMG_DECLARE(chart_ico);
-LV_IMG_DECLARE(fft_ico);
+LV_IMG_DECLARE(chart_change_icon);
+LV_IMG_DECLARE(weight_icon);
 
 LV_FONT_DECLARE(gui_font_med);
 
@@ -169,6 +170,7 @@ void _update_unbalance(void);
 void chart_slider_x_event_cb(lv_event_t *e);
 void chart_slider_y_event_cb(lv_event_t *e);
 void start_btn_event_cb(lv_event_t *e);
+void searchType_sw_event_cb(lv_event_t *e);
 void nerd_btn_event_cb(lv_event_t *e);
 void root_back_btn_event_cb(lv_event_t *e);
 void FFTXChart_draw_event_cb(lv_event_t *e);
@@ -185,7 +187,8 @@ void btn_show_raw_y_charts_event_cb(lv_event_t *e);
 void _display_init(void);
 void _create_toolbars_main(void);
 void _create_anglechart_main(void);
-void _create_unbalance_arrow(float_t angle_value, uint8_t lenght, uint8_t mirrored);
+void _create_unbalance_arrow(float_t angle_value, float_t magnitude_value, uint8_t lenght, uint8_t mirrored);
+void _create_4stepschart_main(void);
 void _create_pages_nerd(void);
 void _create_toolbars_nerd(void);
 void _create_signal_chart(lv_obj_t **chart_handler, int16_t *data_array, lv_event_cb_t event_cb, size_t point_num, lv_obj_t **sliderX_handler, lv_obj_t **sliderY_handler, lv_obj_t *parent, lv_coord_t width, lv_coord_t height, lv_point_t position);

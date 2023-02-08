@@ -23,6 +23,7 @@ lv_obj_t *gui_FFTScreen = NULL;
 //* Main screen object
 lv_obj_t *gui_StartBut = NULL;
 lv_obj_t *gui_StartButLabel = NULL;
+lv_obj_t *gui_SearchTypeSwitch = NULL;
 lv_obj_t *gui_SettingsBut = NULL;
 lv_obj_t *gui_NerdBut = NULL;
 lv_obj_t *gui_RPMLabel = NULL;
@@ -31,6 +32,11 @@ lv_obj_t *gui_UnbalanceAngleTab = NULL;
 lv_obj_t *gui_UnbalanceAngleLine = NULL;
 lv_obj_t *gui_UnbalanceAngleLineEnd = NULL;
 lv_obj_t *gui_UnbalanceLabValue = NULL;
+lv_obj_t *gui_4StepsTab = NULL;
+lv_obj_t *gui_Steps1Lab = NULL;
+lv_obj_t *gui_Steps2Lab = NULL;
+lv_obj_t *gui_Steps3Lab = NULL;
+lv_obj_t *gui_Steps4Lab = NULL;
 
 //* Nerd screen object
 lv_obj_t *gui_page_signal_x = NULL;
@@ -163,6 +169,9 @@ void gui_MainScreen_init(void)
     //* Create angle chart
     _create_anglechart_main();
 
+    //* Create 4-steps chart
+    _create_4stepschart_main();
+
     //* Create start button
     gui_StartBut = lv_btn_create(gui_MainScreen);
     lv_obj_set_width(gui_StartBut, 100);
@@ -194,7 +203,7 @@ void gui_MainScreen_init(void)
     lv_style_set_transition(&styleStartBut_pressed, &trans_start_but);
     lv_obj_add_style(gui_StartBut, &styleStartBut, 0);
     lv_obj_add_style(gui_StartBut, &styleStartBut_pressed, LV_STATE_PRESSED);
-    lv_obj_align(gui_StartBut, LV_ALIGN_TOP_LEFT, 210, 45);
+    lv_obj_align(gui_StartBut, LV_ALIGN_TOP_LEFT, 210, 80);
 
     // Add event
     lv_obj_add_event_cb(gui_StartBut, start_btn_event_cb, LV_EVENT_ALL, NULL);
@@ -208,9 +217,39 @@ void gui_MainScreen_init(void)
     lv_obj_add_style(gui_StartButLabel, &styleStartButLabel, 0);
     lv_obj_center(gui_StartButLabel);
 
-    //* Create magnitude label
+    //* Create search type switch tab
+    lv_obj_t *gui_SearchTypeSwitch_Tab = lv_obj_create(gui_MainScreen);
+    lv_obj_set_size(gui_SearchTypeSwitch_Tab, 100, 30);
+    lv_obj_clear_flag(gui_SearchTypeSwitch_Tab, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_bg_opa(gui_SearchTypeSwitch_Tab, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_border_opa(gui_SearchTypeSwitch_Tab, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_outline_opa(gui_SearchTypeSwitch_Tab, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_align_to(gui_SearchTypeSwitch_Tab, gui_StartBut, LV_ALIGN_OUT_TOP_MID, 0, -10);
 
-    //* Create unbalance angle label
+    // Create switch
+    gui_SearchTypeSwitch = lv_switch_create(gui_SearchTypeSwitch_Tab);
+    lv_obj_set_style_bg_color(gui_SearchTypeSwitch, SECONDARY_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(gui_SearchTypeSwitch, SECONDARY_BACKGROUND_COLOR, LV_PART_INDICATOR | LV_STATE_DEFAULT | LV_STATE_CHECKED | LV_STATE_FOCUSED);
+    lv_obj_set_style_bg_color(gui_SearchTypeSwitch, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_KNOB | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(gui_SearchTypeSwitch, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_KNOB | LV_STATE_CHECKED);
+    lv_obj_center(gui_SearchTypeSwitch);
+
+    lv_obj_add_event_cb(gui_SearchTypeSwitch, searchType_sw_event_cb, LV_EVENT_ALL, NULL);
+
+    // Add icons
+    lv_obj_t *gui_SearchType = lv_img_create(gui_SearchTypeSwitch_Tab);
+    lv_img_set_src(gui_SearchType, &sensor_img);
+    lv_obj_align(gui_SearchType, LV_ALIGN_CENTER, -40, 17);
+
+    gui_SearchType = lv_img_create(gui_SearchTypeSwitch_Tab);
+    lv_img_set_src(gui_SearchType, &weight_icon);
+    lv_obj_align(gui_SearchType, LV_ALIGN_CENTER, 40, 0);
+
+    //* Create corrector spinbox
+    // TODO
+    
+    //* Create reset button
+    // TODO
 }
 
 void gui_NerdScreen_init(void)
@@ -442,6 +481,34 @@ void start_btn_event_cb(lv_event_t *e)
     }
 }
 
+void searchType_sw_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED)
+    {
+        int32_t v = (int32_t)_xShared.getSearchType();
+        if (v == (int32_t)SEARCH_OPTICAL)
+        {
+            v = (int32_t)SEARCH_4_STEPS;
+            lv_obj_add_flag(gui_UnbalanceAngleTab, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(gui_4StepsTab, LV_OBJ_FLAG_HIDDEN);
+        }
+        else
+        {
+            v = (int32_t)SEARCH_OPTICAL;
+            lv_obj_add_flag(gui_4StepsTab, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(gui_UnbalanceAngleTab, LV_OBJ_FLAG_HIDDEN);
+        }
+        _xShared.setSearchType((app_search_type_e)v);
+
+        command_data_t command;
+        command.command = SEARCH_TYPE_CMD;
+        command.value.ll = v;
+
+        xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+    }
+}
+
 void nerd_btn_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -514,6 +581,7 @@ void AccelChart_draw_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
     lv_obj_t *chart = lv_event_get_target(e);
+    void *user_data = lv_event_get_user_data(e);
 
     if (code == LV_EVENT_VALUE_CHANGED)
     {
@@ -528,7 +596,7 @@ void AccelChart_draw_event_cb(lv_event_t *e)
     {
         static uint8_t serCount;
 
-        //? Show points only when chart is pressed
+        //! Show points only when chart is pressed
         int32_t id = lv_chart_get_pressed_point(chart);
         if (id == LV_CHART_POINT_NONE)
         {
@@ -544,7 +612,16 @@ void AccelChart_draw_event_cb(lv_event_t *e)
                 continue;
             }
 
-            size_t peakCount = _xShared.getXPeakCount();
+            size_t peakCount;
+            if (user_data == gui_AccelXChart)
+            {
+                peakCount = _xShared.getXPeakCount();
+            }
+            else
+            {
+                peakCount = _xShared.getYPeakCount();
+            }
+
             if (peakCount == 0)
             {
                 ser = lv_chart_get_series_next(chart, ser);
@@ -571,7 +648,7 @@ void AccelChart_draw_event_cb(lv_event_t *e)
             lv_point_t *r = new lv_point_t[rotCount]();
             size_t *pPeakBuf;
 
-            if (serCount == 1)
+            if (user_data == gui_AccelXChart)
             {
                 pPeakBuf = _xShared.getXPeaksIndexPointer_us();
             }
@@ -655,17 +732,11 @@ void chart_switch_btn_event_cb(lv_event_t *e)
             {
                 lv_obj_add_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
                 lv_obj_clear_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
-
-                // Change icon
-                lv_img_set_src(lv_obj_get_child(obj, 0), &chart_ico);
             }
             else
             {
                 lv_obj_add_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
                 lv_obj_clear_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
-
-                // Change icon
-                lv_img_set_src(lv_obj_get_child(obj, 0), &fft_ico);
             }
         }
         else
@@ -674,17 +745,11 @@ void chart_switch_btn_event_cb(lv_event_t *e)
             {
                 lv_obj_add_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
                 lv_obj_clear_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
-
-                // Change icon
-                lv_img_set_src(lv_obj_get_child(obj, 0), &chart_ico);
             }
             else
             {
                 lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
                 lv_obj_clear_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
-
-                // Change icon
-                lv_img_set_src(lv_obj_get_child(obj, 0), &fft_ico);
             }
         }
     }
@@ -1233,6 +1298,11 @@ void _create_anglechart_main(void)
     lv_img_set_zoom(gui_PropBaseImg, (uint16_t)k);
     lv_obj_align(gui_PropBaseImg, LV_ALIGN_LEFT_MID, -45, 0);
 
+    //* Create sensor symbol
+    lv_obj_t *gui_SensorImg = lv_img_create(gui_UnbalanceAngleTab);
+    lv_img_set_src(gui_SensorImg, &sensor_img);
+    lv_obj_align(gui_SensorImg, LV_ALIGN_LEFT_MID, 0, 25);
+
     //* Create unbalance angle line
     gui_UnbalanceAngleLine = lv_line_create(gui_UnbalanceAngleTab);
     lv_line_set_y_invert(gui_UnbalanceAngleLine, true);
@@ -1257,7 +1327,7 @@ void _create_anglechart_main(void)
     // Create angle label
     gui_UnbalanceLabValue = lv_label_create(gui_UnbalanceAngleTab);
     lv_obj_set_width(gui_UnbalanceLabValue, 50);
-    lv_obj_set_height(gui_UnbalanceLabValue, 16);
+    lv_obj_set_height(gui_UnbalanceLabValue, 34);
     lv_label_set_long_mode(gui_UnbalanceLabValue, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_label_set_recolor(gui_UnbalanceLabValue, true);
     lv_obj_set_style_text_align(gui_UnbalanceLabValue, LV_TEXT_ALIGN_CENTER, 0);
@@ -1268,15 +1338,10 @@ void _create_anglechart_main(void)
     lv_obj_set_style_border_opa(gui_UnbalanceLabValue, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_radius(gui_UnbalanceLabValue, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    _create_unbalance_arrow(-180.0, 0, 0);
-
-    //* Create sensor symbol
-    lv_obj_t *gui_SensorImg = lv_img_create(gui_UnbalanceAngleTab);
-    lv_img_set_src(gui_SensorImg, &sensor_img);
-    lv_obj_align(gui_SensorImg, LV_ALIGN_LEFT_MID, 0, 25);
+    _create_unbalance_arrow(-180.0, 0, 0, 0);
 }
 
-void _create_unbalance_arrow(float_t angle_value, uint8_t lenght, uint8_t mirrored)
+void _create_unbalance_arrow(float_t angle_value, float_t magnitude_value, uint8_t lenght, uint8_t mirrored)
 {
     lv_point_t startPoint = {98, 102};
     lv_point_t endPoint = startPoint;
@@ -1328,16 +1393,16 @@ void _create_unbalance_arrow(float_t angle_value, uint8_t lenght, uint8_t mirror
     lv_obj_align(gui_UnbalanceAngleLineEnd, LV_ALIGN_BOTTOM_LEFT, endPoint.x - 5, -endPoint.y + 5);
 
     // Change label value
-    lv_label_set_text_fmt(gui_UnbalanceLabValue, "%.1f°", label_angle_value);
+    lv_label_set_text_fmt(gui_UnbalanceLabValue, "%.1f°\n%.1f", label_angle_value, magnitude_value);
 
     // Change label position
     if (angle_value <= 90)
     {
-        lv_obj_align(gui_UnbalanceLabValue, LV_ALIGN_BOTTOM_LEFT, endPoint.x - 25, -endPoint.y + 16 + 8);
+        lv_obj_align(gui_UnbalanceLabValue, LV_ALIGN_BOTTOM_LEFT, endPoint.x - 25, -endPoint.y + 2 * 16 + 8);
     }
     else if ((angle_value > 90) && (angle_value <= 180))
     {
-        lv_obj_align(gui_UnbalanceLabValue, LV_ALIGN_BOTTOM_LEFT, endPoint.x - 25, -endPoint.y + 16 + 8);
+        lv_obj_align(gui_UnbalanceLabValue, LV_ALIGN_BOTTOM_LEFT, endPoint.x - 25, -endPoint.y + 2 * 16 + 8);
     }
     else if ((angle_value > 180) && (angle_value <= 270))
     {
@@ -1349,6 +1414,108 @@ void _create_unbalance_arrow(float_t angle_value, uint8_t lenght, uint8_t mirror
     }
 }
 
+void _create_4stepschart_main(void)
+{
+    //* Create 4-steps chart object
+    gui_4StepsTab = lv_obj_create(gui_MainScreen);
+    lv_obj_set_width(gui_4StepsTab, 280);
+    lv_obj_set_height(gui_4StepsTab, 240);
+    lv_obj_clear_flag(gui_4StepsTab, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+
+    // Add style
+    lv_obj_set_style_bg_opa(gui_4StepsTab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(gui_4StepsTab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_align(gui_4StepsTab, LV_ALIGN_LEFT_MID, 0, 0);
+    lv_obj_add_flag(gui_4StepsTab, LV_OBJ_FLAG_HIDDEN);
+
+    //* Add background propeller image
+    lv_obj_t *gui_PropBaseImg = lv_img_create(gui_4StepsTab);
+    lv_img_set_src(gui_PropBaseImg, &propeller_img_png);
+    lv_img_set_angle(gui_PropBaseImg, 90 * 10);
+    // lv_img_set_pivot(prop_img, 0, 0);  //To zoom from the left top corner
+    float_t k = 256 * 0.8;
+    lv_img_set_zoom(gui_PropBaseImg, (uint16_t)k);
+    lv_obj_align(gui_PropBaseImg, LV_ALIGN_LEFT_MID, -45, 0);
+
+    //* Create 4-steps labels
+    lv_point_t centerPoint = {98, 102};
+
+    // Step 1
+    gui_Steps1Lab = lv_label_create(gui_4StepsTab);
+    lv_obj_set_width(gui_Steps1Lab, 40);
+    lv_obj_set_height(gui_Steps1Lab, 34);
+    lv_obj_set_pos(gui_Steps1Lab, centerPoint.x - 20, centerPoint.y - 15);
+    lv_label_set_long_mode(gui_Steps1Lab, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_label_set_recolor(gui_Steps1Lab, true);
+    lv_obj_set_style_text_align(gui_Steps1Lab, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_clear_flag(gui_Steps1Lab, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_text_color(gui_Steps1Lab, lv_color_white(), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(gui_Steps1Lab, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(gui_Steps1Lab, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(gui_Steps1Lab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(gui_Steps1Lab, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Add text
+    lv_label_set_text(gui_Steps1Lab, "Step 1:\nWeightfree");
+
+    // Step 2
+    gui_Steps2Lab = lv_label_create(gui_4StepsTab);
+    lv_obj_set_width(gui_Steps2Lab, 40);
+    lv_obj_set_height(gui_Steps2Lab, 34);
+    lv_obj_set_pos(gui_Steps2Lab, centerPoint.x - 20 - 60, centerPoint.y - 15);
+    lv_label_set_long_mode(gui_Steps2Lab, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_label_set_recolor(gui_Steps2Lab, true);
+    lv_obj_set_style_text_align(gui_Steps2Lab, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_clear_flag(gui_Steps2Lab, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_text_color(gui_Steps2Lab, lv_color_white(), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(gui_Steps2Lab, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(gui_Steps2Lab, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(gui_Steps2Lab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(gui_Steps2Lab, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_add_flag(gui_Steps2Lab, LV_OBJ_FLAG_HIDDEN);
+
+    // Add text
+    lv_label_set_text(gui_Steps2Lab, "Step 2:\nAdd weight here");
+
+    // Step 3
+    gui_Steps3Lab = lv_label_create(gui_4StepsTab);
+    lv_obj_set_width(gui_Steps3Lab, 40);
+    lv_obj_set_height(gui_Steps3Lab, 34);
+    lv_obj_set_pos(gui_Steps3Lab, centerPoint.x - 8 + 20, centerPoint.y + 50);
+    lv_label_set_long_mode(gui_Steps3Lab, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_label_set_recolor(gui_Steps3Lab, true);
+    lv_obj_set_style_text_align(gui_Steps3Lab, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_clear_flag(gui_Steps3Lab, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_text_color(gui_Steps3Lab, lv_color_white(), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(gui_Steps3Lab, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(gui_Steps3Lab, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(gui_Steps3Lab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(gui_Steps3Lab, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_add_flag(gui_Steps3Lab, LV_OBJ_FLAG_HIDDEN);
+
+    // Add text
+    lv_label_set_text(gui_Steps3Lab, "Step 3:\nAdd weight here");
+
+    // Step 4
+    gui_Steps4Lab = lv_label_create(gui_4StepsTab);
+    lv_obj_set_width(gui_Steps4Lab, 40);
+    lv_obj_set_height(gui_Steps4Lab, 34);
+    lv_obj_set_pos(gui_Steps4Lab, centerPoint.x - 8 + 20, centerPoint.y - (17 + 50));
+    lv_label_set_long_mode(gui_Steps4Lab, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_label_set_recolor(gui_Steps4Lab, true);
+    lv_obj_set_style_text_align(gui_Steps4Lab, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_clear_flag(gui_Steps4Lab, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_text_color(gui_Steps4Lab, lv_color_white(), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(gui_Steps4Lab, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(gui_Steps4Lab, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(gui_Steps4Lab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(gui_Steps4Lab, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_add_flag(gui_Steps4Lab, LV_OBJ_FLAG_HIDDEN);
+
+    // Add text
+    lv_label_set_text(gui_Steps4Lab, "Step 4:\nAdd weight here");
+}
+
 void _create_pages_nerd(void)
 {
     //* Acceleration-X signal chart
@@ -1357,7 +1524,7 @@ void _create_pages_nerd(void)
     lv_obj_set_size(gui_page_signal_x, screenWidth, screenHeight - DEFAULT_TOOLBAR_HEIGHT);
     lv_obj_set_style_bg_opa(gui_page_signal_x, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_opa(gui_page_signal_x, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-    _create_signal_chart(&gui_AccelXChart, accX_sample, AccelChart_draw_event_cb, ACC_CHART_POINT_COUNT, &gui_AccelChart_Xslider, &gui_AccelChart_Yslider, gui_page_signal_x, 290, 145, {-4, 25});
+    _create_signal_chart(&gui_AccelXChart, accX_sample, AccelChart_draw_event_cb, ACC_CHART_POINT_COUNT, &gui_AccelChart_Xslider, &gui_AccelChart_Yslider, gui_page_signal_x, 245, 145, {40, 25});
     lv_obj_align(gui_page_signal_x, LV_ALIGN_TOP_MID, 0, 0);
 
     //* Acceleration-Y signal chart
@@ -1366,7 +1533,7 @@ void _create_pages_nerd(void)
     lv_obj_set_size(gui_page_signal_y, screenWidth, screenHeight - DEFAULT_TOOLBAR_HEIGHT);
     lv_obj_set_style_bg_opa(gui_page_signal_y, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_opa(gui_page_signal_y, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-    _create_signal_chart(&gui_AccelYChart, accY_sample, AccelChart_draw_event_cb, ACC_CHART_POINT_COUNT, &gui_AccelChart_Xslider, &gui_AccelChart_Yslider, gui_page_signal_y, 290, 145, {-4, 25});
+    _create_signal_chart(&gui_AccelYChart, accY_sample, AccelChart_draw_event_cb, ACC_CHART_POINT_COUNT, &gui_AccelChart_Xslider, &gui_AccelChart_Yslider, gui_page_signal_y, 245, 145, {40, 25});
 
     // Hide. Only one page must be active at the same time...
     lv_obj_add_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
@@ -1377,7 +1544,7 @@ void _create_pages_nerd(void)
     lv_obj_set_size(gui_page_fft_x, screenWidth, screenHeight - DEFAULT_TOOLBAR_HEIGHT);
     lv_obj_set_style_bg_opa(gui_page_fft_x, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_opa(gui_page_fft_x, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-    _create_analisys_chart(&gui_FFTXChart, fftX_sample, FFTXChart_draw_event_cb, FFT_DATA_BUFFER_SIZE, gui_page_fft_x, 290, 145, {-4, 25});
+    _create_analisys_chart(&gui_FFTXChart, fftX_sample, FFTXChart_draw_event_cb, FFT_DATA_BUFFER_SIZE, gui_page_fft_x, 245, 145, {40, 25});
 
     // Hide. Only one page must be active at the same time...
     lv_obj_add_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
@@ -1388,7 +1555,7 @@ void _create_pages_nerd(void)
     lv_obj_set_size(gui_page_fft_y, screenWidth, screenHeight - DEFAULT_TOOLBAR_HEIGHT);
     lv_obj_set_style_bg_opa(gui_page_fft_y, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_opa(gui_page_fft_y, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-    _create_analisys_chart(&gui_FFTYChart, fftY_sample, FFTYChart_draw_event_cb, FFT_DATA_BUFFER_SIZE, gui_page_fft_y, 290, 145, {-4, 25});
+    _create_analisys_chart(&gui_FFTYChart, fftY_sample, FFTYChart_draw_event_cb, FFT_DATA_BUFFER_SIZE, gui_page_fft_y, 245, 145, {40, 25});
 
     // Hide. Only one page must be active at the same time...
     lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
@@ -1460,12 +1627,28 @@ void _create_toolbars_nerd(void)
     lv_obj_set_width(chart_switch_btn, 25);
     lv_obj_set_height(chart_switch_btn, 25);
 
-    // Add style
-    lv_obj_set_style_bg_opa(chart_switch_btn, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-    // lv_obj_set_style_border_color(chart_switch_btn, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
-    // lv_obj_set_style_border_opa(chart_switch_btn, LV_OPA_50, LV_PART_MAIN | LV_STATE_DEFAULT);
-    // lv_obj_set_style_border_side(chart_switch_btn, LV_BORDER_SIDE_RIGHT, LV_PART_MAIN | LV_STATE_DEFAULT);
-    // lv_obj_set_style_border_width(chart_switch_btn, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // Add default styles
+    static lv_style_t styleChartSwitchBtn;
+    lv_style_init(&styleChartSwitchBtn);
+    lv_style_set_radius(&styleChartSwitchBtn, 3);
+    lv_style_set_bg_opa(&styleChartSwitchBtn, LV_OPA_TRANSP);
+    lv_style_set_border_opa(&styleChartSwitchBtn, LV_OPA_TRANSP);
+    lv_style_set_outline_opa(&styleChartSwitchBtn, LV_OPA_COVER);
+    lv_style_set_outline_color(&styleChartSwitchBtn, DEFAULT_ELEMENT_ACCENT_COLOR);
+
+    // Add pressed styles
+    static lv_style_t styleChartSwitchBtn_pressed;
+    lv_style_init(&styleChartSwitchBtn_pressed);
+    lv_style_set_outline_width(&styleChartSwitchBtn_pressed, 10);
+    lv_style_set_outline_opa(&styleChartSwitchBtn_pressed, LV_OPA_TRANSP);
+
+    static lv_style_transition_dsc_t trans;
+    static lv_style_prop_t props[] = {LV_STYLE_OUTLINE_WIDTH, LV_STYLE_OUTLINE_OPA, LV_STYLE_PROP_INV};
+    lv_style_transition_dsc_init(&trans, props, lv_anim_path_linear, 300, 0, NULL);
+    lv_style_set_transition(&styleChartSwitchBtn_pressed, &trans);
+
+    lv_obj_add_style(chart_switch_btn, &styleChartSwitchBtn, 0);
+    lv_obj_add_style(chart_switch_btn, &styleChartSwitchBtn_pressed, LV_STATE_PRESSED);
     lv_obj_align(chart_switch_btn, LV_ALIGN_CENTER, 0, 0);
 
     // Add callback
@@ -1473,7 +1656,7 @@ void _create_toolbars_nerd(void)
 
     // Add icon
     lv_obj_t *chartSwitchImg = lv_img_create(chart_switch_btn);
-    lv_img_set_src(chartSwitchImg, &fft_ico);
+    lv_img_set_src(chartSwitchImg, &chart_change_icon);
     lv_obj_center(chartSwitchImg);
 
     //* Create back button
@@ -1500,7 +1683,8 @@ void _create_toolbars_nerd(void)
     lv_obj_set_height(list_btn, 25);
 
     // Add style
-    lv_obj_set_style_bg_opa(list_btn, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(list_btn, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(list_btn, DEFAULT_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_align(list_btn, LV_ALIGN_TOP_LEFT, 2, 2);
 
     // Add callback
@@ -1608,10 +1792,11 @@ void _create_signal_chart(lv_obj_t **chart_handler, int16_t *data_array, lv_even
     lv_obj_set_style_bg_color(*chart_handler, DEFAULT_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(*chart_handler, LV_OPA_100, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_size(*chart_handler, 0, LV_PART_INDICATOR); // Do not display points on the data
+    lv_obj_set_style_size(*chart_handler, 1, LV_PART_ITEMS);
     lv_chart_set_update_mode(*chart_handler, LV_CHART_UPDATE_MODE_SHIFT);
-    lv_chart_set_range(*chart_handler, LV_CHART_AXIS_PRIMARY_Y, -4096, 4096);
-    // lv_chart_set_zoom_x(gui_AccelXChart, 1400);                                         // Zoom in a little in X
-    lv_obj_add_event_cb(*chart_handler, event_cb, LV_EVENT_ALL, NULL); //? Event to be able to draw the peak points
+    lv_chart_set_range(*chart_handler, LV_CHART_AXIS_PRIMARY_Y, 0, 1);
+    lv_chart_set_axis_tick(*chart_handler, LV_CHART_AXIS_PRIMARY_Y, 6, 3, 5, 5, true, 50);
+    lv_obj_add_event_cb(*chart_handler, event_cb, LV_EVENT_ALL, *chart_handler); //? Event to be able to draw the peak points
 
     lv_chart_series_t *ser = lv_chart_add_series(*chart_handler, DEFAULT_ELEMENT_ACCENT_COLOR, LV_CHART_AXIS_PRIMARY_Y);
 
@@ -1647,7 +1832,7 @@ void _create_analisys_chart(lv_obj_t **chart_handler, int16_t *data_array, lv_ev
     lv_obj_set_style_size(*chart_handler, 0, LV_PART_INDICATOR); // Do not display points on the data
     lv_obj_set_style_size(*chart_handler, 1, LV_PART_ITEMS);
     lv_chart_set_update_mode(*chart_handler, LV_CHART_UPDATE_MODE_SHIFT);
-    lv_chart_set_range(*chart_handler, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
+    lv_chart_set_range(*chart_handler, LV_CHART_AXIS_PRIMARY_Y, 0, 1);
     lv_chart_set_axis_tick(*chart_handler, LV_CHART_AXIS_PRIMARY_X, 7, 3, FFT_MAJOR_TICK_COUNT, 5, true, 50);
     lv_obj_add_event_cb(*chart_handler, event_cb, LV_EVENT_ALL, NULL); //? Event to be able to draw the peak points
 
@@ -1727,5 +1912,5 @@ void _update_but_labels(void)
 
 void _update_unbalance(void)
 {
-    _create_unbalance_arrow(_xShared.getUnbalanceXAngle(), 50, 0);
+    _create_unbalance_arrow(_xShared.getUnbalanceXAngle(), _xShared.getUnbalanceMag(), 70, 0);
 }
