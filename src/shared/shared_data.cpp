@@ -481,17 +481,17 @@ size_t DPBShared::getAccYMaxIndex(void)
     return v;
 }
 
-void DPBShared::setAngleOffset(int16_t v)
+void DPBShared::setAngleOffset(float_t v)
 {
     _lockComm();
     _data->_angleOffset = v;
     _unlockComm();
 }
 
-int16_t DPBShared::getAngleOffset()
+float_t DPBShared::getAngleOffset()
 {
     _lockComm();
-    int16_t v = _data->_angleOffset;
+    float_t v = _data->_angleOffset;
     _unlockComm();
     return v;
 }

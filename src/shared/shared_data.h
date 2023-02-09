@@ -90,8 +90,8 @@ public:
     void setAccYMaxIndex(size_t v);
     size_t getAccYMaxIndex(void);
 
-    void setAngleOffset(int16_t v);
-    int16_t getAngleOffset();
+    void setAngleOffset(float_t v);
+    float_t getAngleOffset();
 
     void setSearchType(app_search_type_e v);
     app_search_type_e getSearchType();
@@ -129,7 +129,7 @@ private:
         // User
         uint16_t _range;
         uint16_t _bandWidth;
-        int16_t _angleOffset;
+        float_t _angleOffset;
         app_search_type_e _searchType;
     };
     Data *_data;

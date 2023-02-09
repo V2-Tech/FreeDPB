@@ -1,5 +1,4 @@
-#ifndef INC_IMAGES_H
-#define INC_IMAGES_H
+#pragma once
 
 #define LGFX_USE_V1
 #include "../../components/lvgl/lvgl.h"
@@ -149335,5 +149334,3 @@ const lv_img_dsc_t propeller_img_png = {
     .data_size = 49770 * LV_IMG_PX_SIZE_ALPHA_BYTE,
     .data = propeller_img_png_map,
 };
-
-#endif

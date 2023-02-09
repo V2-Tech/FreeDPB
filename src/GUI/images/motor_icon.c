@@ -1,3 +1,5 @@
+#pragma once
+
 #define LGFX_USE_V1
 #include "../../components/lvgl/lvgl.h"
 

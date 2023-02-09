@@ -24,6 +24,9 @@ lv_obj_t *gui_FFTScreen = NULL;
 lv_obj_t *gui_StartBut = NULL;
 lv_obj_t *gui_StartButLabel = NULL;
 lv_obj_t *gui_SearchTypeSwitch = NULL;
+lv_obj_t *gui_ResetBut = NULL;
+lv_obj_t *gui_OffsetSpinboxTab = NULL;
+lv_obj_t *gui_OffsetSpinbox = NULL;
 lv_obj_t *gui_SettingsBut = NULL;
 lv_obj_t *gui_NerdBut = NULL;
 lv_obj_t *gui_RPMLabel = NULL;
@@ -175,7 +178,7 @@ void gui_MainScreen_init(void)
     //* Create start button
     gui_StartBut = lv_btn_create(gui_MainScreen);
     lv_obj_set_width(gui_StartBut, 100);
-    lv_obj_set_height(gui_StartBut, 75);
+    lv_obj_set_height(gui_StartBut, 60);
 
     // Add default styles
     static lv_style_t styleStartBut;
@@ -203,7 +206,7 @@ void gui_MainScreen_init(void)
     lv_style_set_transition(&styleStartBut_pressed, &trans_start_but);
     lv_obj_add_style(gui_StartBut, &styleStartBut, 0);
     lv_obj_add_style(gui_StartBut, &styleStartBut_pressed, LV_STATE_PRESSED);
-    lv_obj_align(gui_StartBut, LV_ALIGN_TOP_LEFT, 210, 80);
+    lv_obj_align(gui_StartBut, LV_ALIGN_TOP_LEFT, 210, 75);
 
     // Add event
     lv_obj_add_event_cb(gui_StartBut, start_btn_event_cb, LV_EVENT_ALL, NULL);
@@ -229,7 +232,7 @@ void gui_MainScreen_init(void)
     // Create switch
     gui_SearchTypeSwitch = lv_switch_create(gui_SearchTypeSwitch_Tab);
     lv_obj_set_style_bg_color(gui_SearchTypeSwitch, SECONDARY_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_color(gui_SearchTypeSwitch, SECONDARY_BACKGROUND_COLOR, LV_PART_INDICATOR | LV_STATE_DEFAULT | LV_STATE_CHECKED | LV_STATE_FOCUSED);
+    lv_obj_set_style_bg_color(gui_SearchTypeSwitch, SECONDARY_BACKGROUND_COLOR, LV_PART_INDICATOR | LV_STATE_DEFAULT | LV_STATE_CHECKED);
     lv_obj_set_style_bg_color(gui_SearchTypeSwitch, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_KNOB | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_color(gui_SearchTypeSwitch, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_KNOB | LV_STATE_CHECKED);
     lv_obj_center(gui_SearchTypeSwitch);
@@ -245,11 +248,120 @@ void gui_MainScreen_init(void)
     lv_img_set_src(gui_SearchType, &weight_icon);
     lv_obj_align(gui_SearchType, LV_ALIGN_CENTER, 40, 0);
 
-    //* Create corrector spinbox
-    // TODO
-    
     //* Create reset button
-    // TODO
+    gui_ResetBut = lv_btn_create(gui_MainScreen);
+    lv_obj_set_width(gui_ResetBut, 100);
+    lv_obj_set_height(gui_ResetBut, 42);
+
+    // Add default styles
+    static lv_style_t styleResetBut;
+    lv_style_init(&styleResetBut);
+    lv_style_set_radius(&styleResetBut, 3);
+    lv_style_set_bg_opa(&styleResetBut, LV_OPA_TRANSP);
+    lv_style_set_border_color(&styleResetBut, DEFAULT_ELEMENT_ACCENT_COLOR);
+    lv_style_set_border_width(&styleResetBut, 2);
+    lv_style_set_border_opa(&styleResetBut, LV_OPA_100);
+    lv_style_set_outline_opa(&styleResetBut, LV_OPA_COVER);
+    lv_style_set_outline_color(&styleResetBut, SECONDARY_ELEMENT_ACCENT_COLOR);
+    lv_style_set_shadow_width(&styleResetBut, 5);
+    lv_style_set_shadow_color(&styleResetBut, DEFAULT_ELEMENT_ACCENT_COLOR);
+    lv_style_set_shadow_opa(&styleResetBut, LV_OPA_100);
+
+    // Add pressed styles
+    static lv_style_t styleResetBut_pressed;
+    lv_style_init(&styleResetBut_pressed);
+    lv_style_set_outline_width(&styleResetBut_pressed, 15);
+    lv_style_set_outline_opa(&styleResetBut_pressed, LV_OPA_TRANSP);
+
+    static lv_style_transition_dsc_t trans_Reset_but;
+    static lv_style_prop_t props_Reset_but[] = {LV_STYLE_OUTLINE_WIDTH, LV_STYLE_OUTLINE_OPA, LV_STYLE_PROP_INV};
+    lv_style_transition_dsc_init(&trans_Reset_but, props_Reset_but, lv_anim_path_linear, 300, 0, NULL);
+    lv_style_set_transition(&styleResetBut_pressed, &trans_Reset_but);
+    lv_obj_add_style(gui_ResetBut, &styleResetBut, 0);
+    lv_obj_add_style(gui_ResetBut, &styleResetBut_pressed, LV_STATE_PRESSED);
+    lv_obj_align_to(gui_ResetBut, gui_StartBut, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
+
+    // Add event
+    lv_obj_add_event_cb(gui_ResetBut, reset_btn_event_cb, LV_EVENT_ALL, NULL);
+
+    // Add icon
+    lv_obj_t *gui_ResetButImg = lv_img_create(gui_ResetBut);
+    lv_img_set_src(gui_ResetButImg, &reset_icon);
+    lv_obj_center(gui_ResetButImg);
+
+    //* Create angle offset spinbox
+    // Create tab
+    gui_OffsetSpinboxTab = lv_obj_create(gui_MainScreen);
+    lv_obj_set_width(gui_OffsetSpinboxTab, 100);
+    lv_obj_set_height(gui_OffsetSpinboxTab, 42);
+    lv_obj_clear_flag(gui_OffsetSpinboxTab, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+
+    // Add style
+    lv_obj_set_style_bg_opa(gui_OffsetSpinboxTab, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_border_opa(gui_OffsetSpinboxTab, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_align_to(gui_OffsetSpinboxTab, gui_ResetBut, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
+
+    // Create spinbox
+    gui_OffsetSpinbox = lv_spinbox_create(gui_OffsetSpinboxTab);
+    lv_spinbox_set_range(gui_OffsetSpinbox, -3599, 3599);
+    lv_spinbox_set_digit_format(gui_OffsetSpinbox, 4, 3);
+    lv_spinbox_step_prev(gui_OffsetSpinbox);
+    lv_spinbox_set_rollover(gui_OffsetSpinbox, true);
+    lv_obj_set_width(gui_OffsetSpinbox, 60);
+    lv_obj_set_height(gui_OffsetSpinbox, lv_obj_get_height(gui_OffsetSpinboxTab));
+    lv_obj_set_style_pad_hor(gui_OffsetSpinbox, 2, LV_PART_MAIN);
+    lv_obj_set_style_pad_ver(gui_OffsetSpinbox, (lv_obj_get_height(gui_OffsetSpinbox) - 14) / 2, LV_PART_MAIN);
+
+    // Add style
+    lv_obj_set_style_bg_color(gui_OffsetSpinbox, DEFAULT_BACKGROUND_COLOR, LV_PART_MAIN);
+    lv_obj_set_style_border_color(gui_OffsetSpinbox, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+    lv_obj_set_style_border_opa(gui_OffsetSpinbox, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_radius(gui_OffsetSpinbox, lv_obj_get_style_radius(gui_StartBut, LV_PART_MAIN), LV_PART_MAIN);
+    lv_obj_align(gui_OffsetSpinbox, LV_ALIGN_CENTER, 0, 0);
+
+    // Add callback
+    lv_obj_add_event_cb(gui_OffsetSpinbox, spinbox_event_cb, LV_EVENT_ALL, NULL);
+
+    // Create increment button
+    lv_coord_t h = lv_obj_get_height(gui_OffsetSpinbox);
+    lv_obj_t *btn = lv_btn_create(gui_OffsetSpinboxTab);
+    lv_obj_set_size(btn, 15, h);
+
+    // Add style
+    lv_obj_set_style_bg_img_src(btn, LV_SYMBOL_PLUS, 0);
+    lv_obj_set_style_bg_color(btn, DEFAULT_BACKGROUND_COLOR, LV_PART_MAIN);
+    lv_obj_set_style_border_color(btn, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+    lv_obj_set_style_border_opa(btn, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_align_to(btn, gui_OffsetSpinbox, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
+
+    // Add icon
+    lv_obj_t *label = lv_label_create(btn);
+    lv_label_set_text(label, LV_SYMBOL_PLUS);
+    lv_obj_set_style_text_color(label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+    lv_obj_center(label);
+
+    // Add callback
+    lv_obj_add_event_cb(btn, spinbox_increment_btn_event_cb, LV_EVENT_ALL, NULL);
+
+    // Create decrement button
+    btn = lv_btn_create(gui_OffsetSpinboxTab);
+    lv_obj_set_size(btn, 15, h);
+
+    // Add style
+    lv_obj_set_style_bg_img_src(btn, LV_SYMBOL_MINUS, 0);
+    lv_obj_set_style_bg_color(btn, DEFAULT_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_color(btn, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(btn, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_align_to(btn, gui_OffsetSpinbox, LV_ALIGN_OUT_LEFT_MID, -5, 0);
+
+    // Add icon
+    label = lv_label_create(btn);
+    lv_label_set_text(label, LV_SYMBOL_MINUS);
+    lv_obj_set_style_text_color(label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_center(label);
+
+    // Add callback
+    lv_obj_add_event_cb(btn, spinbox_decrement_btn_event_cb, LV_EVENT_ALL, NULL);
 }
 
 void gui_NerdScreen_init(void)
@@ -265,193 +377,6 @@ void gui_NerdScreen_init(void)
 
     //* Create toolbars
     _create_toolbars_nerd();
-}
-
-// void gui_IdleScreen_init(void)
-//{
-//     //* Create IDLE SCREEN object
-//     gui_IdleScreen = lv_obj_create(NULL);
-//     lv_obj_clear_flag(gui_IdleScreen, LV_OBJ_FLAG_SCROLLABLE);
-//
-//     //* Create a chart with 2 traces for AccX e AccY
-//     gui_AccelXChart = lv_chart_create(gui_IdleScreen);
-//     lv_obj_set_width(gui_AccelXChart, 280);
-//     lv_obj_set_height(gui_AccelXChart, 140);
-//     lv_obj_set_x(gui_AccelXChart, 15);
-//     lv_obj_set_y(gui_AccelXChart, 20);
-//     lv_obj_set_style_bg_color(gui_AccelXChart, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
-//     lv_obj_set_style_bg_opa(gui_AccelXChart, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-//     lv_obj_set_style_shadow_color(gui_AccelXChart, lv_color_hex(0x3E3E3E), LV_PART_MAIN | LV_STATE_DEFAULT);
-//     lv_obj_set_style_shadow_opa(gui_AccelXChart, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-//     lv_obj_set_style_shadow_width(gui_AccelXChart, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
-//     lv_obj_set_style_shadow_spread(gui_AccelXChart, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
-//     lv_obj_set_style_size(gui_AccelXChart, 0, LV_PART_INDICATOR); // Do not display points on the data
-//     lv_chart_set_update_mode(gui_AccelXChart, LV_CHART_UPDATE_MODE_SHIFT);
-//     lv_chart_set_range(gui_AccelXChart, LV_CHART_AXIS_PRIMARY_Y, -4096, 4096);
-//     // lv_chart_set_zoom_x(gui_AccelXChart, 1400);                                         // Zoom in a little in X
-//     lv_obj_add_event_cb(gui_AccelXChart, AccelChart_draw_event_cb, LV_EVENT_ALL, NULL); //? Event to be able to draw the peak points
-//
-//     serAccX = lv_chart_add_series(gui_AccelXChart, ACCX_TRACE_COLOR, LV_CHART_AXIS_PRIMARY_Y);
-//     serAccY = lv_chart_add_series(gui_AccelXChart, ACCY_TRACE_COLOR, LV_CHART_AXIS_PRIMARY_Y);
-//
-//     lv_chart_set_point_count(gui_AccelXChart, ACC_CHART_POINT_COUNT);
-//     lv_chart_set_ext_y_array(gui_AccelXChart, serAccX, (lv_coord_t *)accX_sample);
-//     lv_chart_set_ext_y_array(gui_AccelXChart, serAccY, (lv_coord_t *)accY_sample);
-//
-//     //* Create X-ScrollBar
-//     gui_AccelChart_Xslider = lv_slider_create(gui_IdleScreen);
-//     lv_slider_set_range(gui_AccelChart_Xslider, LV_IMG_ZOOM_NONE, LV_IMG_ZOOM_NONE * 10);
-//     lv_obj_add_event_cb(gui_AccelChart_Xslider, chart_slider_x_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
-//     lv_obj_set_size(gui_AccelChart_Xslider, 280, 10);
-//     lv_obj_align_to(gui_AccelChart_Xslider, gui_AccelXChart, LV_ALIGN_OUT_BOTTOM_MID, 0, 5);
-//     // lv_slider_set_value(gui_AccelChart_Xslider, 1400, LV_ANIM_OFF);
-//
-//     //* Create Y-ScrollBar
-//     gui_AccelChart_Yslider = lv_slider_create(gui_IdleScreen);
-//     lv_slider_set_range(gui_AccelChart_Yslider, LV_IMG_ZOOM_NONE, LV_IMG_ZOOM_NONE * 10);
-//     lv_obj_add_event_cb(gui_AccelChart_Yslider, chart_slider_y_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
-//     lv_obj_set_size(gui_AccelChart_Yslider, 10, 150);
-//     lv_obj_align_to(gui_AccelChart_Yslider, gui_AccelXChart, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
-//
-//     //* Create start-stop button
-//     lv_obj_t *btn = lv_btn_create(gui_IdleScreen); /*Add a button the current screen*/
-//     lv_obj_set_size(btn, 120, 50);                 /*Set its size*/
-//     lv_obj_align_to(btn, gui_AccelChart_Xslider, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 10);
-//     lv_obj_add_event_cb(btn, start_btn_event_cb, LV_EVENT_ALL, NULL); /*Assign a callback to the button*/
-//
-//     gui_StartButLabel = lv_label_create(btn);      /*Add a label to the button*/
-//     lv_label_set_text(gui_StartButLabel, "START"); /*Set the labels text*/
-//     lv_obj_center(gui_StartButLabel);
-//
-//     //* Create FFT button
-//     btn = lv_btn_create(gui_IdleScreen); /*Add a button the current screen*/
-//     lv_obj_set_size(btn, 50, 50);        /*Set its size*/
-//     lv_obj_align_to(btn, gui_AccelChart_Xslider, LV_ALIGN_OUT_BOTTOM_LEFT, 130, 10);
-//     lv_obj_add_event_cb(btn, fft_btn_event_cb, LV_EVENT_ALL, NULL); /*Assign a callback to the button*/
-//
-//     lv_obj_t *label = lv_label_create(btn); /*Add a label to the button*/
-//     lv_label_set_text(label, "FFT");        /*Set the labels text*/
-//     lv_obj_center(label);
-//
-//     //* Create RPM label
-//     gui_RPMLabel = lv_label_create(gui_IdleScreen); /*Add a label to the button*/
-//     static lv_style_t label_style;
-//     lv_style_init(&label_style);
-//     lv_style_set_bg_color(&label_style, lv_palette_main(LV_PALETTE_BLUE));
-//     // lv_style_set_bg_opa(&label_style, LV_OPA_100);
-//     lv_style_set_text_color(&label_style, lv_palette_main(LV_PALETTE_AMBER));
-//     lv_style_set_text_font(&label_style, &lv_font_montserrat_14);
-//
-//     lv_obj_add_style(gui_RPMLabel, &label_style, 0);
-//     lv_obj_set_pos(gui_RPMLabel, 15, 2);
-//     lv_obj_set_size(gui_RPMLabel, 35, 20);
-//     lv_label_set_text(gui_RPMLabel, "0rpm"); /*Set the labels text*/
-//
-//     //* Create unbalance X angle
-//     gui_angleXLabel = lv_label_create(gui_IdleScreen); /*Add a label to the button*/
-//     lv_style_init(&label_style);
-//     lv_style_set_bg_color(&label_style, lv_palette_main(LV_PALETTE_BLUE));
-//     // lv_style_set_bg_opa(&label_style, LV_OPA_100);
-//     lv_style_set_text_color(&label_style, lv_palette_main(LV_PALETTE_TEAL));
-//     lv_style_set_text_font(&label_style, &lv_font_montserrat_14);
-//
-//     lv_obj_add_style(gui_angleXLabel, &label_style, 0);
-//     lv_obj_align_to(gui_angleXLabel, gui_RPMLabel, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
-//     lv_obj_set_size(gui_angleXLabel, 100, 20);
-//     lv_label_set_text(gui_angleXLabel, "X-angle: NaN°"); /*Set the labels text*/
-//
-//     //* Create unbalance X angle
-//     gui_angleYLabel = lv_label_create(gui_IdleScreen); /*Add a label to the button*/
-//     lv_style_init(&label_style);
-//     lv_style_set_bg_color(&label_style, lv_palette_main(LV_PALETTE_BLUE));
-//     // lv_style_set_bg_opa(&label_style, LV_OPA_100);
-//     lv_style_set_text_color(&label_style, lv_palette_main(LV_PALETTE_PURPLE));
-//     lv_style_set_text_font(&label_style, &lv_font_montserrat_14);
-//
-//     lv_obj_add_style(gui_angleYLabel, &label_style, 0);
-//     lv_obj_align_to(gui_angleYLabel, gui_angleXLabel, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
-//     lv_obj_set_size(gui_angleYLabel, 100, 20);
-//     lv_label_set_text(gui_angleYLabel, "Y-angle: NaN°"); /*Set the labels text*/
-// }
-
-void gui_FFTScreen_init(void)
-{
-    //* Create FFT SCREEN object
-    gui_FFTScreen = lv_obj_create(NULL);
-    lv_obj_clear_flag(gui_FFTScreen, LV_OBJ_FLAG_SCROLLABLE);
-
-    //* Create chart with traces for FFTX
-    gui_FFTXChart = lv_chart_create(gui_FFTScreen);
-    lv_obj_set_width(gui_FFTXChart, 280);
-    lv_obj_set_height(gui_FFTXChart, 120);
-    lv_obj_set_x(gui_FFTXChart, 15);
-    lv_obj_set_y(gui_FFTXChart, 20);
-    // lv_chart_set_type(gui_FFTXChart, LV_CHART_TYPE_BAR);
-    lv_obj_set_style_bg_color(gui_FFTXChart, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_opa(gui_FFTXChart, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_shadow_color(gui_FFTXChart, lv_color_hex(0x3E3E3E), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_shadow_opa(gui_FFTXChart, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_shadow_width(gui_FFTXChart, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_shadow_spread(gui_FFTXChart, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_size(gui_FFTXChart, 0, LV_PART_INDICATOR); // Do not display points on the data
-    lv_chart_set_range(gui_FFTXChart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
-    lv_chart_set_axis_tick(gui_FFTXChart, LV_CHART_AXIS_PRIMARY_X, 10, 5, FFT_MAJOR_TICK_COUNT, 5, true, 50);
-    lv_obj_add_event_cb(gui_FFTXChart, FFTXChart_draw_event_cb, LV_EVENT_DRAW_PART_BEGIN, NULL); //? Event to be able to customized the tick's labels
-
-    serFFTX = lv_chart_add_series(gui_FFTXChart, lv_palette_main(LV_PALETTE_RED), LV_CHART_AXIS_PRIMARY_Y);
-
-    lv_chart_set_point_count(gui_FFTXChart, FFT_DATA_BUFFER_SIZE);
-    lv_chart_set_ext_y_array(gui_FFTXChart, serFFTX, (lv_coord_t *)fftX_sample);
-
-    //* Create chart with traces for FFTY
-    gui_FFTYChart = lv_chart_create(gui_FFTScreen);
-    lv_obj_set_width(gui_FFTYChart, 280);
-    lv_obj_set_height(gui_FFTYChart, 70);
-    lv_obj_align_to(gui_FFTYChart, gui_FFTXChart, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 5);
-    lv_chart_set_type(gui_FFTYChart, LV_CHART_TYPE_BAR);
-    lv_obj_set_style_bg_color(gui_FFTYChart, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_opa(gui_FFTYChart, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_shadow_color(gui_FFTYChart, lv_color_hex(0x3E3E3E), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_shadow_opa(gui_FFTYChart, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_shadow_width(gui_FFTYChart, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_shadow_spread(gui_FFTYChart, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_size(gui_FFTYChart, 0, LV_PART_INDICATOR); // Do not display points on the data
-    lv_chart_set_range(gui_FFTYChart, LV_CHART_AXIS_PRIMARY_Y, 0, 100);
-    lv_chart_set_axis_tick(gui_FFTYChart, LV_CHART_AXIS_PRIMARY_X, 12, 5, FFT_MAJOR_TICK_COUNT, 10, true, 20);
-    lv_obj_add_event_cb(gui_FFTYChart, FFTYChart_draw_event_cb, LV_EVENT_DRAW_PART_BEGIN, NULL); //? Event to be able to customized the tick's labels
-
-    serFFTY = lv_chart_add_series(gui_FFTYChart, lv_palette_main(LV_PALETTE_BLUE), LV_CHART_AXIS_PRIMARY_Y);
-
-    lv_chart_set_point_count(gui_FFTYChart, FFT_DATA_BUFFER_SIZE);
-    lv_chart_set_ext_y_array(gui_FFTYChart, serFFTY, (lv_coord_t *)fftX_sample);
-
-    //! Hidden
-    lv_obj_add_flag(gui_FFTYChart, LV_OBJ_FLAG_HIDDEN);
-
-    //* Create back button
-    lv_obj_t *btn = lv_btn_create(gui_FFTScreen); /*Add a button the current screen*/
-    lv_obj_set_size(btn, 120, 50);                /*Set its size*/
-    lv_obj_set_pos(btn, 10, screenHeight - (50 + 5));
-    // lv_obj_align_to(btn, gui_FFTYChart, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 10);
-    lv_obj_add_event_cb(btn, root_back_btn_event_cb, LV_EVENT_ALL, NULL); /*Assign a callback to the button*/
-
-    lv_obj_t *label = lv_label_create(btn); /*Add a label to the button*/
-    lv_label_set_text(label, "Back");       /*Set the labels text*/
-    lv_obj_center(label);
-
-    //* Create fundamental freq label
-    gui_FundLabel = lv_label_create(gui_FFTScreen); /*Add a label to the button*/
-    static lv_style_t label_style;
-    lv_style_init(&label_style);
-    lv_style_set_bg_color(&label_style, lv_palette_main(LV_PALETTE_BLUE));
-    // lv_style_set_bg_opa(&label_style, LV_OPA_100);
-    lv_style_set_text_color(&label_style, lv_palette_main(LV_PALETTE_GREEN));
-    lv_style_set_text_font(&label_style, &lv_font_montserrat_14);
-
-    lv_obj_add_style(gui_FundLabel, &label_style, 0);
-    lv_obj_set_pos(gui_FundLabel, screenWidth - 100, 2);
-    lv_obj_set_size(gui_FundLabel, 100, 20);
-    lv_label_set_text(gui_FundLabel, "0Hz"); /*Set the labels text*/
 }
 
 void chart_slider_x_event_cb(lv_event_t *e)
@@ -481,6 +406,39 @@ void start_btn_event_cb(lv_event_t *e)
     }
 }
 
+void reset_btn_event_cb(lv_event_t *e)
+{
+}
+
+void spinbox_event_cb(lv_event_t *e)
+{
+    lv_obj_t *obj = lv_event_get_target(e);
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_VALUE_CHANGED)
+    {
+        _xShared.setAngleOffset((float_t)lv_spinbox_get_value(obj) / 10);
+        _update_unbalance();
+    }
+}
+
+void spinbox_increment_btn_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT)
+    {
+        lv_spinbox_increment(gui_OffsetSpinbox);
+    }
+}
+
+void spinbox_decrement_btn_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT)
+    {
+        lv_spinbox_decrement(gui_OffsetSpinbox);
+    }
+}
+
 void searchType_sw_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -491,6 +449,7 @@ void searchType_sw_event_cb(lv_event_t *e)
         {
             v = (int32_t)SEARCH_4_STEPS;
             lv_obj_add_flag(gui_UnbalanceAngleTab, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(gui_OffsetSpinboxTab, LV_OBJ_FLAG_HIDDEN);
             lv_obj_clear_flag(gui_4StepsTab, LV_OBJ_FLAG_HIDDEN);
         }
         else
@@ -498,6 +457,7 @@ void searchType_sw_event_cb(lv_event_t *e)
             v = (int32_t)SEARCH_OPTICAL;
             lv_obj_add_flag(gui_4StepsTab, LV_OBJ_FLAG_HIDDEN);
             lv_obj_clear_flag(gui_UnbalanceAngleTab, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(gui_OffsetSpinboxTab, LV_OBJ_FLAG_HIDDEN);
         }
         _xShared.setSearchType((app_search_type_e)v);
 
@@ -1912,5 +1872,5 @@ void _update_but_labels(void)
 
 void _update_unbalance(void)
 {
-    _create_unbalance_arrow(_xShared.getUnbalanceXAngle(), _xShared.getUnbalanceMag(), 70, 0);
+    _create_unbalance_arrow(_xShared.getUnbalanceXAngle() + _xShared.getAngleOffset(), _xShared.getUnbalanceMag(), 70, 0);
 }

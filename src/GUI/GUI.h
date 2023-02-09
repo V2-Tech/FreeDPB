@@ -30,6 +30,7 @@ LV_IMG_DECLARE(motor_icon);
 LV_IMG_DECLARE(sensor_img);
 LV_IMG_DECLARE(chart_change_icon);
 LV_IMG_DECLARE(weight_icon);
+LV_IMG_DECLARE(reset_icon);
 
 LV_FONT_DECLARE(gui_font_med);
 
@@ -148,7 +149,6 @@ uint8_t gui_init(QueueHandle_t xQueueComp2Sys_handle, QueueHandle_t xQueueSys2Co
 void gui_LoadingScreen_init(void);
 void gui_MainScreen_init(void);
 void gui_NerdScreen_init(void);
-void gui_FFTScreen_init(void);
 
 //* GUI management
 void gui_update(void);
@@ -170,6 +170,10 @@ void _update_unbalance(void);
 void chart_slider_x_event_cb(lv_event_t *e);
 void chart_slider_y_event_cb(lv_event_t *e);
 void start_btn_event_cb(lv_event_t *e);
+void reset_btn_event_cb(lv_event_t *e);
+void spinbox_event_cb(lv_event_t *e);
+void spinbox_increment_btn_event_cb(lv_event_t *e);
+void spinbox_decrement_btn_event_cb(lv_event_t *e);
 void searchType_sw_event_cb(lv_event_t *e);
 void nerd_btn_event_cb(lv_event_t *e);
 void root_back_btn_event_cb(lv_event_t *e);
