@@ -15,7 +15,7 @@ public:
     //* Data access methods
     //! "*_us" = unsafe, if you need a thread-safe access, please call related lock* method before operations and unlock* at the end of operations.
     void setRotCount(uint64_t v);
-    uint64_t getRotCount();
+    uint64_t getRotCount(void);
 
     void setDPBData(int16_t v_x, int16_t v_y, uint32_t index);
     void getDPBData(int16_t *v_x, int16_t *v_y, uint32_t index);
@@ -38,10 +38,10 @@ public:
     int16_t *getDPBDataFltAccYBuffer_us(void);
 
     void setRPM(uint16_t v);
-    uint16_t getRPM();
+    uint16_t getRPM(void);
 
     void setAppStatus(app_steps_e v);
-    app_steps_e getAppStatus();
+    app_steps_e getAppStatus(void);
 
     void setFFTX(float_t v, size_t index);
     float_t getFFTX(size_t index);
@@ -53,25 +53,25 @@ public:
     float_t *getFFTYBuffer_us(void);
 
     void setBandWidth(uint16_t v);
-    uint16_t getBandWidth();
+    uint16_t getBandWidth(void);
     void setRange(uint16_t v);
-    uint16_t getRange();
+    uint16_t getRange(void);
 
     void setUnbalanceXAngle(float_t v);
-    float_t getUnbalanceXAngle();
+    float_t getUnbalanceXAngle(void);
     void setUnbalanceYAngle(float_t v);
-    float_t getUnbalanceYAngle();
+    float_t getUnbalanceYAngle(void);
     void setUnbalanceFreq(float_t v);
-    float_t getUnbalanceFreq();
+    float_t getUnbalanceFreq(void);
     void setUnbalanceMag(float_t v);
-    float_t getUnbalanceMag();
+    float_t getUnbalanceMag(void);
 
-    void setXPeaksIndex(size_t v, uint32_t index);
-    size_t getXPeakIndex(uint32_t index);
-    size_t *getXPeaksIndexPointer_us();
-    void setYPeaksIndex(size_t v, uint32_t index);
-    size_t getYPeakIndex(uint32_t index);
-    size_t *getYPeaksIndexPointer_us();
+    void setXPeaksIndex(int16_t v, uint32_t index);
+    int16_t getXPeakIndex(uint32_t index);
+    int16_t *getXPeaksIndexPointer_us(void);
+    void setYPeaksIndex(int16_t v, uint32_t index);
+    int16_t getYPeakIndex(uint32_t index);
+    int16_t *getYPeaksIndexPointer_us(void);
     void lockPeaksIndex(void);
     void unlockPeaksIndex(void);
 
@@ -91,10 +91,21 @@ public:
     size_t getAccYMaxIndex(void);
 
     void setAngleOffset(float_t v);
-    float_t getAngleOffset();
+    float_t getAngleOffset(void);
 
     void setSearchType(app_search_type_e v);
-    app_search_type_e getSearchType();
+    app_search_type_e getSearchType(void);
+
+    void setUnbalanceSource(app_unbalance_source_e v);
+    app_unbalance_source_e getUnbalanceSource(void);
+
+    void setMeasureThrottle(uint16_t v);
+    uint16_t getMeasureThrottle(void);
+
+    void setIIRCenterFreq(float_t v);
+    float_t getIIRCenterFreq(void);
+    void setIIRQFactor(float_t v);
+    float_t getIIRQFactor(void);
 
 private:
     DPBShared();
@@ -117,8 +128,8 @@ private:
         float_t _unbalanceYAngle;
         float_t _unbalanceFreq;
         float_t _unbalanceMag;
-        size_t _x_peak_index[ACC_DATA_BUFFER_SIZE] = {0};
-        size_t _y_peak_index[ACC_DATA_BUFFER_SIZE] = {0};
+        int16_t _x_peak_index[ACC_DATA_BUFFER_SIZE] = {0};
+        int16_t _y_peak_index[ACC_DATA_BUFFER_SIZE] = {0};
         size_t _x_peak_count;
         size_t _y_peak_count;
         size_t _acc_x_max_index;
@@ -131,6 +142,10 @@ private:
         uint16_t _bandWidth;
         float_t _angleOffset;
         app_search_type_e _searchType;
+        app_unbalance_source_e _unbalanceSource;
+        uint16_t _measureThrottle;
+        float_t _iirCenterFreq;
+        float_t _iirQFactor;
     };
     Data *_data;
 

@@ -50,6 +50,7 @@ int16_t DPB::init(QueueHandle_t xQueueSysInput_handle, QueueHandle_t xQueueSysOu
     {
         return ESP_FAIL;
     }
+
     ESP_LOGI(TAG, "DPB intialization started");
     _xQueueSysInput = xQueueSysInput_handle;
     _xQueueSysOutput = xQueueSysOutput_handle;
@@ -70,6 +71,7 @@ int16_t DPB::init(QueueHandle_t xQueueSysInput_handle, QueueHandle_t xQueueSysOu
 
     _init_done = 1;
     setStep(IDLE);
+    _set_searchType(SEARCH_OPTICAL);
 
     return ESP_OK;
 }
@@ -86,6 +88,7 @@ int16_t DPB::init_rpm(TaskHandle_t supportTask_handle, gptimer_handle_t xTimer_h
 int16_t DPB::init_esc()
 {
     Motor::arm();
+    _xShared.setMeasureThrottle(DEFAULT_MEASURE_THROTTLE);
 
     _init_status |= INIT_ESC_DONE;
 
@@ -136,7 +139,7 @@ void DPB::loop_rpm(void)
 
     ulTaskNotifyTakeIndexed(0, pdTRUE, portMAX_DELAY);
     rpm_update();
-    _xShared.setRPM(get_rpm());
+    _xShared.setRPM(RotSense::get_rpm());
 }
 
 void DPB::loop_accel(void)
@@ -212,9 +215,7 @@ void DPB::exe(command_data_t command)
         if (command.value.ull == SYS_ANALYZE_DATA)
         {
             _exe_filter();
-            _exe_analyzing();
-            _exe_unbalance_finder();
-            _exe_reset();
+            _exe_analyze();
         }
         break;
 
@@ -236,9 +237,22 @@ void DPB::exe(command_data_t command)
         _exe_reset();
         break;
 
+    case APP_STEP_CMD:
+        _exe_step_managment((app_steps_e)command.value.ll);
+        break;
+
     case LPF_REQUEST_CMD:
         _exe_lpf();
         _exe_reset();
+        break;
+
+    case APP_GET_SOURCE_CMD:
+    case ACCEL_GET_BW_CMD:
+    case ACCEL_GET_RANGE_CMD:
+    case MOTOR_GET_SPEED_CMD:
+    case IIR_GET_FREQ_CMD:
+    case IIR_GET_Q_CMD:
+        _exe_get_settings(command.command);
         break;
     default:
         break;
@@ -248,7 +262,7 @@ void DPB::exe(command_data_t command)
 void DPB::_exe_start(void)
 {
     RotSense::reset_rpm_cnt();
-    Motor::set_throttle(DEFAULT_MEASURE_THROTTLE);
+    Motor::set_throttle(_xShared.getMeasureThrottle());
     if (xTimerReset(_motorStartupTimer, DEFAULT_FUNC_TIMOUT) != pdTRUE)
     {
         esp_system_abort("Timer start-command timeout");
@@ -258,11 +272,18 @@ void DPB::_exe_start(void)
 
 void DPB::_exe_reset(void)
 {
+    _reset();
+}
+
+void DPB::_reset(void)
+{
     if (xTimerStop(_motorStartupTimer, DEFAULT_FUNC_TIMOUT) != pdTRUE)
     {
         esp_system_abort("Timer stop-command timeout");
     }
     Motor::set_throttle(0);
+    RotSense::stop_rpm_cnt();
+    ask_unbalance_step_1();
     setStep(IDLE);
 }
 
@@ -272,29 +293,42 @@ void DPB::_exe_filter(void)
 
     Motor::motor_stop();
     _log_acc_data();
-    if (filter_data_iir_zero(RAW_DATA) != ESP_OK)
+    if (_filter_data_iir_zero(RAW_DATA) != ESP_OK)
     {
         // TODO Error message
         return;
     }
+    //_dummy_data_remove();
     _log_acc_data_filtered();
     ask_acc_charts_update(); // ? Show filtered data
 }
 
-void DPB::_exe_analyzing(void)
+void DPB::_exe_analyze(void)
 {
     setStep(ANALYSING);
-    if (fft_calc(FILTERED_DATA) != ESP_OK)
+
+    if (_fft_calc(FILTERED_DATA) != ESP_OK)
     {
         // TODO Error message
         return;
     }
-    fft_peak_finder();
-    signal_peak_finder();
+    _fft_peak_finder();
     ask_fft_chart_update();
+
+    if (_search_type == SEARCH_OPTICAL)
+    {
+        setStep(UNBALANCE_OPT_FINDING);
+        _signal_peak_finder();
+        _unbalance_finder_optical();
+        _reset();
+    }
+    else
+    {
+        _unbalance_finder_steps();
+    }
 }
 
-void DPB::_exe_unbalance_finder(void)
+void DPB::_unbalance_finder_optical(void)
 {
     static const char *TAG = "EXE-UNBALANCE";
     int64_t averageX = 0;
@@ -304,10 +338,8 @@ void DPB::_exe_unbalance_finder(void)
     size_t maxLoops = 0;
     uint8_t *pRotDoneBuf = _xShared.getDPBRotDoneBuffer_us();
     uint64_t *pTimeBuf = _xShared.getDPBTimeBuffer_us();
-    size_t *pXPeakIndexBuf = _xShared.getXPeaksIndexPointer_us();
-    size_t *pYPeakIndexBuf = _xShared.getYPeaksIndexPointer_us();
-
-    setStep(UNBALANCE_FIND);
+    int16_t *pXPeakIndexBuf = _xShared.getXPeaksIndexPointer_us();
+    int16_t *pYPeakIndexBuf = _xShared.getYPeaksIndexPointer_us();
 
     float_t count2deg = ((1 / _xShared.getUnbalanceFreq()) * 1000000.0) / 360.0;
 
@@ -425,26 +457,65 @@ void DPB::_exe_unbalance_finder(void)
 
     delete[] rotDoneIndexBuf;
 
-    ask_unbalance_update();
+    ask_unbalance_arrow_update();
+}
+
+void DPB::_unbalance_finder_steps(void)
+{
+    switch (_app_step)
+    {
+    case ANALYSING:
+        setStep(UNBALANCE_STEP_1);
+        _unbalance_step_1();
+        ask_unbalance_step_2();
+        break;
+
+    case UNBALANCE_STEP_1:
+        setStep(UNBALANCE_STEP_2);
+        _unbalance_step_2();
+        ask_unbalance_step_3();
+        break;
+
+    case UNBALANCE_STEP_2:
+        setStep(UNBALANCE_STEP_3);
+        _unbalance_step_3();
+        ask_unbalance_step_4();
+        break;
+
+    case UNBALANCE_STEP_3:
+        setStep(UNBALANCE_STEP_4);
+        _unbalance_step_4();
+        ask_unbalance_step_4();
+        _reset();
+        break;
+
+    default:
+        break;
+    }
 }
 
 void DPB::_exe_fft(uint8_t data_type)
 {
-    if (fft_calc((data_orig_e)data_type) != ESP_OK)
+    if (_fft_calc((data_orig_e)data_type) != ESP_OK)
     {
         return;
     }
-    fft_peak_finder();
+    _fft_peak_finder();
     ask_fft_chart_update();
 }
 
 void DPB::_exe_lpf(void)
 {
-    if (filter_data_iir(FILTERED_DATA) != ESP_OK)
+    if (_filter_data_iir_zero(FILTERED_DATA) != ESP_OK)
     {
         return;
     }
     ask_acc_charts_update(); // ? Show filtered data
+}
+
+void DPB::_set_searchType(app_search_type_e type)
+{
+    _search_type = type;
 }
 
 void DPB::ask_acc_charts_update(void)
@@ -465,12 +536,48 @@ void DPB::ask_fft_chart_update(void)
     xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
 }
 
-void DPB::ask_unbalance_update(void)
+void DPB::ask_unbalance_arrow_update(void)
 {
     command_data_t command;
 
     command.command = GUI_UNBALANCE_UPDATE_CMD;
-    command.value.ull = 1;
+    command.value.ull = GUI_UNBALANCE_OPT;
+    xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
+}
+
+void DPB::ask_unbalance_step_1(void)
+{
+    command_data_t command;
+
+    command.command = GUI_UNBALANCE_UPDATE_CMD;
+    command.value.ull = GUI_UNBALANCE_STEP_1;
+    xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
+}
+
+void DPB::ask_unbalance_step_2(void)
+{
+    command_data_t command;
+
+    command.command = GUI_UNBALANCE_UPDATE_CMD;
+    command.value.ull = GUI_UNBALANCE_STEP_2;
+    xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
+}
+
+void DPB::ask_unbalance_step_3(void)
+{
+    command_data_t command;
+
+    command.command = GUI_UNBALANCE_UPDATE_CMD;
+    command.value.ull = GUI_UNBALANCE_STEP_3;
+    xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
+}
+
+void DPB::ask_unbalance_step_4(void)
+{
+    command_data_t command;
+
+    command.command = GUI_UNBALANCE_UPDATE_CMD;
+    command.value.ull = GUI_UNBALANCE_STEP_4;
     xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
 }
 
@@ -478,75 +585,21 @@ void DPB::ask_main_page(void)
 {
     command_data_t command;
 
-    command.command = GUI_INIT_COMPLETE_CMD;
+    command.command = GUI_INIT_COMPLETED_CMD;
     command.value.ull = 1;
     xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
 }
 
-int16_t DPB::filter_data_iir(data_orig_e data_type)
+void DPB::ask_setting_update(sys_command_e request, int64_t value)
 {
-    int16_t *pAccXBuf = _xShared.getDPBDataAccXBuffer_us();
-    int16_t *pAccYBuf = _xShared.getDPBDataAccYBuffer_us();
-    int16_t *pAccXFltBuf = _xShared.getDPBDataFltAccXBuffer_us();
-    int16_t *pAccYFltBuf = _xShared.getDPBDataFltAccYBuffer_us();
+    command_data_t command;
 
-    __attribute__((aligned(16))) static float accX_input[ACC_DATA_BUFFER_SIZE];
-    __attribute__((aligned(16))) static float accY_input[ACC_DATA_BUFFER_SIZE];
-    __attribute__((aligned(16))) static float accX_filtered[ACC_DATA_BUFFER_SIZE];
-    __attribute__((aligned(16))) static float accY_filtered[ACC_DATA_BUFFER_SIZE];
-    float_t coeffs_lpf[5];
-    float_t w_lpf[5] = {0, 0};
-
-    setStep(FILTERING);
-    _xShared.lockDPBDataAcc();
-    _xShared.lockDPBDataFltAcc();
-
-    for (int32_t i = 0; i < ACC_DATA_BUFFER_SIZE; i++)
-    {
-        if (data_type == RAW_DATA)
-        {
-            accX_input[i] = pAccXBuf[i];
-            accY_input[i] = pAccYBuf[i];
-        }
-        else
-        {
-            accX_input[i] = pAccXFltBuf[i];
-            accY_input[i] = pAccYFltBuf[i];
-        }
-    }
-
-    // Calculate iir filter coefficients
-    if (dsps_biquad_gen_lpf_f32(coeffs_lpf, 0.02, 0.7071) != ESP_OK)
-    {
-        ESP_LOGE(TAG, "IIR coefs calc error");
-        return ESP_FAIL;
-    }
-
-    // Filter X signal
-    if (dsps_biquad_f32(accX_input, accX_filtered, ACC_DATA_BUFFER_SIZE, coeffs_lpf, w_lpf) != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Filtering operation error");
-        return ESP_FAIL;
-    }
-    // Filter Y signal
-    if (dsps_biquad_f32(accY_input, accY_filtered, ACC_DATA_BUFFER_SIZE, coeffs_lpf, w_lpf) != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Filtering operation error");
-        return ESP_FAIL;
-    }
-
-    for (int32_t i = 0; i < ACC_DATA_BUFFER_SIZE; i++)
-    {
-        pAccXFltBuf[i] = accX_filtered[i];
-        pAccYFltBuf[i] = accY_filtered[i];
-    }
-
-    _xShared.unlockDPBDataAcc();
-    _xShared.unlockDPBDataFltAcc();
-    return ESP_OK;
+    command.command = request;
+    command.value.ll = value;
+    xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
 }
 
-int16_t DPB::filter_data_iir_zero(data_orig_e data_type)
+int16_t DPB::_filter_data_iir_zero(data_orig_e data_type)
 {
     int16_t *pAccXBuf = _xShared.getDPBDataAccXBuffer_us();
     int16_t *pAccYBuf = _xShared.getDPBDataAccYBuffer_us();
@@ -557,10 +610,10 @@ int16_t DPB::filter_data_iir_zero(data_orig_e data_type)
     __attribute__((aligned(16))) static float accY_input[ACC_DATA_BUFFER_SIZE];
     __attribute__((aligned(16))) static float accX_filtered[ACC_DATA_BUFFER_SIZE];
     __attribute__((aligned(16))) static float accY_filtered[ACC_DATA_BUFFER_SIZE];
-    __attribute__((aligned(16))) static float accX_filtered_rev[ACC_DATA_BUFFER_SIZE];
-    __attribute__((aligned(16))) static float accY_filtered_rev[ACC_DATA_BUFFER_SIZE];
-    float_t coeffs_lpf[5];
+
+    float_t filter_coeffs[5];
     float_t w_lpf[5] = {0, 0};
+    float_t filter_Q[2] = {_xShared.getIIRQFactor(), _xShared.getIIRQFactor()};
 
     _xShared.lockDPBDataAcc();
     _xShared.lockDPBDataFltAcc();
@@ -579,21 +632,22 @@ int16_t DPB::filter_data_iir_zero(data_orig_e data_type)
         }
     }
 
+    //* BAND-PASS FILTERING
     // Calculate iir filter coefficients
-    if (dsps_biquad_gen_lpf_f32(coeffs_lpf, 0.02, 0.7071) != ESP_OK)
+    if (dsps_biquad_gen_bpf_f32(filter_coeffs, _xShared.getIIRCenterFreq(), filter_Q[0]) != ESP_OK)
     {
         ESP_LOGE(TAG, "IIR coefs calc error");
         return ESP_FAIL;
     }
 
     // Filter X signal
-    if (dsps_biquad_f32(accX_input, accX_filtered, ACC_DATA_BUFFER_SIZE, coeffs_lpf, w_lpf) != ESP_OK)
+    if (dsps_biquad_f32(accX_input, accX_filtered, ACC_DATA_BUFFER_SIZE, filter_coeffs, w_lpf) != ESP_OK)
     {
         ESP_LOGE(TAG, "Filtering operation error");
         return ESP_FAIL;
     }
     // Filter Y signal
-    if (dsps_biquad_f32(accY_input, accY_filtered, ACC_DATA_BUFFER_SIZE, coeffs_lpf, w_lpf) != ESP_OK)
+    if (dsps_biquad_f32(accY_input, accY_filtered, ACC_DATA_BUFFER_SIZE, filter_coeffs, w_lpf) != ESP_OK)
     {
         ESP_LOGE(TAG, "Filtering operation error");
         return ESP_FAIL;
@@ -601,18 +655,24 @@ int16_t DPB::filter_data_iir_zero(data_orig_e data_type)
 
     for (size_t i = 0; i < ACC_DATA_BUFFER_SIZE; i++)
     {
-        accX_filtered_rev[i] = accX_filtered[ACC_DATA_BUFFER_SIZE - 1 - i];
-        accY_filtered_rev[i] = accY_filtered[ACC_DATA_BUFFER_SIZE - 1 - i];
+        accX_input[i] = accX_filtered[ACC_DATA_BUFFER_SIZE - 1 - i];
+        accY_input[i] = accY_filtered[ACC_DATA_BUFFER_SIZE - 1 - i];
     }
 
+    // Calculate iir filter coefficients
+    if (dsps_biquad_gen_bpf_f32(filter_coeffs, _xShared.getIIRCenterFreq(), filter_Q[1]) != ESP_OK)
+    {
+        ESP_LOGE(TAG, "IIR coefs calc error");
+        return ESP_FAIL;
+    }
     // Filter X signal
-    if (dsps_biquad_f32(accX_filtered_rev, accX_filtered, ACC_DATA_BUFFER_SIZE, coeffs_lpf, w_lpf) != ESP_OK)
+    if (dsps_biquad_f32(accX_input, accX_filtered, ACC_DATA_BUFFER_SIZE, filter_coeffs, w_lpf) != ESP_OK)
     {
         ESP_LOGE(TAG, "Filtering operation error");
         return ESP_FAIL;
     }
     // Filter Y signal
-    if (dsps_biquad_f32(accY_filtered_rev, accY_filtered, ACC_DATA_BUFFER_SIZE, coeffs_lpf, w_lpf) != ESP_OK)
+    if (dsps_biquad_f32(accY_input, accY_filtered, ACC_DATA_BUFFER_SIZE, filter_coeffs, w_lpf) != ESP_OK)
     {
         ESP_LOGE(TAG, "Filtering operation error");
         return ESP_FAIL;
@@ -620,14 +680,14 @@ int16_t DPB::filter_data_iir_zero(data_orig_e data_type)
 
     for (size_t i = 0; i < ACC_DATA_BUFFER_SIZE; i++)
     {
-        accX_filtered_rev[i] = accX_filtered[ACC_DATA_BUFFER_SIZE - 1 - i];
-        accY_filtered_rev[i] = accY_filtered[ACC_DATA_BUFFER_SIZE - 1 - i];
+        accX_input[i] = accX_filtered[ACC_DATA_BUFFER_SIZE - 1 - i];
+        accY_input[i] = accY_filtered[ACC_DATA_BUFFER_SIZE - 1 - i];
     }
 
     for (size_t i = 0; i < ACC_DATA_BUFFER_SIZE; i++)
     {
-        pAccXFltBuf[i] = accX_filtered_rev[i];
-        pAccYFltBuf[i] = accY_filtered_rev[i];
+        pAccXFltBuf[i] = accX_input[i];
+        pAccYFltBuf[i] = accY_input[i];
     }
 
     _xShared.unlockDPBDataAcc();
@@ -636,7 +696,7 @@ int16_t DPB::filter_data_iir_zero(data_orig_e data_type)
     return ESP_OK;
 }
 
-int16_t DPB::fft_calc(data_orig_e data_type)
+int16_t DPB::_fft_calc(data_orig_e data_type)
 {
     int16_t *pAccXBuf = _xShared.getDPBDataAccXBuffer_us();
     int16_t *pAccYBuf = _xShared.getDPBDataAccYBuffer_us();
@@ -651,8 +711,9 @@ int16_t DPB::fft_calc(data_orig_e data_type)
     esp_err_t ret = ESP_OK;
 
     // Window coefficients
-    __attribute__((aligned(16)))
-    float_t wind[ACC_DATA_BUFFER_SIZE];
+    __attribute__((aligned(16))) float_t wind[ACC_DATA_BUFFER_SIZE];
+    // working complex array
+    __attribute__((aligned(16))) static float input_cf[ACC_DATA_BUFFER_SIZE * 2];
 
     // Init FFT filter
     if (dsps_fft2r_init_fc32(NULL, CONFIG_DSP_MAX_FFT_SIZE) != ESP_OK)
@@ -664,122 +725,93 @@ int16_t DPB::fft_calc(data_orig_e data_type)
 
     // Generate hann window
     dsps_wind_hann_f32(wind, N);
-    // working complex array
-    __attribute__((aligned(16))) static float x_cf[ACC_DATA_BUFFER_SIZE * 2];
-    __attribute__((aligned(16))) static float y_cf[ACC_DATA_BUFFER_SIZE * 2];
 
-    _xShared.lockDPBDataAcc();
-    _xShared.lockDPBDataFltAcc();
-
-    // Convert input vectors to complex vectors
-    for (int32_t i = 0; i < N; i++)
+    for (size_t j = 0; j < 2; j++)
     {
-        if (data_type == RAW_DATA)
+        _xShared.lockDPBDataAcc();
+        _xShared.lockDPBDataFltAcc();
+
+        // Convert input vectors to complex vectors
+        for (size_t i = 0; i < N; i++)
         {
-            x_cf[i * 2 + 0] = pAccXBuf[i] * wind[i];
-            x_cf[i * 2 + 1] = 0;
-            y_cf[i * 2 + 0] = pAccYBuf[i] * wind[i];
-            y_cf[i * 2 + 1] = 0;
+            if (data_type == RAW_DATA)
+            {
+                if (j == 0)
+                {
+                    input_cf[i * 2 + 0] = pAccXBuf[i] * wind[i];
+                    input_cf[i * 2 + 1] = 0;
+                }
+                else
+                {
+                    input_cf[i * 2 + 0] = pAccYBuf[i] * wind[i];
+                    input_cf[i * 2 + 1] = 0;
+                }
+            }
+            else
+            {
+                if (j == 0)
+                {
+                    input_cf[i * 2 + 0] = pAccXFltBuf[i] * wind[i];
+                    input_cf[i * 2 + 1] = 0;
+                }
+                else
+                {
+                    input_cf[i * 2 + 0] = pAccYFltBuf[i] * wind[i];
+                    input_cf[i * 2 + 1] = 0;
+                }
+            }
         }
-        else
+
+        _xShared.unlockDPBDataAcc();
+        _xShared.unlockDPBDataFltAcc();
+
+        // FFT X-axes
+        ret += dsps_fft2r_fc32(input_cf, N);
+        // Bit reverse
+        ret += dsps_bit_rev_fc32(input_cf, N);
+        // Convert one complex vector to two complex vectors
+        ret += dsps_cplx2reC_fc32(input_cf, N);
+
+        if (ret != ESP_OK)
         {
-            x_cf[i * 2 + 0] = pAccXFltBuf[i] * wind[i];
-            x_cf[i * 2 + 1] = 0;
-            y_cf[i * 2 + 0] = pAccYFltBuf[i] * wind[i];
-            y_cf[i * 2 + 1] = 0;
+            char *TAG = "app_fft";
+            ESP_LOGE(TAG, "FFT calc error");
+            return ESP_FAIL;
         }
+
+        _xShared.lockFFT();
+
+        // Make module and normalize it
+        for (size_t i = 0; i < N / 2; i++)
+        {
+            if (j == 0)
+            {
+                //? I scale by 2 to make sure i dont lose too much precision when i convert the data to int16 for the FFT chart
+                pFFTXBuf[i] = 2 * sqrtf((input_cf[i * 2 + 0] * input_cf[i * 2 + 0] + input_cf[i * 2 + 1] * input_cf[i * 2 + 1] + 0.0000001) / N);
+            }
+            else
+            {
+                //? I scale by 2 to make sure i dont lose too much precision when i convert the data to int16 for the FFT chart
+                pFFTYBuf[i] = 2 * sqrtf((input_cf[i * 2 + 0] * input_cf[i * 2 + 0] + input_cf[i * 2 + 1] * input_cf[i * 2 + 1] + 0.0000001) / N);
+            }
+        }
+
+        _xShared.unlockFFT();
     }
-
-    _xShared.unlockDPBDataAcc();
-    _xShared.unlockDPBDataFltAcc();
-
-    // FFT X-axes
-    ret += dsps_fft2r_fc32(x_cf, N);
-    // Bit reverse
-    ret += dsps_bit_rev_fc32(x_cf, N);
-    // Convert one complex vector to two complex vectors
-    ret += dsps_cplx2reC_fc32(x_cf, N);
-
-    // FFT Y-axes
-    ret += dsps_fft2r_fc32(y_cf, N);
-    // Bit reverse
-    ret += dsps_bit_rev_fc32(y_cf, N);
-    // Convert one complex vector to two complex vectors
-    ret += dsps_cplx2reC_fc32(y_cf, N);
-
-    if (ret != ESP_OK)
-    {
-        char *TAG = "app_fft";
-        ESP_LOGE(TAG, "FFT calc error");
-        return ESP_FAIL;
-    }
-
-    _xShared.lockFFT();
-    // Make module and normalize it
-    for (int i = 0; i < N / 2; i++)
-    {
-        //? I scale by 2 to make sure i dont lose too much precision when i convert the data to int16 for the FFT chart
-        pFFTXBuf[i] = 2 * sqrtf((x_cf[i * 2 + 0] * x_cf[i * 2 + 0] + x_cf[i * 2 + 1] * x_cf[i * 2 + 1] + 0.0000001) / N);
-        pFFTYBuf[i] = 2 * sqrtf((y_cf[i * 2 + 0] * y_cf[i * 2 + 0] + y_cf[i * 2 + 1] * y_cf[i * 2 + 1] + 0.0000001) / N);
-    }
-
-    _xShared.unlockFFT();
 
     return ESP_OK;
 }
 
-void DPB::signal_peak_finder(void)
+void DPB::_signal_peak_finder(void)
 {
-    size_t maxXPeakIndex = 0, maxYPeakIndex = 0;
-
-    //* Find all local peaks index and absolute max peak index
-    _xShared.lockDPBDataFltAcc();
-    _xShared.lockPeaksIndex();
-
-    ESP_ERROR_CHECK(peaks_finder<int16_t>(_xShared.getDPBDataFltAccXBuffer_us(), _xShared.getXPeaksIndexPointer_us(), &_XpeakCount, &maxXPeakIndex, ACC_DATA_BUFFER_SIZE, ACC_DATA_BUFFER_SIZE));
-    ESP_ERROR_CHECK(peaks_finder<int16_t>(_xShared.getDPBDataFltAccYBuffer_us(), _xShared.getYPeaksIndexPointer_us(), &_YpeakCount, &maxYPeakIndex, ACC_DATA_BUFFER_SIZE, ACC_DATA_BUFFER_SIZE));
-    _xShared.setAccXMaxIndex(maxXPeakIndex);
-    _xShared.setAccYMaxIndex(maxYPeakIndex);
-
-    _xShared.unlockDPBDataFltAcc();
-    _xShared.unlockPeaksIndex();
-
-    //* Calc min distance between two real local peak
-    float_t fund = _get_fundamental_freq(_xShared.getBandWidth(), FFT_DATA_BUFFER_SIZE);
-    float_t peak_min_dist = ((0.8 * 1000000.0) / fund); //! _rpmTimer has 1us resolution
-    _xShared.setUnbalanceFreq(fund);
-
-    //* Remove peak indexs that dont meet the min required distance
-    size_t *height_sorted_Xpeak_index = new size_t[_XpeakCount](); //? Index of peak index
-    size_t *height_sorted_Ypeak_index = new size_t[_YpeakCount](); //? Index of peak index
-
-    _xShared.lockDPBDataAcc();
-    _xShared.lockPeaksIndex();
-    ESP_ERROR_CHECK(array_map_incr<int16_t>(_xShared.getXPeaksIndexPointer_us(), _xShared.getDPBDataFltAccXBuffer_us(), height_sorted_Xpeak_index, _XpeakCount));
-    ESP_ERROR_CHECK(array_map_incr<int16_t>(_xShared.getYPeaksIndexPointer_us(), _xShared.getDPBDataFltAccYBuffer_us(), height_sorted_Ypeak_index, _YpeakCount));
-
-#ifdef APP_DEBUG_MODE
-    ESP_LOGI(TAG, "Filter X-Peak");
+#ifndef APP_Z_SCORES_PEAKS
+    _standard_peaks_analisys();
+#else
+    _z_scores_peaks_analisys();
 #endif
-    _peaks_filter_by_distance(_xShared.getDPBTimeBuffer_us(), _xShared.getXPeaksIndexPointer_us(), height_sorted_Xpeak_index, _XpeakCount, peak_min_dist);
-#ifdef APP_DEBUG_MODE
-    ESP_LOGI(TAG, "Filter Y-Peak");
-#endif
-    _peaks_filter_by_distance(_xShared.getDPBTimeBuffer_us(), _xShared.getYPeaksIndexPointer_us(), height_sorted_Ypeak_index, _YpeakCount, peak_min_dist);
-    _xShared.unlockDPBDataAcc();
-
-    ESP_ERROR_CHECK(array_value_remover<size_t>(_xShared.getXPeaksIndexPointer_us(), &_XpeakCount, (size_t)-1));
-    ESP_ERROR_CHECK(array_value_remover<size_t>(_xShared.getYPeaksIndexPointer_us(), &_YpeakCount, (size_t)-1));
-    _xShared.unlockPeaksIndex();
-
-    _xShared.setXPeakCount(_XpeakCount);
-    _xShared.setYPeakCount(_YpeakCount);
-
-    delete[] height_sorted_Xpeak_index;
-    delete[] height_sorted_Ypeak_index;
 }
 
-void DPB::fft_peak_finder(void)
+void DPB::_fft_peak_finder(void)
 {
     float_t *pFFTXBuf = _xShared.getFFTXBuffer_us();
     float_t *pFFTYBuf = _xShared.getFFTXBuffer_us();
@@ -811,6 +843,47 @@ void DPB::fft_peak_finder(void)
 
     _xShared.setFFTXMaxIndex(peak_x_index);
     _xShared.setFFTYMaxIndex(peak_y_index);
+}
+
+void DPB::_exe_step_managment(app_steps_e requested_step)
+{
+}
+
+void DPB::_exe_get_settings(sys_command_e request)
+{
+    accel_settings_t acc_settings;
+
+    switch (request)
+    {
+    case APP_GET_SOURCE_CMD:
+        ask_setting_update(request, (int64_t)_xShared.getUnbalanceSource());
+        break;
+
+    case ACCEL_GET_BW_CMD:
+        Accel::get_acc_settings(&acc_settings);
+        ask_setting_update(request, (int64_t)acc_settings.band);
+        break;
+
+    case ACCEL_GET_RANGE_CMD:
+        Accel::get_acc_settings(&acc_settings);
+        ask_setting_update(request, (int64_t)_range_convert((uint8_t)acc_settings.range));
+        break;
+
+    case MOTOR_GET_SPEED_CMD:
+        ask_setting_update(request, (int64_t)_xShared.getMeasureThrottle());
+        break;
+
+    case IIR_GET_FREQ_CMD:
+        ask_setting_update(request, (int64_t)(_xShared.getIIRCenterFreq() * 1000));
+        break;
+
+    case IIR_GET_Q_CMD:
+        ask_setting_update(request, (int64_t)(_xShared.getIIRQFactor() * 100));
+        break;
+
+    default:
+        break;
+    }
 }
 
 void DPB::setStep(app_steps_e v)
@@ -858,65 +931,102 @@ void DPB::_log_acc_data_filtered(void)
 #endif
 }
 
-float_t DPB::_get_fundamental_freq(uint16_t sample_freq, size_t fft_lenght)
+void DPB::_dummy_data_remove(void)
 {
-    float_t fft_res = (float_t)sample_freq / (float_t)fft_lenght;
-    float_t signal_fundamental = (float_t)_xShared.getFFTXMaxIndex();
-    signal_fundamental *= fft_res;
+    //* Remove the first X values of filtered data that present fake oscillations
+    _xShared.lockDPBDataFltAcc();
+    _xShared.lockDPBDataAcc();
 
-    if (signal_fundamental == 0)
-    {
-        signal_fundamental = fft_res; // Min distance equal to FFT resolution
-    }
+    ESP_ERROR_CHECK(_analyzer.array_cutter<int16_t>(_xShared.getDPBDataFltAccXBuffer_us(), ACC_DATA_BUFFER_SIZE, DUMMY_DATA_QUANTITY, ACC_DATA_BUFFER_SIZE - DUMMY_DATA_QUANTITY));
+    ESP_ERROR_CHECK(_analyzer.array_cutter<int16_t>(_xShared.getDPBDataFltAccYBuffer_us(), ACC_DATA_BUFFER_SIZE, DUMMY_DATA_QUANTITY, ACC_DATA_BUFFER_SIZE - DUMMY_DATA_QUANTITY));
+    ESP_ERROR_CHECK(_analyzer.array_cutter<uint8_t>(_xShared.getDPBRotDoneBuffer_us(), ACC_DATA_BUFFER_SIZE, DUMMY_DATA_QUANTITY, ACC_DATA_BUFFER_SIZE - DUMMY_DATA_QUANTITY));
+    ESP_ERROR_CHECK(_analyzer.array_cutter<uint64_t>(_xShared.getDPBTimeBuffer_us(), ACC_DATA_BUFFER_SIZE, DUMMY_DATA_QUANTITY, ACC_DATA_BUFFER_SIZE - DUMMY_DATA_QUANTITY));
 
-    return signal_fundamental;
+    _xShared.unlockDPBDataFltAcc();
+    _xShared.unlockDPBDataAcc();
 }
 
-void DPB::_peaks_filter_by_distance(uint64_t *ref_array, size_t *ref_peaks, size_t *sorted_peaks, size_t peak_num, uint64_t req_distance)
+void DPB::_standard_peaks_analisys(void)
 {
-    const char *TAG = "PEAKS-FILTER-DIST";
-    size_t current = 0;
-    u_short *to_remove = new u_short[peak_num]();
+#ifndef APP_Z_SCORES_PEAKS
 
-    for (size_t i = 0; i < peak_num; i++)
-    {
-        current = sorted_peaks[i];
+    size_t maxXPeakIndex = 0, maxYPeakIndex = 0;
 
-        if (to_remove[current] == 1)
-        {
-            continue; // peak will already be removed, move on.
-        }
+    //* Find all local peaks index and absolute max peak index
+    _xShared.lockDPBDataFltAcc();
+    _xShared.lockPeaksIndex();
 
-        // check on left side of peak
-        int16_t neighbor = current - 1;
-        while (neighbor >= 0 && (ref_array[ref_peaks[current]] - ref_array[ref_peaks[neighbor]]) < req_distance)
-        {
-            to_remove[neighbor] = 1;
-            --neighbor;
-        }
-
-        // check on right side of peak
-        neighbor = current + 1;
-        while (neighbor < peak_num && (ref_array[ref_peaks[current]] - ref_array[ref_peaks[neighbor]]) < req_distance)
-        {
-            to_remove[neighbor] = 1;
-            ++neighbor;
-        }
-    }
-
-    // Remove the incorrect peak indexs
-    for (size_t i = 0; i < peak_num; i++)
-    {
-        if (to_remove[i] == 1)
-        {
 #ifdef APP_DEBUG_MODE
-            ESP_LOGW(TAG, "Peak[%d] removed", i);
+    ESP_LOGI(TAG, "X-Peak");
 #endif
-            ref_peaks[i] = -1;
-        }
-    }
+    ESP_ERROR_CHECK(_analyzer.peaks_finder<int16_t>(_xShared.getDPBDataFltAccXBuffer_us(), _xShared.getXPeaksIndexPointer_us(), &_XpeakCount, &maxXPeakIndex, ACC_DATA_BUFFER_SIZE, ACC_DATA_BUFFER_SIZE));
+#ifdef APP_DEBUG_MODE
+    ESP_LOGI(TAG, "Y-Peak");
+#endif
+    ESP_ERROR_CHECK(_analyzer.peaks_finder<int16_t>(_xShared.getDPBDataFltAccYBuffer_us(), _xShared.getYPeaksIndexPointer_us(), &_YpeakCount, &maxYPeakIndex, ACC_DATA_BUFFER_SIZE, ACC_DATA_BUFFER_SIZE));
+    _xShared.setAccXMaxIndex(maxXPeakIndex);
+    _xShared.setAccYMaxIndex(maxYPeakIndex);
 
-    delete[] to_remove;
+    _xShared.unlockDPBDataFltAcc();
+    _xShared.unlockPeaksIndex();
+
+    //* Calc min distance between two real local peak
+    float_t fund = _get_fundamental_freq(_xShared.getBandWidth(), FFT_DATA_BUFFER_SIZE);
+    float_t peak_min_dist = ((0.8 * 1000000.0) / fund); //! _rpmTimer has 1us resolution
+    _xShared.setUnbalanceFreq(fund);
+
+    //* Remove peak indexs that dont meet the min required distance
+    int16_t *height_sorted_Xpeak_index = new int16_t[_XpeakCount](); //? Index of peak index
+    int16_t *height_sorted_Ypeak_index = new int16_t[_YpeakCount](); //? Index of peak index
+
+    _xShared.lockDPBDataAcc();
+    _xShared.lockPeaksIndex();
+    ESP_ERROR_CHECK(_analyzer.array_map_incr<int16_t>(_xShared.getXPeaksIndexPointer_us(), _xShared.getDPBDataFltAccXBuffer_us(), height_sorted_Xpeak_index, _XpeakCount));
+    ESP_ERROR_CHECK(_analyzer.array_map_incr<int16_t>(_xShared.getYPeaksIndexPointer_us(), _xShared.getDPBDataFltAccYBuffer_us(), height_sorted_Ypeak_index, _YpeakCount));
+
+#ifdef APP_DEBUG_MODE
+    ESP_LOGI(TAG, "Filter X-Peak");
+#endif
+    _analyzer.peaks_filter_by_distance<uint64_t>(_xShared.getDPBTimeBuffer_us(), _xShared.getXPeaksIndexPointer_us(), height_sorted_Xpeak_index, _XpeakCount, peak_min_dist);
+#ifdef APP_DEBUG_MODE
+    ESP_LOGI(TAG, "Filter Y-Peak");
+#endif
+    _analyzer.peaks_filter_by_distance<uint64_t>(_xShared.getDPBTimeBuffer_us(), _xShared.getYPeaksIndexPointer_us(), height_sorted_Ypeak_index, _YpeakCount, peak_min_dist);
+    _xShared.unlockDPBDataAcc();
+
+    ESP_ERROR_CHECK(_analyzer.array_value_remover<int16_t>(_xShared.getXPeaksIndexPointer_us(), &_XpeakCount, (size_t)-1));
+    ESP_ERROR_CHECK(_analyzer.array_value_remover<int16_t>(_xShared.getYPeaksIndexPointer_us(), &_YpeakCount, (size_t)-1));
+    _xShared.unlockPeaksIndex();
+
+    _xShared.setXPeakCount(_XpeakCount);
+    _xShared.setYPeakCount(_YpeakCount);
+
+    delete[] height_sorted_Xpeak_index;
+    delete[] height_sorted_Ypeak_index;
+#endif
+}
+
+void DPB::_z_scores_peaks_analisys(void)
+{
+#ifdef APP_Z_SCORES_PEAKS
+    size_t maxXPeakIndex = 0, maxYPeakIndex = 0;
+
+    _xShared.lockDPBDataFltAcc();
+    _xShared.lockPeaksIndex();
+
+#ifdef APP_DEBUG_MODE
+    ESP_LOGI(TAG, "X-Peak");
+#endif
+    __peaks_finder_z_scores<int16_t>(_xShared.getDPBDataFltAccXBuffer_us(), _xShared.getXPeaksIndexPointer_us(), 10, 5, 0.35, &_XpeakCount, &maxXPeakIndex, ACC_DATA_BUFFER_SIZE, ACC_DATA_BUFFER_SIZE);
+#ifdef APP_DEBUG_MODE
+    ESP_LOGI(TAG, "Y-Peak");
+#endif
+    __peaks_finder_z_scores<int16_t>(_xShared.getDPBDataFltAccYBuffer_us(), _xShared.getYPeaksIndexPointer_us(), 10, 2.5, 0.5, &_YpeakCount, &maxYPeakIndex, ACC_DATA_BUFFER_SIZE, ACC_DATA_BUFFER_SIZE);
+
+    _xShared.unlockDPBDataFltAcc();
+    _xShared.unlockPeaksIndex();
+
+#endif
 }
 
 /* Thank to @FoxKeys https://github.com/espressif/esp-idf/issues/2355 */
@@ -932,4 +1042,87 @@ void DPB::__motorStartupTimerCallback(TimerHandle_t pxTimer)
     {
         esp_system_abort("Timer stop-command timeout");
     }
+}
+
+void DPB::_unbalance_step_1(void)
+{
+    _steps_amplitude[0] = _get_vibe_vector_mod();
+}
+
+void DPB::_unbalance_step_2(void)
+{
+    _steps_amplitude[1] = _get_vibe_vector_mod();
+}
+
+void DPB::_unbalance_step_3(void)
+{
+    _steps_amplitude[2] = _get_vibe_vector_mod();
+}
+
+void DPB::_unbalance_step_4(void)
+{
+    _steps_amplitude[3] = _get_vibe_vector_mod();
+}
+
+dpb_range_e DPB::_range_convert(uint8_t range)
+{
+    dpb_range_e value = RANGE_UNKNOW;
+    switch (range)
+    {
+    case 2:
+        value = RANGE_2G;
+        break;
+    case 4:
+        value = RANGE_4G;
+        break;
+    case 8:
+        value = RANGE_8G;
+        break;
+    case 16:
+        value = RANGE_16G;
+        break;
+    default:
+        value = RANGE_UNKNOW;
+        break;
+    }
+
+    return value;
+}
+
+float_t DPB::_get_fundamental_freq(uint16_t sample_freq, size_t fft_lenght)
+{
+    float_t fft_res = (float_t)sample_freq / (float_t)fft_lenght;
+    float_t signal_fundamental = (float_t)_xShared.getFFTXMaxIndex();
+    signal_fundamental *= fft_res;
+
+    if (signal_fundamental == 0)
+    {
+        signal_fundamental = fft_res; // Min distance equal to FFT resolution
+    }
+
+    return signal_fundamental;
+}
+
+float_t DPB::_get_vibe_vector_mod(void)
+{
+    int16_t min_x = 0;
+    int16_t max_x = 0;
+    int16_t min_y = 0;
+    int16_t max_y = 0;
+    float_t mod = 0;
+    int16_t *pAccXBuff = nullptr;
+    int16_t *pAccYBuff = nullptr;
+
+    _xShared.lockDPBDataFltAcc();
+    pAccXBuff = _xShared.getDPBDataFltAccXBuffer_us();
+    pAccYBuff = _xShared.getDPBDataFltAccYBuffer_us();
+
+    _analyzer.array_max_min_finder<int16_t>(pAccXBuff, ACC_DATA_BUFFER_SIZE, &max_x, &min_x);
+    _analyzer.array_max_min_finder<int16_t>(pAccYBuff, ACC_DATA_BUFFER_SIZE, &max_y, &min_y);
+
+    _xShared.unlockDPBDataFltAcc();
+
+    mod = sqrt(((max_x - min_x) * (max_x - min_x)) + ((max_y - min_y) * (max_y - min_y)));
+
+    return mod;
 }

@@ -45,11 +45,9 @@ void guiTask(void *pvParameter)
 
     while (1)
     {
-        gui_update();
-
-        /* Try to take the semaphore, call lvgl related function on success */
         if (xSemaphoreTake(xGuiSemaphore, portMAX_DELAY) == pdTRUE)
         {
+            gui_update();
             lv_timer_handler();
             xSemaphoreGive(xGuiSemaphore);
         }

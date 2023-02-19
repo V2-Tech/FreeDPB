@@ -17,6 +17,8 @@ public:
     void rpm_update();
 
     float_t get_rpm();
+
+    void start_rpm_cnt();
     void reset_rpm_cnt();
     void stop_rpm_cnt();
 

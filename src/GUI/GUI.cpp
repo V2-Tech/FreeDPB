@@ -3,6 +3,8 @@
 //************************/
 //*      VARIABLES       */
 //************************/
+static const char *TAG = "GUI";
+
 //* Inter-pages usage
 static LGFX tft;
 DPBShared &_xShared = DPBShared::getInstance();
@@ -11,16 +13,18 @@ static lv_color_t buf[screenWidth * 10];
 static QueueHandle_t _xQueueCom2Sys = NULL;
 static QueueHandle_t _xQueueSys2Comp = NULL;
 static uint8_t _gui_init_done = 0;
-static dpb_page_t _gui_act_page = LOADING_PAGE;
+static dpb_page_e _gui_act_page = LOADING_PAGE;
 static uint8_t _peak_draw_done = 0;
+static nerd_subpage_e _nerd_act_page = X_RAW;
+static settings_subpage_e _settings_act_page = SYSTEM_SETTINGS;
 
-//* Pages handler
+//* Page handlers
 lv_obj_t *gui_LoadingScreen = NULL;
 lv_obj_t *gui_MainScreen = NULL;
 lv_obj_t *gui_NerdScreen = NULL;
-lv_obj_t *gui_FFTScreen = NULL;
+lv_obj_t *gui_SettingsScreen = NULL;
 
-//* Main screen object
+//* Main screen objects
 lv_obj_t *gui_StartBut = NULL;
 lv_obj_t *gui_StartButLabel = NULL;
 lv_obj_t *gui_SearchTypeSwitch = NULL;
@@ -29,7 +33,6 @@ lv_obj_t *gui_OffsetSpinboxTab = NULL;
 lv_obj_t *gui_OffsetSpinbox = NULL;
 lv_obj_t *gui_SettingsBut = NULL;
 lv_obj_t *gui_NerdBut = NULL;
-lv_obj_t *gui_RPMLabel = NULL;
 lv_obj_t *gui_RPMLabelText = NULL;
 lv_obj_t *gui_UnbalanceAngleTab = NULL;
 lv_obj_t *gui_UnbalanceAngleLine = NULL;
@@ -40,13 +43,14 @@ lv_obj_t *gui_Steps1Lab = NULL;
 lv_obj_t *gui_Steps2Lab = NULL;
 lv_obj_t *gui_Steps3Lab = NULL;
 lv_obj_t *gui_Steps4Lab = NULL;
+lv_obj_t *gui_StepBackBut = NULL;
 
-//* Nerd screen object
+//* Nerd screen objects
+lv_obj_t *gui_action_list_nerd = NULL;
 lv_obj_t *gui_page_signal_x = NULL;
 lv_obj_t *gui_page_signal_y = NULL;
 lv_obj_t *gui_page_fft_x = NULL;
 lv_obj_t *gui_page_fft_y = NULL;
-lv_obj_t *gui_action_list_nerd = NULL;
 
 // Acceleration charts
 lv_obj_t *gui_AccelXChart = NULL;
@@ -69,6 +73,26 @@ int16_t fftY_sample[FFT_DATA_BUFFER_SIZE] = {0};
 
 // Labels
 lv_obj_t *gui_FundLabel = NULL;
+
+//* Settings screen objects
+lv_obj_t *gui_menu_list_settings = NULL;
+lv_obj_t *gui_page_system_settings = NULL;
+lv_obj_t *gui_page_accel_settings = NULL;
+lv_obj_t *gui_page_filter_settings = NULL;
+lv_obj_t *gui_page_info_settings = NULL;
+
+// System
+lv_obj_t *unbalance_source_dropdown = NULL;
+lv_obj_t *speed_slider = NULL;
+lv_obj_t *speed_slider_value_label = NULL;
+
+// Accelerometer
+lv_obj_t *range_dropdown = NULL;
+lv_obj_t *bandwidth_dropdown = NULL;
+
+// Filter
+lv_obj_t *gui_FreqSpinbox = NULL;
+lv_obj_t *gui_QFactorSpinbox = NULL;
 
 //?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
 //?         FUNCTIONS DEFINITION        /
@@ -126,11 +150,8 @@ uint8_t gui_init(QueueHandle_t xQueueComp2Sys_handle, QueueHandle_t xQueueSys2Co
     lv_disp_t *disp = lv_disp_get_default();
     lv_theme_t *theme = lv_theme_default_init(disp, lv_palette_main(LV_PALETTE_BLUE), lv_palette_main(LV_PALETTE_RED),
                                               true, LV_FONT_DEFAULT);
-
     lv_disp_set_theme(disp, theme);
-    gui_LoadingScreen_init();
-    gui_MainScreen_init();
-    gui_NerdScreen_init();
+
     gui_show_page(LOADING_PAGE);
 
     _gui_init_done = 1;
@@ -138,7 +159,7 @@ uint8_t gui_init(QueueHandle_t xQueueComp2Sys_handle, QueueHandle_t xQueueSys2Co
     return ret;
 }
 
-void gui_LoadingScreen_init(void)
+void gui_LoadingScreen_create(void)
 {
     //* Create LOADING SCREEN object
     gui_LoadingScreen = lv_obj_create(NULL);
@@ -158,7 +179,7 @@ void gui_LoadingScreen_init(void)
     lv_obj_center(spinner);
 }
 
-void gui_MainScreen_init(void)
+void gui_MainScreen_create(void)
 {
     //* Create MAIN SCREEN object
     gui_MainScreen = lv_obj_create(NULL);
@@ -179,46 +200,39 @@ void gui_MainScreen_init(void)
     gui_StartBut = lv_btn_create(gui_MainScreen);
     lv_obj_set_width(gui_StartBut, 100);
     lv_obj_set_height(gui_StartBut, 60);
+    lv_obj_align(gui_StartBut, LV_ALIGN_TOP_LEFT, 210, 75);
 
     // Add default styles
-    static lv_style_t styleStartBut;
-    lv_style_init(&styleStartBut);
-    lv_style_set_radius(&styleStartBut, 3);
-    lv_style_set_bg_opa(&styleStartBut, LV_OPA_TRANSP);
-    lv_style_set_border_color(&styleStartBut, DEFAULT_ELEMENT_ACCENT_COLOR);
-    lv_style_set_border_width(&styleStartBut, 2);
-    lv_style_set_border_opa(&styleStartBut, LV_OPA_100);
-    lv_style_set_outline_opa(&styleStartBut, LV_OPA_COVER);
-    lv_style_set_outline_color(&styleStartBut, SECONDARY_ELEMENT_ACCENT_COLOR);
-    lv_style_set_shadow_width(&styleStartBut, 5);
-    lv_style_set_shadow_color(&styleStartBut, DEFAULT_ELEMENT_ACCENT_COLOR);
-    lv_style_set_shadow_opa(&styleStartBut, LV_OPA_100);
+    lv_obj_set_style_radius(gui_StartBut, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(gui_StartBut, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_color(gui_StartBut, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(gui_StartBut, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(gui_StartBut, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(gui_StartBut, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_color(gui_StartBut, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_width(gui_StartBut, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_color(gui_StartBut, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_opa(gui_StartBut, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Add pressed styles
-    static lv_style_t styleStartBut_pressed;
-    lv_style_init(&styleStartBut_pressed);
-    lv_style_set_outline_width(&styleStartBut_pressed, 15);
-    lv_style_set_outline_opa(&styleStartBut_pressed, LV_OPA_TRANSP);
+    lv_obj_set_style_outline_width(gui_StartBut, 15, LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_outline_opa(gui_StartBut, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_PRESSED);
 
-    static lv_style_transition_dsc_t trans_start_but;
-    static lv_style_prop_t props_start_but[] = {LV_STYLE_OUTLINE_WIDTH, LV_STYLE_OUTLINE_OPA, LV_STYLE_PROP_INV};
-    lv_style_transition_dsc_init(&trans_start_but, props_start_but, lv_anim_path_linear, 300, 0, NULL);
-    lv_style_set_transition(&styleStartBut_pressed, &trans_start_but);
-    lv_obj_add_style(gui_StartBut, &styleStartBut, 0);
-    lv_obj_add_style(gui_StartBut, &styleStartBut_pressed, LV_STATE_PRESSED);
-    lv_obj_align(gui_StartBut, LV_ALIGN_TOP_LEFT, 210, 75);
+    static lv_style_transition_dsc_t but_trans;
+    static lv_style_prop_t but_props[] = {LV_STYLE_OUTLINE_WIDTH, LV_STYLE_OUTLINE_OPA, LV_STYLE_PROP_INV};
+    lv_style_transition_dsc_init(&but_trans, but_props, lv_anim_path_linear, 300, 0, NULL);
+    lv_obj_set_style_transition(gui_StartBut, &but_trans, LV_PART_MAIN | LV_STATE_PRESSED);
 
     // Add event
     lv_obj_add_event_cb(gui_StartBut, start_btn_event_cb, LV_EVENT_ALL, NULL);
 
     // Add icon
     gui_StartButLabel = lv_label_create(gui_StartBut);
-    lv_label_set_text(gui_StartButLabel, LV_SYMBOL_PLAY);
-    static lv_style_t styleStartButLabel;
-    lv_style_set_text_font(&styleStartButLabel, &lv_font_montserrat_36);
-    lv_style_set_text_color(&styleStartButLabel, DEFAULT_ELEMENT_ACCENT_COLOR);
-    lv_obj_add_style(gui_StartButLabel, &styleStartButLabel, 0);
+    lv_obj_set_style_text_font(gui_StartButLabel, &lv_font_montserrat_36, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(gui_StartButLabel, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_center(gui_StartButLabel);
+
+    lv_label_set_text(gui_StartButLabel, LV_SYMBOL_PLAY);
 
     //* Create search type switch tab
     lv_obj_t *gui_SearchTypeSwitch_Tab = lv_obj_create(gui_MainScreen);
@@ -252,42 +266,35 @@ void gui_MainScreen_init(void)
     gui_ResetBut = lv_btn_create(gui_MainScreen);
     lv_obj_set_width(gui_ResetBut, 100);
     lv_obj_set_height(gui_ResetBut, 42);
+    lv_obj_align_to(gui_ResetBut, gui_StartBut, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
 
     // Add default styles
-    static lv_style_t styleResetBut;
-    lv_style_init(&styleResetBut);
-    lv_style_set_radius(&styleResetBut, 3);
-    lv_style_set_bg_opa(&styleResetBut, LV_OPA_TRANSP);
-    lv_style_set_border_color(&styleResetBut, DEFAULT_ELEMENT_ACCENT_COLOR);
-    lv_style_set_border_width(&styleResetBut, 2);
-    lv_style_set_border_opa(&styleResetBut, LV_OPA_100);
-    lv_style_set_outline_opa(&styleResetBut, LV_OPA_COVER);
-    lv_style_set_outline_color(&styleResetBut, SECONDARY_ELEMENT_ACCENT_COLOR);
-    lv_style_set_shadow_width(&styleResetBut, 5);
-    lv_style_set_shadow_color(&styleResetBut, DEFAULT_ELEMENT_ACCENT_COLOR);
-    lv_style_set_shadow_opa(&styleResetBut, LV_OPA_100);
+    lv_obj_set_style_radius(gui_ResetBut, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(gui_ResetBut, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_color(gui_ResetBut, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(gui_ResetBut, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(gui_ResetBut, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(gui_ResetBut, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_color(gui_ResetBut, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_width(gui_ResetBut, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_color(gui_ResetBut, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_opa(gui_ResetBut, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Add pressed styles
-    static lv_style_t styleResetBut_pressed;
-    lv_style_init(&styleResetBut_pressed);
-    lv_style_set_outline_width(&styleResetBut_pressed, 15);
-    lv_style_set_outline_opa(&styleResetBut_pressed, LV_OPA_TRANSP);
-
-    static lv_style_transition_dsc_t trans_Reset_but;
-    static lv_style_prop_t props_Reset_but[] = {LV_STYLE_OUTLINE_WIDTH, LV_STYLE_OUTLINE_OPA, LV_STYLE_PROP_INV};
-    lv_style_transition_dsc_init(&trans_Reset_but, props_Reset_but, lv_anim_path_linear, 300, 0, NULL);
-    lv_style_set_transition(&styleResetBut_pressed, &trans_Reset_but);
-    lv_obj_add_style(gui_ResetBut, &styleResetBut, 0);
-    lv_obj_add_style(gui_ResetBut, &styleResetBut_pressed, LV_STATE_PRESSED);
-    lv_obj_align_to(gui_ResetBut, gui_StartBut, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
+    lv_obj_set_style_outline_width(gui_ResetBut, 15, LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_outline_opa(gui_ResetBut, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_style_transition_dsc_init(&but_trans, but_props, lv_anim_path_linear, 300, 0, NULL);
+    lv_obj_set_style_transition(gui_ResetBut, &but_trans, LV_PART_MAIN | LV_STATE_PRESSED);
 
     // Add event
     lv_obj_add_event_cb(gui_ResetBut, reset_btn_event_cb, LV_EVENT_ALL, NULL);
 
     // Add icon
-    lv_obj_t *gui_ResetButImg = lv_img_create(gui_ResetBut);
-    lv_img_set_src(gui_ResetButImg, &reset_icon);
-    lv_obj_center(gui_ResetButImg);
+    lv_obj_t *gui_ResetButLabel = lv_label_create(gui_ResetBut);
+    lv_label_set_text(gui_ResetButLabel, LV_SYMBOL_REFRESH);
+    lv_obj_set_style_text_font(gui_ResetButLabel, &lv_font_montserrat_36, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(gui_ResetButLabel, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_center(gui_ResetButLabel);
 
     //* Create angle offset spinbox
     // Create tab
@@ -320,7 +327,7 @@ void gui_MainScreen_init(void)
     lv_obj_align(gui_OffsetSpinbox, LV_ALIGN_CENTER, 0, 0);
 
     // Add callback
-    lv_obj_add_event_cb(gui_OffsetSpinbox, spinbox_event_cb, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(gui_OffsetSpinbox, offset_spinbox_event_cb, LV_EVENT_ALL, NULL);
 
     // Create increment button
     lv_coord_t h = lv_obj_get_height(gui_OffsetSpinbox);
@@ -341,7 +348,7 @@ void gui_MainScreen_init(void)
     lv_obj_center(label);
 
     // Add callback
-    lv_obj_add_event_cb(btn, spinbox_increment_btn_event_cb, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(btn, offset_increment_btn_event_cb, LV_EVENT_ALL, NULL);
 
     // Create decrement button
     btn = lv_btn_create(gui_OffsetSpinboxTab);
@@ -361,10 +368,47 @@ void gui_MainScreen_init(void)
     lv_obj_center(label);
 
     // Add callback
-    lv_obj_add_event_cb(btn, spinbox_decrement_btn_event_cb, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(btn, offset_decrement_btn_event_cb, LV_EVENT_ALL, NULL);
+
+    //* Create step back button
+    gui_StepBackBut = lv_btn_create(gui_MainScreen);
+    lv_obj_set_width(gui_StepBackBut, 100);
+    lv_obj_set_height(gui_StepBackBut, 42);
+    lv_obj_align_to(gui_StepBackBut, gui_StartBut, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
+
+    // Add default styles
+    lv_obj_set_style_radius(gui_StepBackBut, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(gui_StepBackBut, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_color(gui_StepBackBut, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(gui_StepBackBut, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(gui_StepBackBut, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(gui_StepBackBut, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_color(gui_StepBackBut, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_width(gui_StepBackBut, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_color(gui_StepBackBut, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_opa(gui_StepBackBut, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Add pressed styles
+    lv_obj_set_style_outline_width(gui_StepBackBut, 15, LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_outline_opa(gui_StepBackBut, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_style_transition_dsc_init(&but_trans, but_props, lv_anim_path_linear, 300, 0, NULL);
+    lv_obj_set_style_transition(gui_StepBackBut, &but_trans, LV_PART_MAIN | LV_STATE_PRESSED);
+
+    // Add event
+    lv_obj_add_event_cb(gui_StepBackBut, step_back_btn_event_cb, LV_EVENT_ALL, NULL);
+
+    // Add icon
+    lv_obj_t *gui_StepBackButLabel = lv_label_create(gui_StepBackBut);
+    lv_label_set_text(gui_StepBackButLabel, LV_SYMBOL_PREV);
+    lv_obj_set_style_text_font(gui_StepBackButLabel, &lv_font_montserrat_36, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(gui_StepBackButLabel, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_center(gui_StepBackButLabel);
+
+    // Hide
+    lv_obj_add_flag(gui_StepBackBut, LV_OBJ_FLAG_HIDDEN);
 }
 
-void gui_NerdScreen_init(void)
+void gui_NerdScreen_create(void)
 {
     //* Create NERD SCREEN object
     gui_NerdScreen = lv_obj_create(NULL);
@@ -377,6 +421,21 @@ void gui_NerdScreen_init(void)
 
     //* Create toolbars
     _create_toolbars_nerd();
+}
+
+void gui_SettingsScreen_create(void)
+{
+    //* Create SETTINGS SCREEN object
+    gui_SettingsScreen = lv_obj_create(NULL);
+    lv_obj_clear_flag(gui_SettingsScreen, LV_OBJ_FLAG_SCROLLABLE);
+    // Set screen style
+    lv_obj_set_style_bg_color(gui_SettingsScreen, DEFAULT_BACKGROUND_COLOR, LV_PART_MAIN);
+
+    //* Create sub-pages
+    _create_pages_settings();
+
+    //* Create toolbars
+    _create_toolbars_settings();
 }
 
 void chart_slider_x_event_cb(lv_event_t *e)
@@ -410,18 +469,42 @@ void reset_btn_event_cb(lv_event_t *e)
 {
 }
 
-void spinbox_event_cb(lv_event_t *e)
+void settings_btn_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED)
+    {
+        _settings_get_values();
+        gui_show_page(SETTINGS_PAGE);
+        _settings_show_page(_settings_act_page);
+    }
+}
+
+void step_back_btn_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED)
+    {
+        command_data_t command;
+        command.command = APP_STEP_CMD;
+        command.value.ll = PREVIOUS;
+
+        xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+    }
+}
+
+void offset_spinbox_event_cb(lv_event_t *e)
 {
     lv_obj_t *obj = lv_event_get_target(e);
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_VALUE_CHANGED)
     {
         _xShared.setAngleOffset((float_t)lv_spinbox_get_value(obj) / 10);
-        _update_unbalance();
+        _update_unbalance_arrow();
     }
 }
 
-void spinbox_increment_btn_event_cb(lv_event_t *e)
+void offset_increment_btn_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT)
@@ -430,7 +513,7 @@ void spinbox_increment_btn_event_cb(lv_event_t *e)
     }
 }
 
-void spinbox_decrement_btn_event_cb(lv_event_t *e)
+void offset_decrement_btn_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT)
@@ -450,14 +533,18 @@ void searchType_sw_event_cb(lv_event_t *e)
             v = (int32_t)SEARCH_4_STEPS;
             lv_obj_add_flag(gui_UnbalanceAngleTab, LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(gui_OffsetSpinboxTab, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(gui_ResetBut, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(gui_StepBackBut, LV_OBJ_FLAG_HIDDEN);
             lv_obj_clear_flag(gui_4StepsTab, LV_OBJ_FLAG_HIDDEN);
         }
         else
         {
             v = (int32_t)SEARCH_OPTICAL;
             lv_obj_add_flag(gui_4StepsTab, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(gui_StepBackBut, LV_OBJ_FLAG_HIDDEN);
             lv_obj_clear_flag(gui_UnbalanceAngleTab, LV_OBJ_FLAG_HIDDEN);
             lv_obj_clear_flag(gui_OffsetSpinboxTab, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(gui_ResetBut, LV_OBJ_FLAG_HIDDEN);
         }
         _xShared.setSearchType((app_search_type_e)v);
 
@@ -475,6 +562,7 @@ void nerd_btn_event_cb(lv_event_t *e)
     if (code == LV_EVENT_CLICKED)
     {
         gui_show_page(NERD_PAGE);
+        _nerd_show_page(_nerd_act_page);
     }
 }
 
@@ -606,7 +694,7 @@ void AccelChart_draw_event_cb(lv_event_t *e)
 
             lv_point_t *p = new lv_point_t[peakCount]();
             lv_point_t *r = new lv_point_t[rotCount]();
-            size_t *pPeakBuf;
+            int16_t *pPeakBuf;
 
             if (user_data == gui_AccelXChart)
             {
@@ -686,31 +774,35 @@ void chart_switch_btn_event_cb(lv_event_t *e)
     lv_obj_t *obj = lv_event_get_target(e);
     if (code == LV_EVENT_CLICKED)
     {
-        if (!lv_obj_has_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN) || !lv_obj_has_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN))
+        switch (_nerd_act_page)
         {
-            if (lv_obj_has_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN))
-            {
-                lv_obj_add_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
-                lv_obj_clear_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
-            }
-            else
-            {
-                lv_obj_add_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
-                lv_obj_clear_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
-            }
-        }
-        else
-        {
-            if (lv_obj_has_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN))
-            {
-                lv_obj_add_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
-                lv_obj_clear_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
-            }
-            else
-            {
-                lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
-                lv_obj_clear_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
-            }
+        case X_RAW:
+            _nerd_show_page(X_FFT_RAW);
+            break;
+        case Y_RAW:
+            _nerd_show_page(Y_FFT_RAW);
+            break;
+        case X_FILTERED:
+            _nerd_show_page(X_FFT_FILTERED);
+            break;
+        case Y_FILTERED:
+            _nerd_show_page(Y_FFT_FILTERED);
+            break;
+        case X_FFT_RAW:
+            _nerd_show_page(X_RAW);
+            break;
+        case Y_FFT_RAW:
+            _nerd_show_page(Y_RAW);
+            break;
+        case X_FFT_FILTERED:
+            _nerd_show_page(X_FILTERED);
+            break;
+        case Y_FFT_FILTERED:
+            _nerd_show_page(Y_FILTERED);
+            break;
+
+        default:
+            break;
         }
     }
 }
@@ -738,20 +830,14 @@ void btn_show_x_charts_event_cb(lv_event_t *e)
     lv_obj_t *obj = lv_event_get_target(e);
     if (code == LV_EVENT_CLICKED)
     {
-        // Request chart values update
-        command_data_t command;
-        command.command = FFT_REQUEST_CMD;
-        command.value.ull = FILTERED_DATA;
-
-        xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
-
-        gui_charts_update(FILTERED_DATA);
-
-        // Change visibility of pages
-        lv_obj_add_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
-
-        lv_obj_clear_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
+        if (!lv_obj_has_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN) || !lv_obj_has_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN))
+        {
+            _nerd_show_page(X_FFT_FILTERED);
+        }
+        else
+        {
+            _nerd_show_page(X_FILTERED);
+        }
 
         lv_obj_t *parent = lv_obj_get_parent(obj);
         for (size_t i = 0; i < lv_obj_get_child_cnt(parent); i++)
@@ -775,20 +861,14 @@ void btn_show_y_charts_event_cb(lv_event_t *e)
     lv_obj_t *obj = lv_event_get_target(e);
     if (code == LV_EVENT_CLICKED)
     {
-        // Request chart values update
-        command_data_t command;
-        command.command = FFT_REQUEST_CMD;
-        command.value.ull = FILTERED_DATA;
-
-        xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
-
-        gui_charts_update(FILTERED_DATA);
-
-        // Change visibility of pages
-        lv_obj_add_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
-
-        lv_obj_clear_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
+        if (!lv_obj_has_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN) || !lv_obj_has_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN))
+        {
+            _nerd_show_page(Y_FFT_FILTERED);
+        }
+        else
+        {
+            _nerd_show_page(Y_FILTERED);
+        }
 
         lv_obj_t *parent = lv_obj_get_parent(obj);
         for (size_t i = 0; i < lv_obj_get_child_cnt(parent); i++)
@@ -812,19 +892,14 @@ void btn_show_raw_x_charts_event_cb(lv_event_t *e)
     lv_obj_t *obj = lv_event_get_target(e);
     if (code == LV_EVENT_CLICKED)
     {
-        command_data_t command;
-        command.command = FFT_REQUEST_CMD;
-        command.value.ull = RAW_DATA;
-
-        xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
-
-        gui_charts_update(RAW_DATA);
-
-        // Change visibility of pages
-        lv_obj_add_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
-
-        lv_obj_clear_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
+        if (!lv_obj_has_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN) || !lv_obj_has_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN))
+        {
+            _nerd_show_page(X_FFT_RAW);
+        }
+        else
+        {
+            _nerd_show_page(X_RAW);
+        }
 
         lv_obj_t *parent = lv_obj_get_parent(obj);
         for (size_t i = 0; i < lv_obj_get_child_cnt(parent); i++)
@@ -848,20 +923,14 @@ void btn_show_raw_y_charts_event_cb(lv_event_t *e)
     lv_obj_t *obj = lv_event_get_target(e);
     if (code == LV_EVENT_CLICKED)
     {
-        // Request chart values update
-        command_data_t command;
-        command.command = FFT_REQUEST_CMD;
-        command.value.ull = RAW_DATA;
-
-        xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
-
-        gui_charts_update(RAW_DATA);
-
-        // Change visibility of pages
-        lv_obj_add_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
-
-        lv_obj_clear_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
+        if (!lv_obj_has_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN) || !lv_obj_has_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN))
+        {
+            _nerd_show_page(Y_FFT_RAW);
+        }
+        else
+        {
+            _nerd_show_page(Y_RAW);
+        }
 
         lv_obj_t *parent = lv_obj_get_parent(obj);
         for (size_t i = 0; i < lv_obj_get_child_cnt(parent); i++)
@@ -876,6 +945,185 @@ void btn_show_raw_y_charts_event_cb(lv_event_t *e)
                 lv_obj_clear_state(child, LV_STATE_CHECKED);
             }
         }
+    }
+}
+
+void btn_show_sys_settings_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *obj = lv_event_get_target(e);
+    if (code == LV_EVENT_CLICKED)
+    {
+        _settings_show_page(SYSTEM_SETTINGS);
+
+        lv_obj_t *parent = lv_obj_get_parent(obj);
+        for (size_t i = 0; i < lv_obj_get_child_cnt(parent); i++)
+        {
+            lv_obj_t *child = lv_obj_get_child(parent, i);
+            if (child == obj)
+            {
+                lv_obj_add_state(child, LV_STATE_CHECKED);
+            }
+            else
+            {
+                lv_obj_clear_state(child, LV_STATE_CHECKED);
+            }
+        }
+    }
+}
+
+void btn_show_accel_settings_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *obj = lv_event_get_target(e);
+    if (code == LV_EVENT_CLICKED)
+    {
+        _settings_show_page(ACCEL_SETTINGS);
+
+        lv_obj_t *parent = lv_obj_get_parent(obj);
+        for (size_t i = 0; i < lv_obj_get_child_cnt(parent); i++)
+        {
+            lv_obj_t *child = lv_obj_get_child(parent, i);
+            if (child == obj)
+            {
+                lv_obj_add_state(child, LV_STATE_CHECKED);
+            }
+            else
+            {
+                lv_obj_clear_state(child, LV_STATE_CHECKED);
+            }
+        }
+    }
+}
+
+void btn_show_filter_settings_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *obj = lv_event_get_target(e);
+    if (code == LV_EVENT_CLICKED)
+    {
+        _settings_show_page(FILTER_SETTINGS);
+
+        lv_obj_t *parent = lv_obj_get_parent(obj);
+        for (size_t i = 0; i < lv_obj_get_child_cnt(parent); i++)
+        {
+            lv_obj_t *child = lv_obj_get_child(parent, i);
+            if (child == obj)
+            {
+                lv_obj_add_state(child, LV_STATE_CHECKED);
+            }
+            else
+            {
+                lv_obj_clear_state(child, LV_STATE_CHECKED);
+            }
+        }
+    }
+}
+
+void btn_show_info_settings_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *obj = lv_event_get_target(e);
+    if (code == LV_EVENT_CLICKED)
+    {
+        _settings_show_page(INFO_SETTINGS);
+
+        lv_obj_t *parent = lv_obj_get_parent(obj);
+        for (size_t i = 0; i < lv_obj_get_child_cnt(parent); i++)
+        {
+            lv_obj_t *child = lv_obj_get_child(parent, i);
+            if (child == obj)
+            {
+                lv_obj_add_state(child, LV_STATE_CHECKED);
+            }
+            else
+            {
+                lv_obj_clear_state(child, LV_STATE_CHECKED);
+            }
+        }
+    }
+}
+
+void btn_save_settings_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED)
+    {
+        // TODO
+    }
+}
+
+void slider_motor_speed_settings_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *obj = lv_event_get_target(e);
+    char buf[5];
+
+    if (code == LV_EVENT_VALUE_CHANGED)
+    {
+        lv_snprintf(buf, sizeof(buf), "%d%%", (uint16_t)lv_slider_get_value(obj) / 10);
+
+        lv_label_set_text(lv_obj_get_child(lv_obj_get_parent(obj), 1), buf);
+    }
+    if (code == LV_EVENT_RELEASED)
+    {
+        // TODO
+    }
+}
+
+void freq_spinbox_event_cb(lv_event_t *e)
+{
+    lv_obj_t *obj = lv_event_get_target(e);
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_VALUE_CHANGED)
+    {
+        // TODO
+    }
+}
+
+void freq_increment_btn_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT)
+    {
+        lv_spinbox_increment(gui_FreqSpinbox);
+    }
+}
+
+void freq_decrement_btn_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT)
+    {
+        lv_spinbox_decrement(gui_FreqSpinbox);
+    }
+}
+
+void QFactor_spinbox_event_cb(lv_event_t *e)
+{
+    lv_obj_t *obj = lv_event_get_target(e);
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_VALUE_CHANGED)
+    {
+        // TODO
+    }
+}
+
+void QFactor_increment_btn_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT)
+    {
+        lv_spinbox_increment(gui_QFactorSpinbox);
+    }
+}
+
+void QFactor_decrement_btn_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT)
+    {
+        lv_spinbox_decrement(gui_QFactorSpinbox);
     }
 }
 
@@ -904,55 +1152,254 @@ void gui_exe(command_data_t command)
     switch (command.command)
     {
     case GUI_ACC_CHART_UPDATE_CMD:
-        gui_charts_update(command.value.ull);
+        _exe_accel_charts_update(command.value.ull);
         break;
     case GUI_FFT_CHART_UPDATE_CMD:
-        gui_fft_update();
+        _exe_fft_charts_update();
         break;
     case GUI_UNBALANCE_UPDATE_CMD:
-        gui_unbalance_arrow_update();
+        _exe_unbalance_update((gui_unbalance_command_e)command.value.ll);
         break;
-    case GUI_INIT_COMPLETE_CMD:
-        // gui_show_page(IDLE_PAGE);
-        gui_show_page(MAIN_PAGE);
+    case GUI_INIT_COMPLETED_CMD:
+        _exe_init_completed();
+        break;
+    case APP_GET_SOURCE_CMD:
+    case ACCEL_GET_BW_CMD:
+    case ACCEL_GET_RANGE_CMD:
+    case MOTOR_GET_SPEED_CMD:
+    case IIR_GET_FREQ_CMD:
+    case IIR_GET_Q_CMD:
+        _exe_settings_update(command);
         break;
     default:
         break;
     }
 }
 
-void gui_show_page(dpb_page_t page)
+void gui_show_page(dpb_page_e page)
 {
+    gui_clear_page(page);
+
     switch (page)
     {
     case LOADING_PAGE:
-        // lv_disp_load_scr(gui_LoadingScreen);
-        lv_disp_load_scr(gui_MainScreen);
+        _show_loading_screen();
         break;
+
     case MAIN_PAGE:
-        lv_disp_load_scr(gui_MainScreen);
+        _show_main_screen();
         break;
+
     case NERD_PAGE:
-        lv_disp_load_scr(gui_NerdScreen);
+        _show_nerd_screen();
         break;
-    case FFT_PAGE:
-        lv_disp_load_scr(gui_FFTScreen);
+
+    case SETTINGS_PAGE:
+        _show_settings_screen();
         break;
+
     default:
         break;
     }
 
+    gui_delete_page(page);
+
     _gui_act_page = page;
+
+    //    lv_mem_monitor_t mon;
+    //    lv_mem_monitor(&mon);
+    //    printf("used: %6lu (%3d %%), frag: %3d %%, biggest free: %6d\n", (int)mon.total_size - mon.free_size,
+    //           mon.used_pct,
+    //           mon.frag_pct,
+    //           (int)mon.free_biggest_size);
+}
+
+void gui_clear_page(dpb_page_e page)
+{
+    if (page == _gui_act_page)
+    {
+        //! We do NOT wanna clear the active page...
+        return;
+    }
+
+    switch (_gui_act_page)
+    {
+    case LOADING_PAGE:
+        _page_clear(gui_LoadingScreen);
+        break;
+    case MAIN_PAGE:
+        _page_clear(gui_MainScreen);
+        break;
+    case NERD_PAGE:
+        _page_clear(gui_NerdScreen);
+        break;
+    case SETTINGS_PAGE:
+        _page_clear(gui_SettingsScreen);
+        break;
+    default:
+        break;
+    }
+}
+
+void gui_delete_page(dpb_page_e page)
+{
+    if (page == _gui_act_page)
+    {
+        //! We cannot delete the active page...
+        return;
+    }
+
+    switch (_gui_act_page)
+    {
+    case LOADING_PAGE:
+        lv_obj_del(gui_LoadingScreen);
+        break;
+    case MAIN_PAGE:
+        lv_obj_del(gui_MainScreen);
+        break;
+    case NERD_PAGE:
+        lv_obj_del(gui_NerdScreen);
+        break;
+    case SETTINGS_PAGE:
+        lv_obj_del(gui_SettingsScreen);
+        break;
+    default:
+        break;
+    }
 }
 
 void gui_values_update(void)
 {
+    if (_gui_act_page != MAIN_PAGE)
+    {
+        return;
+    }
     _update_but_labels();
     _update_rpm();
-    _update_fund();
 }
 
-void gui_charts_update(uint8_t data_type)
+void _exe_accel_charts_update(uint8_t data_type)
+{
+    if (_gui_act_page != NERD_PAGE)
+    {
+        return;
+    }
+
+    _update_accel_charts(data_type);
+}
+
+void _exe_fft_charts_update(void)
+{
+    if (_gui_act_page != NERD_PAGE)
+    {
+        return;
+    }
+
+    _update_fft_charts();
+}
+
+void _exe_unbalance_update(gui_unbalance_command_e step)
+{
+    switch (step)
+    {
+    case GUI_UNBALANCE_OPT:
+        _update_unbalance_arrow();
+        break;
+    case GUI_UNBALANCE_STEP_1:
+        break;
+    case GUI_UNBALANCE_STEP_2:
+        break;
+    case GUI_UNBALANCE_STEP_3:
+        break;
+    case GUI_UNBALANCE_STEP_4:
+        break;
+    default:
+        break;
+    }
+}
+
+void _exe_init_completed(void)
+{
+    gui_show_page(MAIN_PAGE);
+}
+
+void _exe_settings_update(command_data_t command)
+{
+    switch (command.command)
+    {
+    case APP_GET_SOURCE_CMD:
+        lv_dropdown_set_selected(unbalance_source_dropdown, (uint16_t)command.value.ull);
+        break;
+
+    case ACCEL_GET_RANGE_CMD:
+        lv_dropdown_set_selected(range_dropdown, (uint16_t)command.value.ull);
+        break;
+
+    case ACCEL_GET_BW_CMD:
+        // TODO
+        break;
+
+    case MOTOR_GET_SPEED_CMD:
+        lv_slider_set_value(speed_slider, (int32_t)command.value.ll, LV_ANIM_OFF);
+        break;
+
+    case IIR_GET_FREQ_CMD:
+        lv_spinbox_set_value(gui_FreqSpinbox, (int32_t)command.value.ll);
+        break;
+
+    case IIR_GET_Q_CMD:
+        lv_spinbox_set_value(gui_QFactorSpinbox, (int32_t)command.value.ll);
+        break;
+
+    default:
+        break;
+    }
+}
+
+void _ask_peak_draw(void)
+{
+    _peak_draw_done = 0;
+}
+
+void _update_rpm(void)
+{
+    app_steps_e status = _xShared.getAppStatus();
+    if (status == IDLE)
+    {
+        lv_label_set_text_fmt(gui_RPMLabelText, "%d rpm", 0);
+    }
+    else
+    {
+        lv_label_set_text_fmt(gui_RPMLabelText, "%d rpm", _xShared.getRPM());
+    }
+}
+
+void _update_but_labels(void)
+{
+    app_steps_e status = _xShared.getAppStatus();
+    if (status == IDLE)
+    {
+        lv_label_set_text(gui_StartButLabel, LV_SYMBOL_PLAY);
+    }
+    else
+    {
+        lv_label_set_text(gui_StartButLabel, LV_SYMBOL_STOP);
+    }
+}
+
+void _update_unbalance_arrow(void)
+{
+    if (_xShared.getUnbalanceSource() == X_AXIS_SOURCE)
+    {
+        _create_unbalance_arrow(_xShared.getUnbalanceXAngle() + _xShared.getAngleOffset(), _xShared.getUnbalanceMag(), 70, 0);
+    }
+    else
+    {
+        _create_unbalance_arrow(_xShared.getUnbalanceYAngle() + _xShared.getAngleOffset(), _xShared.getUnbalanceMag(), 70, 0);
+    }
+}
+
+void _update_accel_charts(uint8_t data_type)
 {
     int16_t min_x = 0;
     int16_t max_x = 0;
@@ -1013,7 +1460,7 @@ void gui_charts_update(uint8_t data_type)
     _ask_peak_draw();
 }
 
-void gui_fft_update(void)
+void _update_fft_charts(void)
 {
     int16_t min_x = 0;
     int16_t max_x = 0;
@@ -1057,9 +1504,28 @@ void gui_fft_update(void)
     lv_chart_refresh(gui_FFTYChart);
 }
 
-void gui_unbalance_arrow_update(void)
+void _show_loading_screen(void)
 {
-    _update_unbalance();
+    gui_LoadingScreen_create();
+    lv_disp_load_scr(gui_LoadingScreen);
+}
+
+void _show_main_screen(void)
+{
+    gui_MainScreen_create();
+    lv_disp_load_scr(gui_MainScreen);
+}
+
+void _show_nerd_screen(void)
+{
+    gui_NerdScreen_create();
+    lv_disp_load_scr(gui_NerdScreen);
+}
+
+void _show_settings_screen(void)
+{
+    gui_SettingsScreen_create();
+    lv_disp_load_scr(gui_SettingsScreen);
 }
 
 void _display_init(void)
@@ -1092,106 +1558,104 @@ void _display_init(void)
     lv_indev_drv_register(&indev_drv);
 }
 
+void _page_clear(lv_obj_t *page)
+{
+    //_all_styles_remove(page); //! Not necessary anymore for LVGL Ver > 7.1.1
+    lv_obj_clean(page);
+}
+
+void _all_styles_remove(lv_obj_t *obj)
+{
+    if (obj == NULL)
+    {
+        return;
+    }
+
+    size_t child_cnt = lv_obj_get_child_cnt(obj);
+    for (size_t i = 0; i < child_cnt; i++)
+    {
+        lv_obj_remove_style_all(lv_obj_get_child(obj, i));
+        _all_styles_remove(lv_obj_get_child(obj, i));
+    }
+}
+
 void _create_toolbars_main(void)
 {
     //* Create top divider line
-    lv_obj_t *top_line;
-    top_line = lv_line_create(gui_MainScreen);
+    lv_obj_t *top_line = lv_line_create(gui_MainScreen);
 
     // Create an array for the points of the line
     static lv_point_t top_line_points[] = {{0, DEFAULT_TOOLBAR_HEIGHT}, {100, DEFAULT_TOOLBAR_HEIGHT}, {120, 0}, {270, 0}, {290, DEFAULT_TOOLBAR_HEIGHT}, {340, DEFAULT_TOOLBAR_HEIGHT}};
 
     // Create style for top line
-    static lv_style_t style_top_line;
-    lv_style_init(&style_top_line);
-    lv_style_set_line_width(&style_top_line, 1);
-    lv_style_set_line_color(&style_top_line, DEFAULT_ELEMENT_ACCENT_COLOR);
-    lv_style_set_line_rounded(&style_top_line, true);
+    lv_obj_set_style_line_width(top_line, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_line_color(top_line, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_line_rounded(top_line, true, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    // Apply the style
-    lv_line_set_points(top_line, top_line_points, 6); /*Set the points*/
-    lv_obj_add_style(top_line, &style_top_line, 0);
+    // Set the shape
+    lv_line_set_points(top_line, top_line_points, 6);
 
     //* Create bottom divider line
-    lv_obj_t *bottom_line;
-    bottom_line = lv_line_create(gui_MainScreen);
+    lv_obj_t *bottom_line = lv_line_create(gui_MainScreen);
 
     // Create an array for the points of the line
     static lv_point_t bottom_line_points[] = {{0, screenHeight - DEFAULT_TOOLBAR_HEIGHT}, {100, screenHeight - DEFAULT_TOOLBAR_HEIGHT}, {120, 240}};
 
     // Create style for top line
-    static lv_style_t style_bottom_line;
-    lv_style_init(&style_bottom_line);
-    lv_style_set_line_width(&style_bottom_line, 1);
-    lv_style_set_line_color(&style_bottom_line, DEFAULT_ELEMENT_ACCENT_COLOR);
-    lv_style_set_line_rounded(&style_bottom_line, true);
+    lv_obj_set_style_line_width(bottom_line, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_line_color(bottom_line, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_line_rounded(bottom_line, true, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    // Apply the style
-    lv_line_set_points(bottom_line, bottom_line_points, 3); /*Set the points*/
-    lv_obj_add_style(bottom_line, &style_bottom_line, 0);
+    // Set the shape
+    lv_line_set_points(bottom_line, bottom_line_points, 3);
 
     //* Create settings button
     gui_SettingsBut = lv_btn_create(gui_MainScreen);
     lv_obj_set_width(gui_SettingsBut, 25);
     lv_obj_set_height(gui_SettingsBut, 25);
+    lv_obj_align(gui_SettingsBut, LV_ALIGN_TOP_LEFT, 290, 2);
 
     // Add default styles
-    static lv_style_t styleSettingsBut;
-    lv_style_init(&styleSettingsBut);
-    lv_style_set_radius(&styleSettingsBut, 3);
-    lv_style_set_bg_opa(&styleSettingsBut, LV_OPA_TRANSP);
-    lv_style_set_border_opa(&styleSettingsBut, LV_OPA_TRANSP);
-    lv_style_set_outline_opa(&styleSettingsBut, LV_OPA_COVER);
-    lv_style_set_outline_color(&styleSettingsBut, DEFAULT_ELEMENT_ACCENT_COLOR);
+    lv_obj_set_style_radius(gui_SettingsBut, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(gui_SettingsBut, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(gui_SettingsBut, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(gui_SettingsBut, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_color(gui_SettingsBut, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Add pressed styles
-    static lv_style_t styleSettingsBut_pressed;
-    lv_style_init(&styleSettingsBut_pressed);
-    lv_style_set_outline_width(&styleSettingsBut_pressed, 10);
-    lv_style_set_outline_opa(&styleSettingsBut_pressed, LV_OPA_TRANSP);
-
+    lv_obj_set_style_outline_width(gui_SettingsBut, 10, LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_outline_opa(gui_SettingsBut, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_PRESSED);
     static lv_style_transition_dsc_t trans;
     static lv_style_prop_t props[] = {LV_STYLE_OUTLINE_WIDTH, LV_STYLE_OUTLINE_OPA, LV_STYLE_PROP_INV};
     lv_style_transition_dsc_init(&trans, props, lv_anim_path_linear, 300, 0, NULL);
-    lv_style_set_transition(&styleSettingsBut_pressed, &trans);
-
-    lv_obj_remove_style_all(gui_SettingsBut); /*Remove the style coming from the theme*/
-    lv_obj_add_style(gui_SettingsBut, &styleSettingsBut, 0);
-    lv_obj_add_style(gui_SettingsBut, &styleSettingsBut_pressed, LV_STATE_PRESSED);
-    lv_obj_align(gui_SettingsBut, LV_ALIGN_TOP_LEFT, 290, 2);
+    lv_obj_set_style_transition(gui_SettingsBut, &trans, LV_PART_MAIN | LV_STATE_PRESSED);
 
     // Add icon
     lv_obj_t *gui_SettingsButImg = lv_img_create(gui_SettingsBut);
     lv_img_set_src(gui_SettingsButImg, &settings_icon);
     lv_obj_center(gui_SettingsButImg);
 
+    // Add callback funtion
+    lv_obj_add_event_cb(gui_SettingsBut, settings_btn_event_cb, LV_EVENT_ALL, NULL); /*Assign a callback to the button*/
+
     //* Create nerd stuff button
     gui_NerdBut = lv_btn_create(gui_MainScreen);
     lv_obj_set_width(gui_NerdBut, 25);
     lv_obj_set_height(gui_NerdBut, 25);
+    lv_obj_align(gui_NerdBut, LV_ALIGN_TOP_LEFT, 5, 2);
 
     // Add default styles
-    static lv_style_t styleNerdBut;
-    lv_style_init(&styleNerdBut);
-    lv_style_set_radius(&styleNerdBut, 3);
-    lv_style_set_bg_opa(&styleNerdBut, LV_OPA_TRANSP);
-    lv_style_set_border_opa(&styleNerdBut, LV_OPA_TRANSP);
-    lv_style_set_outline_opa(&styleNerdBut, LV_OPA_COVER);
-    lv_style_set_outline_color(&styleNerdBut, DEFAULT_ELEMENT_ACCENT_COLOR);
+    lv_obj_set_style_radius(gui_NerdBut, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(gui_NerdBut, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(gui_NerdBut, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(gui_NerdBut, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_color(gui_NerdBut, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Add pressed styles
-    static lv_style_t styleNerdBut_pressed;
-    lv_style_init(&styleNerdBut_pressed);
-    lv_style_set_outline_width(&styleNerdBut_pressed, 10);
-    lv_style_set_outline_opa(&styleNerdBut_pressed, LV_OPA_TRANSP);
-
+    lv_obj_set_style_outline_width(gui_NerdBut, 10, LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_outline_opa(gui_NerdBut, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_PRESSED);
     lv_style_transition_dsc_init(&trans, props, lv_anim_path_linear, 300, 0, NULL);
-    lv_style_set_transition(&styleNerdBut_pressed, &trans);
-
-    lv_obj_remove_style_all(gui_NerdBut); /*Remove the style coming from the theme*/
-    lv_obj_add_style(gui_NerdBut, &styleNerdBut, 0);
-    lv_obj_add_style(gui_NerdBut, &styleNerdBut_pressed, LV_STATE_PRESSED);
-    lv_obj_align(gui_NerdBut, LV_ALIGN_TOP_LEFT, 5, 2);
+    lv_obj_set_style_transition(gui_NerdBut, &trans, LV_PART_MAIN | LV_STATE_PRESSED);
 
     // Add icon
     lv_obj_t *gui_NerdButImg = lv_img_create(gui_NerdBut);
@@ -1199,10 +1663,10 @@ void _create_toolbars_main(void)
     lv_obj_center(gui_NerdButImg);
 
     // Add callback funtion
-    lv_obj_add_event_cb(gui_NerdBut, nerd_btn_event_cb, LV_EVENT_ALL, NULL); /*Assign a callback to the button*/
+    lv_obj_add_event_cb(gui_NerdBut, nerd_btn_event_cb, LV_EVENT_ALL, NULL);
 
     //* Create rpm label
-    gui_RPMLabel = lv_obj_create(gui_MainScreen);
+    lv_obj_t *gui_RPMLabel = lv_obj_create(gui_MainScreen);
     lv_obj_set_width(gui_RPMLabel, 100);
     lv_obj_set_height(gui_RPMLabel, 25);
     lv_obj_clear_flag(gui_RPMLabel, LV_OBJ_FLAG_SCROLLABLE);
@@ -1223,19 +1687,16 @@ void _create_toolbars_main(void)
     gui_RPMLabelText = lv_label_create(gui_RPMLabel); /*Add a label to the button*/
     lv_obj_set_width(gui_RPMLabelText, 70);
     lv_obj_set_height(gui_RPMLabelText, 25);
-    // lv_obj_set_style_text_font(gui_RPMLabelText, &gui_font_med, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_align_to(gui_RPMLabelText, gui_RPMImg, LV_ALIGN_OUT_RIGHT_MID, 5, 5);
 
     // Add style to text
-    static lv_style_t rpm_text_style;
-    lv_style_init(&rpm_text_style);
-    lv_style_set_bg_opa(&rpm_text_style, LV_OPA_TRANSP);
-    lv_style_set_text_color(&rpm_text_style, lv_palette_main(LV_PALETTE_AMBER));
-    lv_style_set_text_font(&rpm_text_style, &lv_font_montserrat_14);
-    lv_style_set_text_align(&rpm_text_style, LV_ALIGN_CENTER);
+    lv_obj_set_style_bg_opa(gui_RPMLabelText, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(gui_RPMLabelText, lv_palette_main(LV_PALETTE_AMBER), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(gui_RPMLabelText, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_align(gui_RPMLabelText, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    lv_obj_add_style(gui_RPMLabelText, &rpm_text_style, 0);
-    lv_obj_align_to(gui_RPMLabelText, gui_RPMImg, LV_ALIGN_OUT_RIGHT_MID, 5, 5);
-    lv_label_set_text(gui_RPMLabelText, "---- rpm"); /*Set the labels text*/
+    // Set the labels text
+    lv_label_set_text(gui_RPMLabelText, "---- rpm");
 }
 
 void _create_anglechart_main(void)
@@ -1266,13 +1727,12 @@ void _create_anglechart_main(void)
     //* Create unbalance angle line
     gui_UnbalanceAngleLine = lv_line_create(gui_UnbalanceAngleTab);
     lv_line_set_y_invert(gui_UnbalanceAngleLine, true);
-    static lv_style_t style_unbalance_line;
-    lv_style_init(&style_unbalance_line);
-    lv_style_set_line_width(&style_unbalance_line, 3);
-    lv_style_set_line_color(&style_unbalance_line, SECONDARY_ELEMENT_ACCENT_COLOR);
-    lv_style_set_line_rounded(&style_unbalance_line, true);
-    lv_obj_add_style(gui_UnbalanceAngleLine, &style_unbalance_line, 0);
     lv_obj_align(gui_UnbalanceAngleLine, LV_ALIGN_BOTTOM_LEFT, 0, 0);
+
+    // Add style
+    lv_obj_set_style_line_width(gui_UnbalanceAngleLine, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_line_color(gui_UnbalanceAngleLine, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_line_rounded(gui_UnbalanceAngleLine, true, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Create end-point circle
     gui_UnbalanceAngleLineEnd = lv_obj_create(gui_UnbalanceAngleTab);
@@ -1321,7 +1781,6 @@ void _create_unbalance_arrow(float_t angle_value, float_t magnitude_value, uint8
 
     // Add offset cause of prop image rotation
     label_angle_value = angle_value + 180.0;
-    label_angle_value = fmod(label_angle_value, 360.0);
 
     // Keep values positive
     if (angle_value > 360.0)
@@ -1339,6 +1798,14 @@ void _create_unbalance_arrow(float_t angle_value, float_t magnitude_value, uint8
     if (gui_angle_value < 0.0)
     {
         gui_angle_value += 360;
+    }
+    if (label_angle_value > 360.0)
+    {
+        label_angle_value = fmod(label_angle_value, 360.0);
+    }
+    if (label_angle_value < 0.0)
+    {
+        label_angle_value += 360;
     }
 
     // Calc end-point coord
@@ -1402,9 +1869,9 @@ void _create_4stepschart_main(void)
 
     // Step 1
     gui_Steps1Lab = lv_label_create(gui_4StepsTab);
-    lv_obj_set_width(gui_Steps1Lab, 40);
+    lv_obj_set_width(gui_Steps1Lab, 50);
     lv_obj_set_height(gui_Steps1Lab, 34);
-    lv_obj_set_pos(gui_Steps1Lab, centerPoint.x - 20, centerPoint.y - 15);
+    lv_obj_set_pos(gui_Steps1Lab, centerPoint.x - 25, centerPoint.y - 15);
     lv_label_set_long_mode(gui_Steps1Lab, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_label_set_recolor(gui_Steps1Lab, true);
     lv_obj_set_style_text_align(gui_Steps1Lab, LV_TEXT_ALIGN_CENTER, 0);
@@ -1416,13 +1883,13 @@ void _create_4stepschart_main(void)
     lv_obj_set_style_radius(gui_Steps1Lab, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Add text
-    lv_label_set_text(gui_Steps1Lab, "Step 1:\nWeightfree");
+    lv_label_set_text(gui_Steps1Lab, "Step 1:\nWeight-free run");
 
     // Step 2
     gui_Steps2Lab = lv_label_create(gui_4StepsTab);
-    lv_obj_set_width(gui_Steps2Lab, 40);
+    lv_obj_set_width(gui_Steps2Lab, 50);
     lv_obj_set_height(gui_Steps2Lab, 34);
-    lv_obj_set_pos(gui_Steps2Lab, centerPoint.x - 20 - 60, centerPoint.y - 15);
+    lv_obj_set_pos(gui_Steps2Lab, centerPoint.x - 25 - 60, centerPoint.y - 15);
     lv_label_set_long_mode(gui_Steps2Lab, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_label_set_recolor(gui_Steps2Lab, true);
     lv_obj_set_style_text_align(gui_Steps2Lab, LV_TEXT_ALIGN_CENTER, 0);
@@ -1435,13 +1902,13 @@ void _create_4stepschart_main(void)
     lv_obj_add_flag(gui_Steps2Lab, LV_OBJ_FLAG_HIDDEN);
 
     // Add text
-    lv_label_set_text(gui_Steps2Lab, "Step 2:\nAdd weight here");
+    lv_label_set_text(gui_Steps2Lab, "Step 2:\nPut 1unit weight here");
 
     // Step 3
     gui_Steps3Lab = lv_label_create(gui_4StepsTab);
-    lv_obj_set_width(gui_Steps3Lab, 40);
+    lv_obj_set_width(gui_Steps3Lab, 50);
     lv_obj_set_height(gui_Steps3Lab, 34);
-    lv_obj_set_pos(gui_Steps3Lab, centerPoint.x - 8 + 20, centerPoint.y + 50);
+    lv_obj_set_pos(gui_Steps3Lab, centerPoint.x - 8 + 25, centerPoint.y + 50);
     lv_label_set_long_mode(gui_Steps3Lab, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_label_set_recolor(gui_Steps3Lab, true);
     lv_obj_set_style_text_align(gui_Steps3Lab, LV_TEXT_ALIGN_CENTER, 0);
@@ -1454,13 +1921,13 @@ void _create_4stepschart_main(void)
     lv_obj_add_flag(gui_Steps3Lab, LV_OBJ_FLAG_HIDDEN);
 
     // Add text
-    lv_label_set_text(gui_Steps3Lab, "Step 3:\nAdd weight here");
+    lv_label_set_text(gui_Steps3Lab, "Step 3:\nPut 1unit weight here");
 
     // Step 4
     gui_Steps4Lab = lv_label_create(gui_4StepsTab);
-    lv_obj_set_width(gui_Steps4Lab, 40);
+    lv_obj_set_width(gui_Steps4Lab, 50);
     lv_obj_set_height(gui_Steps4Lab, 34);
-    lv_obj_set_pos(gui_Steps4Lab, centerPoint.x - 8 + 20, centerPoint.y - (17 + 50));
+    lv_obj_set_pos(gui_Steps4Lab, centerPoint.x - 8 + 25, centerPoint.y - (17 + 50));
     lv_label_set_long_mode(gui_Steps4Lab, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_label_set_recolor(gui_Steps4Lab, true);
     lv_obj_set_style_text_align(gui_Steps4Lab, LV_TEXT_ALIGN_CENTER, 0);
@@ -1473,7 +1940,7 @@ void _create_4stepschart_main(void)
     lv_obj_add_flag(gui_Steps4Lab, LV_OBJ_FLAG_HIDDEN);
 
     // Add text
-    lv_label_set_text(gui_Steps4Lab, "Step 4:\nAdd weight here");
+    lv_label_set_text(gui_Steps4Lab, "Step 4:\nPut 1unit weight here");
 }
 
 void _create_pages_nerd(void)
@@ -1523,11 +1990,10 @@ void _create_pages_nerd(void)
 
 void _create_toolbars_nerd(void)
 {
-    static lv_obj_t *currentButton = NULL;
+    lv_obj_t *currentButton = NULL;
 
     //* Create bottom divider line
-    lv_obj_t *bottom_line;
-    bottom_line = lv_line_create(gui_NerdScreen);
+    lv_obj_t *bottom_line = lv_line_create(gui_NerdScreen);
 
     // Create an array for the points of the line
     static lv_point_t bottom_line_points[] = {{0, screenHeight},
@@ -1538,19 +2004,15 @@ void _create_toolbars_nerd(void)
                                               {screenWidth, screenHeight}};
 
     // Create style for top line
-    static lv_style_t style_bottom_line;
-    lv_style_init(&style_bottom_line);
-    lv_style_set_line_width(&style_bottom_line, 1);
-    lv_style_set_line_color(&style_bottom_line, DEFAULT_ELEMENT_ACCENT_COLOR);
-    lv_style_set_line_rounded(&style_bottom_line, true);
+    lv_obj_set_style_line_width(bottom_line, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_line_color(bottom_line, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_line_rounded(bottom_line, true, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    // Apply the style
+    // Apply the shape
     lv_line_set_points(bottom_line, bottom_line_points, 6);
-    lv_obj_add_style(bottom_line, &style_bottom_line, 0);
 
     //* Create top divider line
-    lv_obj_t *top_line;
-    top_line = lv_line_create(gui_NerdScreen);
+    lv_obj_t *top_line = lv_line_create(gui_NerdScreen);
 
     // Create an array for the points of the line
     static lv_point_t top_line_points[] = {{0, DEFAULT_TOOLBAR_HEIGHT},
@@ -1561,15 +2023,12 @@ void _create_toolbars_nerd(void)
                                            {screenWidth, DEFAULT_TOOLBAR_HEIGHT}};
 
     // Create style for top line
-    static lv_style_t style_top_line;
-    lv_style_init(&style_top_line);
-    lv_style_set_line_width(&style_top_line, 1);
-    lv_style_set_line_color(&style_top_line, DEFAULT_ELEMENT_ACCENT_COLOR);
-    lv_style_set_line_rounded(&style_top_line, true);
+    lv_obj_set_style_line_width(top_line, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_line_color(top_line, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_line_rounded(top_line, true, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    // Apply the style
+    // Apply the shape
     lv_line_set_points(top_line, top_line_points, 6);
-    lv_obj_add_style(top_line, &style_top_line, 0);
 
     //* Create bottom toolbar object
     lv_obj_t *bottom_bar;
@@ -1586,30 +2045,22 @@ void _create_toolbars_nerd(void)
     lv_obj_t *chart_switch_btn = lv_btn_create(bottom_bar);
     lv_obj_set_width(chart_switch_btn, 25);
     lv_obj_set_height(chart_switch_btn, 25);
+    lv_obj_align(chart_switch_btn, LV_ALIGN_CENTER, 0, 0);
 
     // Add default styles
-    static lv_style_t styleChartSwitchBtn;
-    lv_style_init(&styleChartSwitchBtn);
-    lv_style_set_radius(&styleChartSwitchBtn, 3);
-    lv_style_set_bg_opa(&styleChartSwitchBtn, LV_OPA_TRANSP);
-    lv_style_set_border_opa(&styleChartSwitchBtn, LV_OPA_TRANSP);
-    lv_style_set_outline_opa(&styleChartSwitchBtn, LV_OPA_COVER);
-    lv_style_set_outline_color(&styleChartSwitchBtn, DEFAULT_ELEMENT_ACCENT_COLOR);
+    lv_obj_set_style_radius(chart_switch_btn, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(chart_switch_btn, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(chart_switch_btn, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(chart_switch_btn, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_color(chart_switch_btn, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Add pressed styles
-    static lv_style_t styleChartSwitchBtn_pressed;
-    lv_style_init(&styleChartSwitchBtn_pressed);
-    lv_style_set_outline_width(&styleChartSwitchBtn_pressed, 10);
-    lv_style_set_outline_opa(&styleChartSwitchBtn_pressed, LV_OPA_TRANSP);
-
+    lv_obj_set_style_outline_width(chart_switch_btn, 10, LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_outline_opa(chart_switch_btn, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_PRESSED);
     static lv_style_transition_dsc_t trans;
     static lv_style_prop_t props[] = {LV_STYLE_OUTLINE_WIDTH, LV_STYLE_OUTLINE_OPA, LV_STYLE_PROP_INV};
     lv_style_transition_dsc_init(&trans, props, lv_anim_path_linear, 300, 0, NULL);
-    lv_style_set_transition(&styleChartSwitchBtn_pressed, &trans);
-
-    lv_obj_add_style(chart_switch_btn, &styleChartSwitchBtn, 0);
-    lv_obj_add_style(chart_switch_btn, &styleChartSwitchBtn_pressed, LV_STATE_PRESSED);
-    lv_obj_align(chart_switch_btn, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_transition(chart_switch_btn, &trans, LV_PART_MAIN | LV_STATE_PRESSED);
 
     // Add callback
     lv_obj_add_event_cb(chart_switch_btn, chart_switch_btn_event_cb, LV_EVENT_ALL, NULL);
@@ -1831,46 +2282,817 @@ void _chart_Y_autorange(lv_obj_t *chart_obj, lv_chart_series_t *ser)
     lv_chart_set_range(chart_obj, LV_CHART_AXIS_PRIMARY_Y, min, max);
 }
 
-void _ask_peak_draw(void)
+void _set_nerd_page(nerd_subpage_e page)
 {
-    _peak_draw_done = 0;
+    _nerd_act_page = page;
 }
 
-void _update_rpm(void)
+void _nerd_show_page(nerd_subpage_e page)
 {
-    app_steps_e status = _xShared.getAppStatus();
-    if (status == IDLE)
+    switch (page)
     {
-        lv_label_set_text_fmt(gui_RPMLabelText, "%d rpm", 0);
-    }
-    else
-    {
-        lv_label_set_text_fmt(gui_RPMLabelText, "%d rpm", _xShared.getRPM());
+    case X_RAW:
+        _nerd_show_x_raw();
+        break;
+    case Y_RAW:
+        _nerd_show_y_raw();
+        break;
+    case X_FILTERED:
+        _nerd_show_x_filtered();
+        break;
+    case Y_FILTERED:
+        _nerd_show_y_filtered();
+        break;
+    case X_FFT_RAW:
+        _nerd_show_x_fft_raw();
+        break;
+    case Y_FFT_RAW:
+        _nerd_show_y_fft_raw();
+        break;
+    case X_FFT_FILTERED:
+        _nerd_show_x_fft_filtered();
+        break;
+    case Y_FFT_FILTERED:
+        _nerd_show_y_fft_filtered();
+        break;
+
+    default:
+        break;
     }
 }
 
-void _update_fund(void)
+void _nerd_show_x_raw(void)
 {
-    if (_gui_act_page == FFT_PAGE)
+    _update_accel_charts(RAW_DATA);
+
+    // Change visibility of pages
+    lv_obj_add_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_clear_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
+
+    _set_nerd_page(X_RAW);
+}
+
+void _nerd_show_y_raw(void)
+{
+    _update_accel_charts(RAW_DATA);
+
+    // Change visibility of pages
+    lv_obj_add_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_clear_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
+
+    _set_nerd_page(Y_RAW);
+}
+
+void _nerd_show_x_filtered(void)
+{
+    _update_accel_charts(FILTERED_DATA);
+
+    // Change visibility of pages
+    lv_obj_add_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_clear_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
+
+    _set_nerd_page(X_FILTERED);
+}
+
+void _nerd_show_y_filtered(void)
+{
+    // Request chart values update
+    _update_accel_charts(FILTERED_DATA);
+
+    // Change visibility of pages
+    lv_obj_add_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_clear_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
+
+    _set_nerd_page(Y_FILTERED);
+}
+
+void _nerd_show_x_fft_raw(void)
+{
+    // Request chart values update
+    command_data_t command;
+    command.command = FFT_REQUEST_CMD;
+    command.value.ull = RAW_DATA;
+
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+    // Change visibility of pages
+    lv_obj_add_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_clear_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
+
+    _set_nerd_page(X_FFT_RAW);
+}
+
+void _nerd_show_y_fft_raw(void)
+{
+    // Request chart values update
+    command_data_t command;
+    command.command = FFT_REQUEST_CMD;
+    command.value.ull = RAW_DATA;
+
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+    // Change visibility of pages
+    lv_obj_add_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_clear_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
+
+    _set_nerd_page(Y_FFT_RAW);
+}
+
+void _nerd_show_x_fft_filtered(void)
+{
+    // Request chart values update
+    command_data_t command;
+    command.command = FFT_REQUEST_CMD;
+    command.value.ull = FILTERED_DATA;
+
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+    // Change visibility of pages
+    lv_obj_add_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_clear_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
+
+    _set_nerd_page(X_FFT_FILTERED);
+}
+
+void _nerd_show_y_fft_filtered(void)
+{
+    // Request chart values update
+    command_data_t command;
+    command.command = FFT_REQUEST_CMD;
+    command.value.ull = FILTERED_DATA;
+
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+    // Change visibility of pages
+    lv_obj_add_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_clear_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
+
+    _set_nerd_page(Y_FFT_FILTERED);
+}
+
+void _create_toolbars_settings(void)
+{
+    //* Create top divider line
+    lv_obj_t *top_line;
+    top_line = lv_line_create(gui_SettingsScreen);
+
+    // Create an array for the points of the line
+    static lv_point_t top_line_points[] = {{(5 * DEFAULT_TOOLBAR_HEIGHT) / 2, screenHeight},
+                                           {(5 * DEFAULT_TOOLBAR_HEIGHT) / 2, 0},
+                                           {screenWidth - 2 * DEFAULT_TOOLBAR_HEIGHT, 0},
+                                           {screenWidth - DEFAULT_TOOLBAR_HEIGHT, DEFAULT_TOOLBAR_HEIGHT},
+                                           {screenWidth, DEFAULT_TOOLBAR_HEIGHT}};
+
+    // Create style for top line
+    static lv_style_t style_top_line;
+    lv_style_init(&style_top_line);
+    lv_style_set_line_width(&style_top_line, 1);
+    lv_style_set_line_color(&style_top_line, DEFAULT_ELEMENT_ACCENT_COLOR);
+    lv_style_set_line_rounded(&style_top_line, true);
+
+    // Apply the style
+    lv_line_set_points(top_line, top_line_points, 5);
+    lv_obj_add_style(top_line, &style_top_line, 0);
+
+    //* Create back button
+    lv_obj_t *back_btn = lv_btn_create(gui_SettingsScreen);
+    lv_obj_set_width(back_btn, 25);
+    lv_obj_set_height(back_btn, 25);
+
+    // Add style
+    lv_obj_set_style_bg_opa(back_btn, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_align(back_btn, LV_ALIGN_TOP_RIGHT, -2, 2);
+
+    // Add callback
+    lv_obj_add_event_cb(back_btn, root_back_btn_event_cb, LV_EVENT_ALL, NULL);
+
+    // Add icon
+    lv_obj_t *back_btn_label = lv_label_create(back_btn);
+    lv_label_set_text(back_btn_label, LV_SYMBOL_CLOSE);
+    lv_obj_set_style_text_color(back_btn_label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_center(back_btn_label);
+
+    //* Create menu list
+    gui_menu_list_settings = lv_list_create(gui_SettingsScreen);
+    lv_obj_set_size(gui_menu_list_settings, (5 * DEFAULT_TOOLBAR_HEIGHT) / 2, screenHeight);
+    lv_obj_set_style_bg_opa(gui_menu_list_settings, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(gui_menu_list_settings, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(gui_menu_list_settings, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_all(gui_menu_list_settings, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_align(gui_menu_list_settings, LV_ALIGN_LEFT_MID, 0, 0);
+
+    // Add buttons to the list
+    lv_obj_t *btn;
+    lv_list_add_text(gui_menu_list_settings, "Settings");
+    btn = lv_list_add_btn(gui_menu_list_settings, LV_SYMBOL_SETTINGS, "Sys");
+    lv_obj_add_event_cb(btn, btn_show_sys_settings_event_cb, LV_EVENT_CLICKED, NULL);
+    btn = lv_list_add_btn(gui_menu_list_settings, LV_SYMBOL_SHUFFLE, "Accel");
+    lv_obj_add_event_cb(btn, btn_show_accel_settings_event_cb, LV_EVENT_CLICKED, NULL);
+    btn = lv_list_add_btn(gui_menu_list_settings, LV_SYMBOL_EDIT, "Filter");
+    lv_obj_add_event_cb(btn, btn_show_filter_settings_event_cb, LV_EVENT_CLICKED, NULL);
+    lv_list_add_text(gui_menu_list_settings, "Other");
+    btn = lv_list_add_btn(gui_menu_list_settings, LV_SYMBOL_EYE_OPEN, "Info");
+    lv_obj_add_event_cb(btn, btn_show_info_settings_event_cb, LV_EVENT_CLICKED, NULL);
+    lv_list_add_text(gui_menu_list_settings, "Actions");
+    btn = lv_list_add_btn(gui_menu_list_settings, LV_SYMBOL_SAVE, "Apply");
+    lv_obj_add_event_cb(btn, btn_save_settings_event_cb, LV_EVENT_CLICKED, NULL);
+
+    // Add style to the text
+    lv_obj_t *currentButton = lv_obj_get_child(gui_menu_list_settings, 0);
+    lv_obj_set_style_bg_color(currentButton, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_all(currentButton, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Add style to the System button
+    currentButton = lv_obj_get_child(gui_menu_list_settings, 1);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_all(currentButton, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(currentButton, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+
+    lv_obj_set_style_bg_color(currentButton, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_CHECKED);
+
+    lv_obj_add_state(currentButton, LV_STATE_CHECKED);
+
+    // Add style to the Accelerometer button
+    currentButton = lv_obj_get_child(gui_menu_list_settings, 2);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_all(currentButton, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(currentButton, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+
+    lv_obj_set_style_bg_color(currentButton, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_CHECKED);
+
+    // Add style to the Filter button
+    currentButton = lv_obj_get_child(gui_menu_list_settings, 3);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_all(currentButton, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(currentButton, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+
+    lv_obj_set_style_bg_color(currentButton, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_CHECKED);
+
+    // Add style to the text
+    currentButton = lv_obj_get_child(gui_menu_list_settings, 4);
+    lv_obj_set_style_bg_color(currentButton, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_all(currentButton, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Add style to the Info button
+    currentButton = lv_obj_get_child(gui_menu_list_settings, 5);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_all(currentButton, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(currentButton, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+
+    lv_obj_set_style_bg_color(currentButton, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_CHECKED);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_CHECKED);
+
+    // Add style to the text
+    currentButton = lv_obj_get_child(gui_menu_list_settings, 6);
+    lv_obj_set_style_bg_color(currentButton, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_all(currentButton, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Add style to the Save button
+    currentButton = lv_obj_get_child(gui_menu_list_settings, 7);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_all(currentButton, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(currentButton, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+
+    lv_obj_set_style_bg_color(currentButton, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_PRESSED);
+}
+
+void _create_pages_settings(void)
+{
+    //* PAGE - System
+    gui_page_system_settings = lv_obj_create(gui_SettingsScreen);
+    lv_obj_set_flex_flow(gui_page_system_settings, LV_FLEX_FLOW_COLUMN_WRAP);
+    lv_obj_set_flex_align(gui_page_system_settings, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+    lv_obj_clear_flag(gui_page_system_settings, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_size(gui_page_system_settings, screenWidth - (5 * DEFAULT_TOOLBAR_HEIGHT) / 2, screenHeight);
+    lv_obj_set_style_bg_opa(gui_page_system_settings, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(gui_page_system_settings, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_left(gui_page_system_settings, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_right(gui_page_system_settings, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_top(gui_page_system_settings, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_bottom(gui_page_system_settings, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_row(gui_page_system_settings, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_align(gui_page_system_settings, LV_ALIGN_TOP_LEFT, (5 * DEFAULT_TOOLBAR_HEIGHT) / 2, 0);
+
+    //* Unbalance source
+    lv_obj_t *_tab = lv_obj_create(gui_page_system_settings);
+    lv_obj_clear_flag(_tab, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_width(_tab, LV_SIZE_CONTENT);
+    lv_obj_set_height(_tab, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_opa(_tab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(_tab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_flex_flow(_tab, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(_tab, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START);
+    lv_obj_set_style_pad_left(_tab, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_right(_tab, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_top(_tab, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_bottom(_tab, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Text
+    lv_obj_t *_label = lv_label_create(_tab);
+    lv_label_set_text(_label, "Unbalance\nsource");
+    lv_obj_set_style_text_color(_label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+    lv_obj_set_width(_label, LV_SIZE_CONTENT);
+    lv_obj_set_height(_label, LV_SIZE_CONTENT);
+
+    // Dropdown button
+    unbalance_source_dropdown = lv_dropdown_create(_tab);
+    lv_obj_set_width(unbalance_source_dropdown, 50);
+    lv_obj_set_height(unbalance_source_dropdown, LV_SIZE_CONTENT);
+    lv_obj_set_align(unbalance_source_dropdown, LV_ALIGN_CENTER);
+    lv_obj_add_flag(unbalance_source_dropdown, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
+    lv_dropdown_set_options(unbalance_source_dropdown, "X\nY");
+    lv_obj_set_style_bg_color(unbalance_source_dropdown, SECONDARY_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(unbalance_source_dropdown, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(unbalance_source_dropdown, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(unbalance_source_dropdown, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Dropdown list
+    lv_obj_t *_list = lv_dropdown_get_list(unbalance_source_dropdown);
+    lv_obj_set_style_bg_color(_list, SECONDARY_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(_list, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(_list, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(_list, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_SELECTED | LV_STATE_CHECKED);
+    lv_obj_set_style_bg_opa(_list, LV_OPA_COVER, LV_PART_SELECTED | LV_STATE_CHECKED);
+    lv_obj_set_style_border_opa(_list, LV_OPA_TRANSP, LV_PART_SELECTED | LV_STATE_CHECKED);
+    lv_obj_set_style_text_color(_list, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    //* Motor speed
+    _tab = lv_obj_create(gui_page_system_settings);
+    lv_obj_clear_flag(_tab, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_width(_tab, screenWidth - ((6 * DEFAULT_TOOLBAR_HEIGHT) / 2));
+    lv_obj_set_height(_tab, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_opa(_tab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(_tab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_flex_flow(_tab, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(_tab, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_left(_tab, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_right(_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_top(_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_bottom(_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_row(_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Text
+    _label = lv_label_create(_tab);
+    lv_label_set_text(_label, "Motor\nspeed");
+    lv_obj_set_style_text_color(_label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+    lv_obj_set_width(_label, LV_SIZE_CONTENT);
+    lv_obj_set_height(_label, LV_SIZE_CONTENT);
+
+    // Slider tab
+    lv_obj_t *_tab_sub = lv_obj_create(_tab);
+    lv_obj_clear_flag(_tab_sub, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_width(_tab_sub, 180);
+    lv_obj_set_height(_tab_sub, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_opa(_tab_sub, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(_tab_sub, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_flex_flow(_tab_sub, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(_tab_sub, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START);
+    lv_obj_set_style_pad_left(_tab_sub, 15, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_column(_tab_sub, 15, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Slider
+    speed_slider = lv_slider_create(_tab_sub);
+    lv_slider_set_range(speed_slider, 100, 1000);
+    lv_obj_set_width(speed_slider, 130);
+
+    // Add callback
+    lv_obj_add_event_cb(speed_slider, slider_motor_speed_settings_event_cb, LV_EVENT_ALL, NULL);
+
+    // Value
+    speed_slider_value_label = lv_label_create(_tab_sub);
+    lv_label_set_text(speed_slider_value_label, "25%");
+    lv_obj_set_style_text_color(speed_slider_value_label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    //* PAGE - Accelerometer
+    gui_page_accel_settings = lv_obj_create(gui_SettingsScreen);
+    lv_obj_set_flex_flow(gui_page_accel_settings, LV_FLEX_FLOW_COLUMN_WRAP);
+    lv_obj_set_flex_align(gui_page_accel_settings, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+    lv_obj_clear_flag(gui_page_accel_settings, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_size(gui_page_accel_settings, screenWidth - (5 * DEFAULT_TOOLBAR_HEIGHT) / 2, screenHeight);
+    lv_obj_set_style_bg_opa(gui_page_accel_settings, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(gui_page_accel_settings, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_left(gui_page_accel_settings, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_right(gui_page_accel_settings, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_top(gui_page_accel_settings, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_bottom(gui_page_accel_settings, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_row(gui_page_accel_settings, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_align(gui_page_accel_settings, LV_ALIGN_TOP_LEFT, (5 * DEFAULT_TOOLBAR_HEIGHT) / 2, 0);
+    lv_obj_add_flag(gui_page_accel_settings, LV_OBJ_FLAG_HIDDEN);
+
+    //* Range
+    _tab = lv_obj_create(gui_page_accel_settings);
+    lv_obj_clear_flag(_tab, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_width(_tab, LV_SIZE_CONTENT);
+    lv_obj_set_height(_tab, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_opa(_tab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(_tab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_flex_flow(_tab, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(_tab, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START);
+    lv_obj_set_style_pad_left(_tab, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_right(_tab, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_top(_tab, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_bottom(_tab, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Text
+    _label = lv_label_create(_tab);
+    lv_label_set_text(_label, "Range");
+    lv_obj_set_style_text_color(_label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+    lv_obj_set_width(_label, LV_SIZE_CONTENT);
+    lv_obj_set_height(_label, LV_SIZE_CONTENT);
+
+    // Dropdown button
+    range_dropdown = lv_dropdown_create(_tab);
+    lv_obj_set_width(range_dropdown, 70);
+    lv_obj_set_height(range_dropdown, LV_SIZE_CONTENT);
+    lv_obj_set_align(range_dropdown, LV_ALIGN_CENTER);
+    lv_obj_add_flag(range_dropdown, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
+    lv_dropdown_set_options(range_dropdown, "2G\n4G\n8G\n16G");
+    lv_obj_set_style_bg_color(range_dropdown, SECONDARY_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(range_dropdown, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(range_dropdown, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(range_dropdown, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Dropdown list
+    _list = lv_dropdown_get_list(range_dropdown);
+    lv_obj_set_style_bg_color(_list, SECONDARY_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(_list, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(_list, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(_list, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_SELECTED | LV_STATE_CHECKED);
+    lv_obj_set_style_bg_opa(_list, LV_OPA_COVER, LV_PART_SELECTED | LV_STATE_CHECKED);
+    lv_obj_set_style_border_opa(_list, LV_OPA_TRANSP, LV_PART_SELECTED | LV_STATE_CHECKED);
+    lv_obj_set_style_text_color(_list, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    //* Bandwidth
+    // TODO
+
+    //* PAGE - Filter
+    gui_page_filter_settings = lv_obj_create(gui_SettingsScreen);
+    lv_obj_set_flex_flow(gui_page_filter_settings, LV_FLEX_FLOW_COLUMN_WRAP);
+    lv_obj_set_flex_align(gui_page_filter_settings, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+    lv_obj_clear_flag(gui_page_filter_settings, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_size(gui_page_filter_settings, screenWidth - (5 * DEFAULT_TOOLBAR_HEIGHT) / 2, screenHeight);
+    lv_obj_set_style_bg_opa(gui_page_filter_settings, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(gui_page_filter_settings, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_left(gui_page_filter_settings, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_right(gui_page_filter_settings, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_top(gui_page_filter_settings, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_bottom(gui_page_filter_settings, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_row(gui_page_filter_settings, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_align(gui_page_filter_settings, LV_ALIGN_TOP_LEFT, (5 * DEFAULT_TOOLBAR_HEIGHT) / 2, 0);
+    lv_obj_add_flag(gui_page_filter_settings, LV_OBJ_FLAG_HIDDEN);
+
+    //* Center frequency
+    _tab = lv_obj_create(gui_page_filter_settings);
+    lv_obj_clear_flag(_tab, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_width(_tab, screenWidth - ((9 * DEFAULT_TOOLBAR_HEIGHT) / 2));
+    lv_obj_set_height(_tab, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_opa(_tab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(_tab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_flex_flow(_tab, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(_tab, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_left(_tab, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_right(_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_top(_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_bottom(_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_row(_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Text
+    _label = lv_label_create(_tab);
+    lv_label_set_text(_label, "Center\nfreq.");
+    lv_obj_set_style_text_color(_label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+    lv_obj_set_width(_label, LV_SIZE_CONTENT);
+    lv_obj_set_height(_label, LV_SIZE_CONTENT);
+
+    // Create spinbox tab
+    lv_obj_t *_sub_tab = lv_obj_create(_tab);
+    lv_obj_clear_flag(_sub_tab, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_width(_sub_tab, LV_SIZE_CONTENT);
+    lv_obj_set_height(_sub_tab, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_opa(_sub_tab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(_sub_tab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_flex_flow(_sub_tab, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(_sub_tab, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START);
+    lv_obj_set_style_pad_left(_sub_tab, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_right(_sub_tab, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_top(_sub_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_bottom(_sub_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Create increment button
+    lv_obj_t *btn = lv_btn_create(_sub_tab);
+    lv_obj_set_size(btn, 15, 30);
+
+    // Add style
+    lv_obj_set_style_bg_img_src(btn, LV_SYMBOL_PLUS, 0);
+    lv_obj_set_style_bg_color(btn, DEFAULT_BACKGROUND_COLOR, LV_PART_MAIN);
+    lv_obj_set_style_border_color(btn, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+    lv_obj_set_style_border_opa(btn, LV_OPA_COVER, LV_PART_MAIN);
+
+    // Add icon
+    lv_obj_t *label = lv_label_create(btn);
+    lv_label_set_text(label, LV_SYMBOL_PLUS);
+    lv_obj_set_style_text_color(label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+    lv_obj_center(label);
+
+    // Add callback
+    lv_obj_add_event_cb(btn, freq_increment_btn_event_cb, LV_EVENT_ALL, NULL);
+
+    // Create spinbox
+    gui_FreqSpinbox = lv_spinbox_create(_sub_tab);
+    lv_spinbox_set_range(gui_FreqSpinbox, 5, 500);
+    lv_spinbox_set_digit_format(gui_FreqSpinbox, 4, 1);
+    lv_spinbox_step_prev(gui_FreqSpinbox);
+    lv_spinbox_set_rollover(gui_FreqSpinbox, false);
+    lv_obj_set_width(gui_FreqSpinbox, 50);
+    lv_obj_set_height(gui_FreqSpinbox, 30);
+    lv_obj_set_style_pad_hor(gui_FreqSpinbox, 2, LV_PART_MAIN);
+    lv_obj_set_style_pad_ver(gui_FreqSpinbox, 4, LV_PART_MAIN);
+
+    // Add style
+    lv_obj_set_style_bg_color(gui_FreqSpinbox, DEFAULT_BACKGROUND_COLOR, LV_PART_MAIN);
+    lv_obj_set_style_border_color(gui_FreqSpinbox, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+    lv_obj_set_style_border_opa(gui_FreqSpinbox, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_radius(gui_FreqSpinbox, 3, LV_PART_MAIN);
+
+    // Add callback
+    lv_obj_add_event_cb(gui_FreqSpinbox, freq_spinbox_event_cb, LV_EVENT_ALL, NULL);
+
+    // Create decrement button
+    btn = lv_btn_create(_sub_tab);
+    lv_obj_set_size(btn, 15, 30);
+
+    // Add style
+    lv_obj_set_style_bg_img_src(btn, LV_SYMBOL_MINUS, 0);
+    lv_obj_set_style_bg_color(btn, DEFAULT_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_color(btn, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(btn, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Add icon
+    label = lv_label_create(btn);
+    lv_label_set_text(label, LV_SYMBOL_MINUS);
+    lv_obj_set_style_text_color(label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_center(label);
+
+    // Add callback
+    lv_obj_add_event_cb(btn, freq_decrement_btn_event_cb, LV_EVENT_ALL, NULL);
+
+    //* Q-factor
+    _tab = lv_obj_create(gui_page_filter_settings);
+    lv_obj_clear_flag(_tab, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_width(_tab, screenWidth - ((9 * DEFAULT_TOOLBAR_HEIGHT) / 2));
+    lv_obj_set_height(_tab, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_opa(_tab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(_tab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_flex_flow(_tab, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(_tab, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_left(_tab, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_right(_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_top(_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_bottom(_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_row(_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Text
+    _label = lv_label_create(_tab);
+    lv_label_set_text(_label, "Q-Factor");
+    lv_obj_set_style_text_color(_label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+    lv_obj_set_width(_label, LV_SIZE_CONTENT);
+    lv_obj_set_height(_label, LV_SIZE_CONTENT);
+
+    // Create spinbox tab
+    _sub_tab = lv_obj_create(_tab);
+    lv_obj_clear_flag(_sub_tab, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_width(_sub_tab, LV_SIZE_CONTENT);
+    lv_obj_set_height(_sub_tab, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_opa(_sub_tab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(_sub_tab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_flex_flow(_sub_tab, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(_sub_tab, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START);
+    lv_obj_set_style_pad_left(_sub_tab, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_right(_sub_tab, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_top(_sub_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_bottom(_sub_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Create increment button
+    btn = lv_btn_create(_sub_tab);
+    lv_obj_set_size(btn, 15, 30);
+
+    // Add style
+    lv_obj_set_style_bg_img_src(btn, LV_SYMBOL_PLUS, 0);
+    lv_obj_set_style_bg_color(btn, DEFAULT_BACKGROUND_COLOR, LV_PART_MAIN);
+    lv_obj_set_style_border_color(btn, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+    lv_obj_set_style_border_opa(btn, LV_OPA_COVER, LV_PART_MAIN);
+
+    // Add icon
+    label = lv_label_create(btn);
+    lv_label_set_text(label, LV_SYMBOL_PLUS);
+    lv_obj_set_style_text_color(label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+    lv_obj_center(label);
+
+    // Add callback
+    lv_obj_add_event_cb(btn, QFactor_increment_btn_event_cb, LV_EVENT_ALL, NULL);
+
+    // Create spinbox
+    gui_QFactorSpinbox = lv_spinbox_create(_sub_tab);
+    lv_spinbox_set_range(gui_QFactorSpinbox, 1, 2000);
+    lv_spinbox_set_digit_format(gui_QFactorSpinbox, 4, 2);
+    lv_spinbox_step_prev(gui_QFactorSpinbox);
+    lv_spinbox_set_rollover(gui_QFactorSpinbox, false);
+    lv_obj_set_width(gui_QFactorSpinbox, 50);
+    lv_obj_set_height(gui_QFactorSpinbox, 30);
+    lv_obj_set_style_pad_hor(gui_QFactorSpinbox, 2, LV_PART_MAIN);
+    lv_obj_set_style_pad_ver(gui_QFactorSpinbox, 4, LV_PART_MAIN);
+
+    // Add style
+    lv_obj_set_style_bg_color(gui_QFactorSpinbox, DEFAULT_BACKGROUND_COLOR, LV_PART_MAIN);
+    lv_obj_set_style_border_color(gui_QFactorSpinbox, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+    lv_obj_set_style_border_opa(gui_QFactorSpinbox, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_radius(gui_QFactorSpinbox, 3, LV_PART_MAIN);
+
+    // Add callback
+    lv_obj_add_event_cb(gui_QFactorSpinbox, QFactor_spinbox_event_cb, LV_EVENT_ALL, NULL);
+
+    // Create decrement button
+    btn = lv_btn_create(_sub_tab);
+    lv_obj_set_size(btn, 15, 30);
+
+    // Add style
+    lv_obj_set_style_bg_img_src(btn, LV_SYMBOL_MINUS, 0);
+    lv_obj_set_style_bg_color(btn, DEFAULT_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_color(btn, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(btn, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Add icon
+    label = lv_label_create(btn);
+    lv_label_set_text(label, LV_SYMBOL_MINUS);
+    lv_obj_set_style_text_color(label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_center(label);
+
+    // Add callback
+    lv_obj_add_event_cb(btn, QFactor_decrement_btn_event_cb, LV_EVENT_ALL, NULL);
+
+    //* PAGE - Info
+    // TODO
+}
+
+void _set_settings_page(settings_subpage_e page)
+{
+    _settings_act_page = page;
+}
+
+void _settings_show_page(settings_subpage_e page)
+{
+    switch (page)
     {
-        lv_label_set_text_fmt(gui_FundLabel, "%.1fHz", _xShared.getUnbalanceFreq());
+    case SYSTEM_SETTINGS:
+        _settings_show_system();
+        break;
+    case ACCEL_SETTINGS:
+        _settings_show_accel();
+        break;
+    case FILTER_SETTINGS:
+        _settings_show_filter();
+        break;
+    case INFO_SETTINGS:
+        _settings_show_info();
+        break;
+    default:
+        break;
     }
 }
 
-void _update_but_labels(void)
+void _settings_show_system(void)
 {
-    app_steps_e status = _xShared.getAppStatus();
-    if (status == IDLE)
-    {
-        lv_label_set_text(gui_StartButLabel, LV_SYMBOL_PLAY);
-    }
-    else
-    {
-        lv_label_set_text(gui_StartButLabel, LV_SYMBOL_STOP);
-    }
+    // TODO load current value
+
+    // Change visibility of pages
+    lv_obj_add_flag(gui_page_accel_settings, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_filter_settings, LV_OBJ_FLAG_HIDDEN);
+    // lv_obj_add_flag(gui_page_info_settings, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_clear_flag(gui_page_system_settings, LV_OBJ_FLAG_HIDDEN);
+
+    _set_settings_page(SYSTEM_SETTINGS);
 }
 
-void _update_unbalance(void)
+void _settings_show_accel(void)
 {
-    _create_unbalance_arrow(_xShared.getUnbalanceXAngle() + _xShared.getAngleOffset(), _xShared.getUnbalanceMag(), 70, 0);
+    // TODO load current value
+
+    // Change visibility of pages
+    lv_obj_add_flag(gui_page_system_settings, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_filter_settings, LV_OBJ_FLAG_HIDDEN);
+    // lv_obj_add_flag(gui_page_info_settings, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_clear_flag(gui_page_accel_settings, LV_OBJ_FLAG_HIDDEN);
+
+    _set_settings_page(ACCEL_SETTINGS);
+}
+
+void _settings_show_filter(void)
+{
+    // TODO load current value
+
+    // Change visibility of pages
+    lv_obj_add_flag(gui_page_system_settings, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_accel_settings, LV_OBJ_FLAG_HIDDEN);
+    // lv_obj_add_flag(gui_page_info_settings, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_clear_flag(gui_page_filter_settings, LV_OBJ_FLAG_HIDDEN);
+
+    _set_settings_page(FILTER_SETTINGS);
+}
+
+void _settings_show_info(void)
+{
+    // TODO load current value
+
+    // Change visibility of pages
+    lv_obj_add_flag(gui_page_system_settings, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_accel_settings, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_page_filter_settings, LV_OBJ_FLAG_HIDDEN);
+
+    // lv_obj_clear_flag(gui_page_info_settings, LV_OBJ_FLAG_HIDDEN);
+
+    _set_settings_page(INFO_SETTINGS);
+}
+
+void _settings_get_values(void)
+{
+    command_data_t command;
+
+    //* Unbalance source
+    command.command = APP_GET_SOURCE_CMD;
+    command.value.ll = -1;
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+    //* Accelerometer range
+    command.command = ACCEL_GET_RANGE_CMD;
+    command.value.ll = -1;
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+    //* Accelerometer bandwidth
+    command.command = ACCEL_GET_BW_CMD;
+    command.value.ll = -1;
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+    //* Motor speed
+    command.command = MOTOR_GET_SPEED_CMD;
+    command.value.ll = -1;
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+    //* Filter center frequency
+    command.command = IIR_GET_FREQ_CMD;
+    command.value.ll = -1;
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+    //* Filter Q factor
+    command.command = IIR_GET_Q_CMD;
+    command.value.ll = -1;
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
 }

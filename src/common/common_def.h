@@ -20,18 +20,20 @@
 #include "driver/gpio.h"
 #include "driver/gptimer.h"
 #include "driver/pulse_cnt.h"
+#include "esp_heap_caps.h"
 
 #include "esp_dsp.h"
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!/
 //!         PROJECT DEFINES         /
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!/
-//* Debug serial loggin enabler
-//#define APP_DEBUG_MODE
+//* Compiler directives
+// #define APP_DEBUG_MODE
+// #define APP_Z_SCORES_PEAKS
 
 //* Accelerometer type
-//#define USE_BMX055 1
-#define USE_ADXL345 1
+#define USE_BMX055 1
+// #define USE_ADXL345 1
 
 //* I/O
 #define ACC_SPI_MISO GPIO_NUM_32
@@ -39,9 +41,9 @@
 #define ACC_SPI_SCLK GPIO_NUM_25
 #define ACC_SPI_CS GPIO_NUM_27
 #ifdef USE_BMX055
-#define ACC_SPI_SPEED 10 //Mhz
+#define ACC_SPI_SPEED 10 // Mhz
 #elif USE_ADXL345
-#define ACC_SPI_SPEED 4 //Mhz
+#define ACC_SPI_SPEED 4 // Mhz
 #endif
 #define GPIO_LED_ERROR GPIO_NUM_2
 #define GPIO_OPT_SENSOR GPIO_NUM_35
@@ -59,7 +61,11 @@
 #define GUI_REFRESH_DELAY_MS 15
 #define ACC_DATA_BUFFER_SIZE 1024
 #define FFT_DATA_BUFFER_SIZE ACC_DATA_BUFFER_SIZE / 2
-#define DEFAULT_MEASURE_THROTTLE 175 /* 225~3600rpm, 175~2700rpm for a 1700kV motor */
+#define DEFAULT_MEASURE_THROTTLE 225 /* 225~3600rpm, 175~2700rpm for a 1700kV motor */
+#define DEFAULT_FILTER_C_FREQ 0.02F
+#define DEFAULT_FILTER_Q_FACTOR 0.7071F
+#define SECOND_FILTER_Q_FACTOR DEFAULT_FILTER_Q_FACTOR
+#define DUMMY_DATA_QUANTITY 128
 
 //*******************************/
 //*         GLOBAL DEFINES      */
@@ -72,6 +78,7 @@
 //*******************************/
 enum sys_command_e
 {
+    //* System operation
     APP_CMD,
     MOTOR_CMD,
     START_BUT_CMD,
@@ -81,10 +88,25 @@ enum sys_command_e
     GUI_UNBALANCE_UPDATE_CMD,
     LPF_REQUEST_CMD,
     SEARCH_TYPE_CMD,
-    GUI_INIT_COMPLETE_CMD,
-    GUI_INIT_ACC_CMD, //ToDo
-    GUI_INIT_RPM_CMD, //ToDo
-    GUI_INIT_ESC_CMD, //ToDo
+    APP_STEP_CMD,
+    //* Settings
+    APP_SET_SOURCE_CMD,     // ToDo
+    ACCEL_SET_BW_CMD,       // ToDo
+    ACCEL_SET_RANGE_CMD,    // ToDo
+    MOTOR_SET_SPEED_CMD,    // ToDo
+    IIR_SET_FREQ_CMD,       // ToDo
+    IIR_SET_Q_CMD,          // ToDo
+    APP_GET_SOURCE_CMD,     // ToDo
+    ACCEL_GET_BW_CMD,       // ToDo
+    ACCEL_GET_RANGE_CMD,    // ToDo
+    MOTOR_GET_SPEED_CMD,    // ToDo
+    IIR_GET_FREQ_CMD,       // ToDo
+    IIR_GET_Q_CMD,          // ToDo
+    //* Init
+    GUI_INIT_COMPLETED_CMD, // ToDo
+    GUI_INIT_ACC_CMD,       // ToDo
+    GUI_INIT_RPM_CMD,       // ToDo
+    GUI_INIT_ESC_CMD,       // ToDo
 };
 
 enum app_command_e
@@ -97,13 +119,26 @@ enum app_command_e
 
 enum app_steps_e
 {
+    PREVIOUS = -1,
     IDLE,
     START_MOTOR,
     VIBES_REC,
     FILTERING,
     ANALYSING,
-    UNBALANCE_FIND,
-    DECEL,
+    UNBALANCE_OPT_FINDING,
+    UNBALANCE_STEP_1,
+    UNBALANCE_STEP_2,
+    UNBALANCE_STEP_3,
+    UNBALANCE_STEP_4,
+};
+
+enum gui_unbalance_command_e
+{
+    GUI_UNBALANCE_OPT,
+    GUI_UNBALANCE_STEP_1,
+    GUI_UNBALANCE_STEP_2,
+    GUI_UNBALANCE_STEP_3,
+    GUI_UNBALANCE_STEP_4,
 };
 
 enum data_orig_e
@@ -116,6 +151,21 @@ enum app_search_type_e
 {
     SEARCH_OPTICAL,
     SEARCH_4_STEPS
+};
+
+enum app_unbalance_source_e
+{
+    X_AXIS_SOURCE,
+    Y_AXIS_SOURCE
+};
+
+enum dpb_range_e
+{
+    RANGE_UNKNOW = -1,
+    RANGE_2G,
+    RANGE_4G,
+    RANGE_8G,
+    RANGE_16G,
 };
 
 union dpb_generic_u

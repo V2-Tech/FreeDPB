@@ -56,8 +56,6 @@ RotSense::RotSense(gpio_num_t opto_gpio_num)
     ESP_ERROR_CHECK(pcnt_unit_enable(__rpm_pcnt));
     ESP_LOGI(TAG, "clear pcnt unit");
     ESP_ERROR_CHECK(pcnt_unit_clear_count(__rpm_pcnt));
-    ESP_LOGI(TAG, "start pcnt unit");
-    ESP_ERROR_CHECK(pcnt_unit_start(__rpm_pcnt));
 }
 
 RotSense::~RotSense()
@@ -101,10 +99,14 @@ float_t RotSense::get_rpm()
     return _rpm;
 }
 
-void RotSense::reset_rpm_cnt()
+void RotSense::start_rpm_cnt() 
 {
-    ESP_ERROR_CHECK(pcnt_unit_clear_count(__rpm_pcnt));
     ESP_ERROR_CHECK(pcnt_unit_start(__rpm_pcnt));
+}
+
+void RotSense::reset_rpm_cnt() {
+  ESP_ERROR_CHECK(pcnt_unit_clear_count(__rpm_pcnt));
+  ESP_ERROR_CHECK(pcnt_unit_start(__rpm_pcnt));
 }
 
 void RotSense::stop_rpm_cnt()

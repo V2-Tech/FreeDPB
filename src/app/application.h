@@ -3,7 +3,7 @@
 
 #include "../common/common_def.h"
 #include "../shared/shared_data.h"
-#include "../common/utils.h"
+#include "../common/SignalProcessing.h"
 
 #include "../sensors/accelerations.h"
 #include "../motor/motor.h"
@@ -37,13 +37,13 @@ public:
     void exe(command_data_t command);
     void ask_acc_charts_update(void);
     void ask_fft_chart_update(void);
-    void ask_unbalance_update(void);
+    void ask_unbalance_arrow_update(void);
+    void ask_unbalance_step_1(void);
+    void ask_unbalance_step_2(void);
+    void ask_unbalance_step_3(void);
+    void ask_unbalance_step_4(void);
     void ask_main_page(void);
-    int16_t filter_data_iir(data_orig_e data_type);
-    int16_t filter_data_iir_zero(data_orig_e data_type);
-    int16_t fft_calc(data_orig_e data_type);
-    void signal_peak_finder(void);
-    void fft_peak_finder(void);
+    void ask_setting_update(sys_command_e request, int64_t value);
 
     void setStep(app_steps_e v);
 
@@ -52,6 +52,7 @@ private:
     QueueHandle_t _xQueueSysOutput;
     TaskHandle_t _xSuppTask;
     DPBShared &_xShared = DPBShared::getInstance();
+    SignalProcessing _analyzer;
 
     uint16_t _init_status;
     uint8_t _init_done;
@@ -60,21 +61,43 @@ private:
     gptimer_handle_t _rpmTimer;
     size_t _XpeakCount;
     size_t _YpeakCount;
+    app_search_type_e _search_type;
+    float_t _steps_amplitude[4] = {0};
 
     void _exe_start(void);
     void _exe_reset(void);
     void _exe_filter(void);
-    void _exe_analyzing(void);
-    void _exe_unbalance_finder(void);
+    void _exe_analyze(void);
     void _exe_fft(uint8_t data_type);
     void _exe_lpf(void);
+    void _exe_step_managment(app_steps_e requested_step);
+    void _exe_get_settings(sys_command_e request);
+    
+    void _reset(void);
+    int16_t _filter_data_iir_zero(data_orig_e data_type);
+    int16_t _fft_calc(data_orig_e data_type);
+    void _signal_peak_finder(void);
+    void _fft_peak_finder(void);
+    void _dummy_data_remove(void);
+    
+    void _set_searchType(app_search_type_e type);
 
     void _log_acc_data(void);
     void _log_acc_data_filtered(void);
-    float_t _get_fundamental_freq(uint16_t sample_freq, size_t fft_lenght);
-    void _peaks_filter_by_distance(uint64_t *ref_array, size_t *ref_peaks, size_t *sorted_peak, size_t peak_num, uint64_t req_distance);
 
-protected:
+    void _standard_peaks_analisys(void);
+    void _z_scores_peaks_analisys(void);
+    void _unbalance_finder_optical(void);
+    void _unbalance_finder_steps(void);
+    void _unbalance_step_1(void);
+    void _unbalance_step_2(void);
+    void _unbalance_step_3(void);
+    void _unbalance_step_4(void);
+
+    float_t _get_fundamental_freq(uint16_t sample_freq, size_t fft_lenght);
+    float_t _get_vibe_vector_mod(void);
+    dpb_range_e _range_convert(uint8_t range);
+
     static void __motorStartupTimerCallback_static(TimerHandle_t pxTimer);
     void __motorStartupTimerCallback(TimerHandle_t pxTimer);
 };

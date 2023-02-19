@@ -18,7 +18,11 @@ DPBShared::DPBShared() : _data(new Data)
     _data->_fft_y_max_index = 0;
     _data->_angleOffset = 0;
     _data->_searchType = SEARCH_OPTICAL;
-    
+    _data->_unbalanceSource = X_AXIS_SOURCE;
+    _data->_measureThrottle = DEFAULT_MEASURE_THROTTLE;
+    _data->_iirCenterFreq = DEFAULT_FILTER_C_FREQ;
+    _data->_iirQFactor = DEFAULT_FILTER_Q_FACTOR;
+
     _xSemComm = xSemaphoreCreateMutex();
     _xSemDpbData = xSemaphoreCreateMutex();
     _xSemDpbDataFlt = xSemaphoreCreateMutex();
@@ -326,7 +330,7 @@ float_t DPBShared::getUnbalanceFreq()
     return v;
 }
 
-void DPBShared::setUnbalanceMag(float_t v) 
+void DPBShared::setUnbalanceMag(float_t v)
 {
     _lockComm();
     _data->_unbalanceMag = v;
@@ -335,48 +339,48 @@ void DPBShared::setUnbalanceMag(float_t v)
 
 float_t DPBShared::getUnbalanceMag()
 {
-   _lockComm();
+    _lockComm();
     float_t v = _data->_unbalanceMag;
     _unlockComm();
     return v;
 }
 
-void DPBShared::setXPeaksIndex(size_t v, uint32_t index)
+void DPBShared::setXPeaksIndex(int16_t v, uint32_t index)
 {
     _lockComm();
     _data->_x_peak_index[index] = v;
     _unlockComm();
 }
 
-size_t DPBShared::getXPeakIndex(uint32_t index)
+int16_t DPBShared::getXPeakIndex(uint32_t index)
 {
     _lockComm();
-    size_t v = _data->_x_peak_index[index];
+    int16_t v = _data->_x_peak_index[index];
     _unlockComm();
     return v;
 }
 
-size_t *DPBShared::getXPeaksIndexPointer_us()
+int16_t *DPBShared::getXPeaksIndexPointer_us()
 {
     return _data->_x_peak_index;
 }
 
-void DPBShared::setYPeaksIndex(size_t v, uint32_t index)
+void DPBShared::setYPeaksIndex(int16_t v, uint32_t index)
 {
     _lockComm();
     _data->_x_peak_index[index] = v;
     _unlockComm();
 }
 
-size_t DPBShared::getYPeakIndex(uint32_t index)
+int16_t DPBShared::getYPeakIndex(uint32_t index)
 {
     _lockComm();
-    size_t v = _data->_y_peak_index[index];
+    int16_t v = _data->_y_peak_index[index];
     _unlockComm();
     return v;
 }
 
-size_t *DPBShared::getYPeaksIndexPointer_us()
+int16_t *DPBShared::getYPeaksIndexPointer_us()
 {
     return _data->_y_peak_index;
 }
@@ -496,7 +500,7 @@ float_t DPBShared::getAngleOffset()
     return v;
 }
 
-void DPBShared::setSearchType(app_search_type_e v) 
+void DPBShared::setSearchType(app_search_type_e v)
 {
     _lockComm();
     _data->_searchType = v;
@@ -507,6 +511,66 @@ app_search_type_e DPBShared::getSearchType()
 {
     _lockComm();
     app_search_type_e v = _data->_searchType;
+    _unlockComm();
+    return v;
+}
+
+void DPBShared::setUnbalanceSource(app_unbalance_source_e v)
+{
+    _lockComm();
+    _data->_unbalanceSource = v;
+    _unlockComm();
+}
+
+app_unbalance_source_e DPBShared::getUnbalanceSource(void)
+{
+    _lockComm();
+    app_unbalance_source_e v = _data->_unbalanceSource;
+    _unlockComm();
+    return v;
+}
+
+void DPBShared::setMeasureThrottle(uint16_t v)
+{
+    _lockComm();
+    _data->_measureThrottle = v;
+    _unlockComm();
+}
+
+uint16_t DPBShared::getMeasureThrottle(void)
+{
+    _lockComm();
+    uint16_t v = _data->_measureThrottle;
+    _unlockComm();
+    return v;
+}
+
+void DPBShared::setIIRCenterFreq(float_t v)
+{
+    _lockComm();
+    _data->_iirCenterFreq = v;
+    _unlockComm();
+}
+
+float_t DPBShared::getIIRCenterFreq(void)
+{
+    _lockComm();
+    float_t v = _data->_iirCenterFreq;
+    _unlockComm();
+    return v;
+}
+
+void DPBShared::setIIRQFactor(float_t v)
+{
+    _lockComm();
+    _data->_iirQFactor = v;
+    _unlockComm();
+}
+
+float_t DPBShared::getIIRQFactor(void)
+{
+    _lockComm();
+    float_t v = _data->_iirQFactor;
     _unlockComm();
     return v;
 }
