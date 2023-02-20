@@ -128,12 +128,12 @@ accel_settings_t Accel::regs_to_settings(uint8_t range_reg, uint8_t bw_reg, acc_
     switch (device_model)
     {
     case BMX:
-        as.range = bmx_range_converter(range_reg);
-        as.band = bmx_bw_converter(bw_reg);
+        as.range = _bmx_range_2_value_converter(range_reg);
+        as.band = _bmx_bw_converter(bw_reg);
         break;
     case ADXL:
-        as.range = adxl_range_converter(range_reg);
-        as.band = adxl_bw_converter(bw_reg);
+        as.range = _adxl_range_2_value_converter(range_reg);
+        as.band = _adxl_bw_converter(bw_reg);
         break;
     default:
         break;
@@ -142,7 +142,41 @@ accel_settings_t Accel::regs_to_settings(uint8_t range_reg, uint8_t bw_reg, acc_
     return as;
 }
 
-int16_t Accel::bmx_range_converter(uint8_t range_reg)
+uint8_t Accel::set_range(uint8_t range)
+{
+#ifdef USE_BMX055
+    bmx_acc_conf_t config;
+#endif
+#ifdef USE_ADXL345
+    adxl_acc_conf_t config;
+#endif
+
+    if (_accel->get_accel_conf(&config) != ESP_OK)
+    {
+        return ESP_FAIL;
+    }
+
+#ifdef USE_BMX055
+    config.range = _bmx_value_2_range_converter(range);
+#endif
+#ifdef USE_ADXL345
+    config.range = _adxl_value_2_range_converter(range);
+#endif
+
+    if (_accel->set_accel_conf(&config) != ESP_OK)
+    {
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+}
+
+uint8_t Accel::set_bandwidth(uint8_t bandwidth)
+{
+    return ESP_OK;
+}
+
+int16_t Accel::_bmx_range_2_value_converter(uint8_t range_reg)
 {
     switch (range_reg)
     {
@@ -164,7 +198,7 @@ int16_t Accel::bmx_range_converter(uint8_t range_reg)
     }
 }
 
-int16_t Accel::bmx_bw_converter(uint8_t bw_reg)
+int16_t Accel::_bmx_bw_converter(uint8_t bw_reg)
 {
     switch (bw_reg)
     {
@@ -198,7 +232,7 @@ int16_t Accel::bmx_bw_converter(uint8_t bw_reg)
     }
 }
 
-int16_t Accel::adxl_range_converter(uint8_t range_reg)
+int16_t Accel::_adxl_range_2_value_converter(uint8_t range_reg)
 {
     switch (range_reg)
     {
@@ -220,7 +254,7 @@ int16_t Accel::adxl_range_converter(uint8_t range_reg)
     }
 }
 
-int16_t Accel::adxl_bw_converter(uint8_t bw_reg)
+int16_t Accel::_adxl_bw_converter(uint8_t bw_reg)
 {
     switch (bw_reg)
     {
@@ -244,6 +278,50 @@ int16_t Accel::adxl_bw_converter(uint8_t bw_reg)
         break;
     case ADXL345_DATARATE_3200_HZ:
         return 1600;
+        break;
+    default:
+        return 0;
+        break;
+    }
+}
+
+uint8_t Accel::_bmx_value_2_range_converter(uint8_t value)
+{
+    switch (value)
+    {
+    case 2:
+        return BMX_ACC_RANGE_2G;
+        break;
+    case 4:
+        return BMX_ACC_RANGE_4G;
+        break;
+    case 8:
+        return BMX_ACC_RANGE_8G;
+        break;
+    case 16:
+        return BMX_ACC_RANGE_16G;
+        break;
+    default:
+        return 0;
+        break;
+    }
+}
+
+uint8_t Accel::_adxl_value_2_range_converter(uint8_t value)
+{
+    switch (value)
+    {
+    case 2:
+        return ADXL345_RANGE_2_G;
+        break;
+    case 4:
+        return ADXL345_RANGE_4_G;
+        break;
+    case 8:
+        return ADXL345_RANGE_8_G;
+        break;
+    case 16:
+        return ADXL345_RANGE_16_G;
         break;
     default:
         return 0;

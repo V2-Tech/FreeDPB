@@ -189,6 +189,8 @@ void _update_but_labels(void);
 void _update_unbalance_arrow(void);
 void _update_accel_charts(uint8_t data_type);
 void _update_fft_charts(void);
+void _ask_settings_values(void);
+void _ask_settings_save(void);
 
 void _show_loading_screen(void);
 void _show_main_screen(void);
@@ -222,7 +224,10 @@ void btn_show_accel_settings_event_cb(lv_event_t *e);
 void btn_show_filter_settings_event_cb(lv_event_t *e);
 void btn_show_info_settings_event_cb(lv_event_t *e);
 void btn_save_settings_event_cb(lv_event_t *e);
+void unbalance_source_settings_event_cb(lv_event_t *e);
 void slider_motor_speed_settings_event_cb(lv_event_t *e);
+void range_settings_event_cb(lv_event_t *e);
+void bandwidth_settings_event_cb(lv_event_t *e);
 void freq_spinbox_event_cb(lv_event_t *e);
 void freq_increment_btn_event_cb(lv_event_t *e);
 void freq_decrement_btn_event_cb(lv_event_t *e);
@@ -262,5 +267,4 @@ void _settings_show_system(void);
 void _settings_show_accel(void);
 void _settings_show_filter(void);
 void _settings_show_info(void);
-void _settings_get_values(void);
 #endif

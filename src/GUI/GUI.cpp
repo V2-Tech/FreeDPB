@@ -1,98 +1,5 @@
 #include "GUI.h"
-
-//************************/
-//*      VARIABLES       */
-//************************/
-static const char *TAG = "GUI";
-
-//* Inter-pages usage
-static LGFX tft;
-DPBShared &_xShared = DPBShared::getInstance();
-static lv_disp_draw_buf_t draw_buf;
-static lv_color_t buf[screenWidth * 10];
-static QueueHandle_t _xQueueCom2Sys = NULL;
-static QueueHandle_t _xQueueSys2Comp = NULL;
-static uint8_t _gui_init_done = 0;
-static dpb_page_e _gui_act_page = LOADING_PAGE;
-static uint8_t _peak_draw_done = 0;
-static nerd_subpage_e _nerd_act_page = X_RAW;
-static settings_subpage_e _settings_act_page = SYSTEM_SETTINGS;
-
-//* Page handlers
-lv_obj_t *gui_LoadingScreen = NULL;
-lv_obj_t *gui_MainScreen = NULL;
-lv_obj_t *gui_NerdScreen = NULL;
-lv_obj_t *gui_SettingsScreen = NULL;
-
-//* Main screen objects
-lv_obj_t *gui_StartBut = NULL;
-lv_obj_t *gui_StartButLabel = NULL;
-lv_obj_t *gui_SearchTypeSwitch = NULL;
-lv_obj_t *gui_ResetBut = NULL;
-lv_obj_t *gui_OffsetSpinboxTab = NULL;
-lv_obj_t *gui_OffsetSpinbox = NULL;
-lv_obj_t *gui_SettingsBut = NULL;
-lv_obj_t *gui_NerdBut = NULL;
-lv_obj_t *gui_RPMLabelText = NULL;
-lv_obj_t *gui_UnbalanceAngleTab = NULL;
-lv_obj_t *gui_UnbalanceAngleLine = NULL;
-lv_obj_t *gui_UnbalanceAngleLineEnd = NULL;
-lv_obj_t *gui_UnbalanceLabValue = NULL;
-lv_obj_t *gui_4StepsTab = NULL;
-lv_obj_t *gui_Steps1Lab = NULL;
-lv_obj_t *gui_Steps2Lab = NULL;
-lv_obj_t *gui_Steps3Lab = NULL;
-lv_obj_t *gui_Steps4Lab = NULL;
-lv_obj_t *gui_StepBackBut = NULL;
-
-//* Nerd screen objects
-lv_obj_t *gui_action_list_nerd = NULL;
-lv_obj_t *gui_page_signal_x = NULL;
-lv_obj_t *gui_page_signal_y = NULL;
-lv_obj_t *gui_page_fft_x = NULL;
-lv_obj_t *gui_page_fft_y = NULL;
-
-// Acceleration charts
-lv_obj_t *gui_AccelXChart = NULL;
-lv_obj_t *gui_AccelYChart = NULL;
-lv_chart_series_t *serAccX = NULL;
-lv_chart_series_t *serAccY = NULL;
-int16_t accX_sample[ACC_CHART_POINT_COUNT] = {0};
-int16_t accY_sample[ACC_CHART_POINT_COUNT] = {0};
-lv_obj_t *gui_AccelChart_Xslider = NULL;
-lv_obj_t *gui_AccelChart_Yslider = NULL;
-
-// Fourier charts
-lv_obj_t *gui_FFTXChart = NULL;
-lv_obj_t *gui_FFTYChart = NULL;
-lv_chart_series_t *serFFTX = NULL;
-lv_chart_series_t *serFFTY = NULL;
-int16_t fftX_sample[FFT_DATA_BUFFER_SIZE] = {0};
-int16_t fftY_sample[FFT_DATA_BUFFER_SIZE] = {0};
-// Buttons
-
-// Labels
-lv_obj_t *gui_FundLabel = NULL;
-
-//* Settings screen objects
-lv_obj_t *gui_menu_list_settings = NULL;
-lv_obj_t *gui_page_system_settings = NULL;
-lv_obj_t *gui_page_accel_settings = NULL;
-lv_obj_t *gui_page_filter_settings = NULL;
-lv_obj_t *gui_page_info_settings = NULL;
-
-// System
-lv_obj_t *unbalance_source_dropdown = NULL;
-lv_obj_t *speed_slider = NULL;
-lv_obj_t *speed_slider_value_label = NULL;
-
-// Accelerometer
-lv_obj_t *range_dropdown = NULL;
-lv_obj_t *bandwidth_dropdown = NULL;
-
-// Filter
-lv_obj_t *gui_FreqSpinbox = NULL;
-lv_obj_t *gui_QFactorSpinbox = NULL;
+#include "GUI_vars.h"
 
 //?^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
 //?         FUNCTIONS DEFINITION        /
@@ -474,7 +381,7 @@ void settings_btn_event_cb(lv_event_t *e)
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_CLICKED)
     {
-        _settings_get_values();
+        _ask_settings_values();
         gui_show_page(SETTINGS_PAGE);
         _settings_show_page(_settings_act_page);
     }
@@ -1049,7 +956,18 @@ void btn_save_settings_event_cb(lv_event_t *e)
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_CLICKED)
     {
-        // TODO
+        _ask_settings_save();
+    }
+}
+
+void unbalance_source_settings_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *obj = lv_event_get_target(e);
+
+    if (code == LV_EVENT_VALUE_CHANGED)
+    {
+        gui_unbalanceSource = lv_dropdown_get_selected(obj);
     }
 }
 
@@ -1062,13 +980,26 @@ void slider_motor_speed_settings_event_cb(lv_event_t *e)
     if (code == LV_EVENT_VALUE_CHANGED)
     {
         lv_snprintf(buf, sizeof(buf), "%d%%", (uint16_t)lv_slider_get_value(obj) / 10);
-
         lv_label_set_text(lv_obj_get_child(lv_obj_get_parent(obj), 1), buf);
+
+        gui_measureThrottle = lv_slider_get_value(obj);
     }
-    if (code == LV_EVENT_RELEASED)
+}
+
+void range_settings_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *obj = lv_event_get_target(e);
+
+    if (code == LV_EVENT_VALUE_CHANGED)
     {
-        // TODO
+        gui_range = lv_dropdown_get_selected(obj);
     }
+}
+
+void bandwidth_settings_event_cb(lv_event_t *e)
+{
+    // TODO
 }
 
 void freq_spinbox_event_cb(lv_event_t *e)
@@ -1077,7 +1008,7 @@ void freq_spinbox_event_cb(lv_event_t *e)
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_VALUE_CHANGED)
     {
-        // TODO
+        gui_iirCenterFreq = lv_spinbox_get_value(obj);
     }
 }
 
@@ -1105,7 +1036,7 @@ void QFactor_spinbox_event_cb(lv_event_t *e)
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_VALUE_CHANGED)
     {
-        // TODO
+        gui_iirQFactor = lv_spinbox_get_value(obj);
     }
 }
 
@@ -1328,27 +1259,33 @@ void _exe_settings_update(command_data_t command)
     switch (command.command)
     {
     case APP_GET_SOURCE_CMD:
-        lv_dropdown_set_selected(unbalance_source_dropdown, (uint16_t)command.value.ull);
+        lv_dropdown_set_selected(gui_unbalance_source_dropdown, (uint16_t)command.value.ull);
+        gui_unbalanceSource = (int32_t)command.value.ll;
         break;
 
     case ACCEL_GET_RANGE_CMD:
-        lv_dropdown_set_selected(range_dropdown, (uint16_t)command.value.ull);
+        lv_dropdown_set_selected(gui_range_dropdown, (uint16_t)command.value.ull);
+        gui_range = (int32_t)command.value.ll;
         break;
 
     case ACCEL_GET_BW_CMD:
-        // TODO
+        gui_bandWidth = (int32_t)command.value.ll;
         break;
 
     case MOTOR_GET_SPEED_CMD:
-        lv_slider_set_value(speed_slider, (int32_t)command.value.ll, LV_ANIM_OFF);
+        lv_slider_set_value(gui_speed_slider, (int32_t)command.value.ll, LV_ANIM_ON);
+        lv_label_set_text_fmt(gui_speed_slider_value_label, "%d%%", (uint16_t)command.value.ll / 10);
+        gui_measureThrottle = (int32_t)command.value.ll;
         break;
 
     case IIR_GET_FREQ_CMD:
         lv_spinbox_set_value(gui_FreqSpinbox, (int32_t)command.value.ll);
+        gui_iirCenterFreq = (int32_t)command.value.ll;
         break;
 
     case IIR_GET_Q_CMD:
         lv_spinbox_set_value(gui_QFactorSpinbox, (int32_t)command.value.ll);
+        gui_iirQFactor = (int32_t)command.value.ll;
         break;
 
     default:
@@ -1502,6 +1439,76 @@ void _update_fft_charts(void)
     lv_chart_refresh(gui_FFTXChart);
     lv_chart_set_range(gui_FFTYChart, LV_CHART_AXIS_PRIMARY_Y, min_y, max_y);
     lv_chart_refresh(gui_FFTYChart);
+}
+
+void _ask_settings_values(void)
+{
+    command_data_t command;
+
+    //* Unbalance source
+    command.command = APP_GET_SOURCE_CMD;
+    command.value.ll = -1;
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+    //* Accelerometer range
+    command.command = ACCEL_GET_RANGE_CMD;
+    command.value.ll = -1;
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+    //* Accelerometer bandwidth
+    command.command = ACCEL_GET_BW_CMD;
+    command.value.ll = -1;
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+    //* Motor speed
+    command.command = MOTOR_GET_SPEED_CMD;
+    command.value.ll = -1;
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+    //* Filter center frequency
+    command.command = IIR_GET_FREQ_CMD;
+    command.value.ll = -1;
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+    //* Filter Q factor
+    command.command = IIR_GET_Q_CMD;
+    command.value.ll = -1;
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+}
+
+void _ask_settings_save(void)
+{
+    command_data_t command;
+
+    //* Unbalance source
+    command.command = APP_SET_SOURCE_CMD;
+    command.value.ll = (int64_t)gui_unbalanceSource;
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+    //* Accelerometer range
+    command.command = ACCEL_SET_RANGE_CMD;
+    command.value.ll = (int64_t)gui_range;
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+    //* Accelerometer bandwidth
+    command.command = ACCEL_SET_BW_CMD;
+    command.value.ll = (int64_t)gui_bandWidth;
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+    //* Motor speed
+    command.command = MOTOR_SET_SPEED_CMD;
+    command.value.ll = (int64_t)gui_measureThrottle;
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+    //* Filter center frequency
+    command.command = IIR_SET_FREQ_CMD;
+    command.value.ll = (int64_t)gui_iirCenterFreq;
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+
+    //* Filter Q factor
+    command.command = IIR_SET_Q_CMD;
+    command.value.ll = (int64_t)gui_iirQFactor;
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
 }
 
 void _show_loading_screen(void)
@@ -2642,19 +2649,19 @@ void _create_pages_settings(void)
     lv_obj_set_height(_label, LV_SIZE_CONTENT);
 
     // Dropdown button
-    unbalance_source_dropdown = lv_dropdown_create(_tab);
-    lv_obj_set_width(unbalance_source_dropdown, 50);
-    lv_obj_set_height(unbalance_source_dropdown, LV_SIZE_CONTENT);
-    lv_obj_set_align(unbalance_source_dropdown, LV_ALIGN_CENTER);
-    lv_obj_add_flag(unbalance_source_dropdown, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
-    lv_dropdown_set_options(unbalance_source_dropdown, "X\nY");
-    lv_obj_set_style_bg_color(unbalance_source_dropdown, SECONDARY_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_opa(unbalance_source_dropdown, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_border_opa(unbalance_source_dropdown, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_color(unbalance_source_dropdown, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    gui_unbalance_source_dropdown = lv_dropdown_create(_tab);
+    lv_obj_set_width(gui_unbalance_source_dropdown, 50);
+    lv_obj_set_height(gui_unbalance_source_dropdown, LV_SIZE_CONTENT);
+    lv_obj_set_align(gui_unbalance_source_dropdown, LV_ALIGN_CENTER);
+    lv_obj_add_flag(gui_unbalance_source_dropdown, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
+    lv_dropdown_set_options(gui_unbalance_source_dropdown, "X\nY");
+    lv_obj_set_style_bg_color(gui_unbalance_source_dropdown, SECONDARY_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(gui_unbalance_source_dropdown, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(gui_unbalance_source_dropdown, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(gui_unbalance_source_dropdown, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Dropdown list
-    lv_obj_t *_list = lv_dropdown_get_list(unbalance_source_dropdown);
+    lv_obj_t *_list = lv_dropdown_get_list(gui_unbalance_source_dropdown);
     lv_obj_set_style_bg_color(_list, SECONDARY_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(_list, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_opa(_list, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -2662,6 +2669,9 @@ void _create_pages_settings(void)
     lv_obj_set_style_bg_opa(_list, LV_OPA_COVER, LV_PART_SELECTED | LV_STATE_CHECKED);
     lv_obj_set_style_border_opa(_list, LV_OPA_TRANSP, LV_PART_SELECTED | LV_STATE_CHECKED);
     lv_obj_set_style_text_color(_list, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Add callback
+    lv_obj_add_event_cb(gui_unbalance_source_dropdown, unbalance_source_settings_event_cb, LV_EVENT_ALL, NULL);
 
     //* Motor speed
     _tab = lv_obj_create(gui_page_system_settings);
@@ -2698,17 +2708,17 @@ void _create_pages_settings(void)
     lv_obj_set_style_pad_column(_tab_sub, 15, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Slider
-    speed_slider = lv_slider_create(_tab_sub);
-    lv_slider_set_range(speed_slider, 100, 1000);
-    lv_obj_set_width(speed_slider, 130);
+    gui_speed_slider = lv_slider_create(_tab_sub);
+    lv_slider_set_range(gui_speed_slider, 100, 1000);
+    lv_obj_set_width(gui_speed_slider, 130);
 
     // Add callback
-    lv_obj_add_event_cb(speed_slider, slider_motor_speed_settings_event_cb, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(gui_speed_slider, slider_motor_speed_settings_event_cb, LV_EVENT_ALL, NULL);
 
     // Value
-    speed_slider_value_label = lv_label_create(_tab_sub);
-    lv_label_set_text(speed_slider_value_label, "25%");
-    lv_obj_set_style_text_color(speed_slider_value_label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    gui_speed_slider_value_label = lv_label_create(_tab_sub);
+    lv_label_set_text(gui_speed_slider_value_label, "25%");
+    lv_obj_set_style_text_color(gui_speed_slider_value_label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     //* PAGE - Accelerometer
     gui_page_accel_settings = lv_obj_create(gui_SettingsScreen);
@@ -2748,19 +2758,19 @@ void _create_pages_settings(void)
     lv_obj_set_height(_label, LV_SIZE_CONTENT);
 
     // Dropdown button
-    range_dropdown = lv_dropdown_create(_tab);
-    lv_obj_set_width(range_dropdown, 70);
-    lv_obj_set_height(range_dropdown, LV_SIZE_CONTENT);
-    lv_obj_set_align(range_dropdown, LV_ALIGN_CENTER);
-    lv_obj_add_flag(range_dropdown, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
-    lv_dropdown_set_options(range_dropdown, "2G\n4G\n8G\n16G");
-    lv_obj_set_style_bg_color(range_dropdown, SECONDARY_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_opa(range_dropdown, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_border_opa(range_dropdown, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_color(range_dropdown, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    gui_range_dropdown = lv_dropdown_create(_tab);
+    lv_obj_set_width(gui_range_dropdown, 70);
+    lv_obj_set_height(gui_range_dropdown, LV_SIZE_CONTENT);
+    lv_obj_set_align(gui_range_dropdown, LV_ALIGN_CENTER);
+    lv_obj_add_flag(gui_range_dropdown, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
+    lv_dropdown_set_options(gui_range_dropdown, "2G\n4G\n8G\n16G");
+    lv_obj_set_style_bg_color(gui_range_dropdown, SECONDARY_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(gui_range_dropdown, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(gui_range_dropdown, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(gui_range_dropdown, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Dropdown list
-    _list = lv_dropdown_get_list(range_dropdown);
+    _list = lv_dropdown_get_list(gui_range_dropdown);
     lv_obj_set_style_bg_color(_list, SECONDARY_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(_list, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_opa(_list, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -2768,6 +2778,9 @@ void _create_pages_settings(void)
     lv_obj_set_style_bg_opa(_list, LV_OPA_COVER, LV_PART_SELECTED | LV_STATE_CHECKED);
     lv_obj_set_style_border_opa(_list, LV_OPA_TRANSP, LV_PART_SELECTED | LV_STATE_CHECKED);
     lv_obj_set_style_text_color(_list, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Add callback
+    lv_obj_add_event_cb(gui_range_dropdown, range_settings_event_cb, LV_EVENT_ALL, NULL);
 
     //* Bandwidth
     // TODO
@@ -3060,39 +3073,4 @@ void _settings_show_info(void)
     // lv_obj_clear_flag(gui_page_info_settings, LV_OBJ_FLAG_HIDDEN);
 
     _set_settings_page(INFO_SETTINGS);
-}
-
-void _settings_get_values(void)
-{
-    command_data_t command;
-
-    //* Unbalance source
-    command.command = APP_GET_SOURCE_CMD;
-    command.value.ll = -1;
-    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
-
-    //* Accelerometer range
-    command.command = ACCEL_GET_RANGE_CMD;
-    command.value.ll = -1;
-    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
-
-    //* Accelerometer bandwidth
-    command.command = ACCEL_GET_BW_CMD;
-    command.value.ll = -1;
-    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
-
-    //* Motor speed
-    command.command = MOTOR_GET_SPEED_CMD;
-    command.value.ll = -1;
-    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
-
-    //* Filter center frequency
-    command.command = IIR_GET_FREQ_CMD;
-    command.value.ll = -1;
-    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
-
-    //* Filter Q factor
-    command.command = IIR_GET_Q_CMD;
-    command.value.ll = -1;
-    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
 }

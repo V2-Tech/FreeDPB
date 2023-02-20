@@ -45,7 +45,7 @@ public:
     void ask_main_page(void);
     void ask_setting_update(sys_command_e request, int64_t value);
 
-    void setStep(app_steps_e v);
+    void set_step(app_steps_e v);
 
 private:
     QueueHandle_t _xQueueSysInput;
@@ -72,7 +72,8 @@ private:
     void _exe_lpf(void);
     void _exe_step_managment(app_steps_e requested_step);
     void _exe_get_settings(sys_command_e request);
-    
+    void _exe_set_settings(command_data_t commnad);
+
     void _reset(void);
     int16_t _filter_data_iir_zero(data_orig_e data_type);
     int16_t _fft_calc(data_orig_e data_type);
@@ -96,7 +97,7 @@ private:
 
     float_t _get_fundamental_freq(uint16_t sample_freq, size_t fft_lenght);
     float_t _get_vibe_vector_mod(void);
-    dpb_range_e _range_convert(uint8_t range);
+    int8_t _range_2_gui_value_convert(uint8_t range);
 
     static void __motorStartupTimerCallback_static(TimerHandle_t pxTimer);
     void __motorStartupTimerCallback(TimerHandle_t pxTimer);

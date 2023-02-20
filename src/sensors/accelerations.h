@@ -50,18 +50,25 @@ public:
     void get_acc_settings(accel_settings_t *actSettings);
     accel_settings_t regs_to_settings(uint8_t range_reg, uint8_t bw_reg, acc_model_e device_model);
 
+    uint8_t set_range(uint8_t range);
+    uint8_t set_bandwidth(uint8_t bandwidth);
+
 private:
 #ifdef USE_BMX055
     BMX055 *_accel;
-#elif USE_ADXL345
+#endif
+#ifdef USE_ADXL345
     ADXL345 *_accel;
 #endif
     spi_device_handle_t _spi;
 
-    int16_t bmx_range_converter(uint8_t range_reg);
-    int16_t bmx_bw_converter(uint8_t bw_reg);
-    int16_t adxl_range_converter(uint8_t range_reg);
-    int16_t adxl_bw_converter(uint8_t bw_reg);
+    int16_t _bmx_range_2_value_converter(uint8_t range_reg);
+    int16_t _bmx_bw_converter(uint8_t bw_reg);
+    int16_t _adxl_range_2_value_converter(uint8_t range_reg);
+    int16_t _adxl_bw_converter(uint8_t bw_reg);
+
+    uint8_t _bmx_value_2_range_converter(uint8_t value);
+    uint8_t _adxl_value_2_range_converter(uint8_t value);
 
 protected:
 };

@@ -70,7 +70,7 @@ int16_t DPB::init(QueueHandle_t xQueueSysInput_handle, QueueHandle_t xQueueSysOu
     ask_main_page();
 
     _init_done = 1;
-    setStep(IDLE);
+    set_step(IDLE);
     _set_searchType(SEARCH_OPTICAL);
 
     return ESP_OK;
@@ -254,6 +254,15 @@ void DPB::exe(command_data_t command)
     case IIR_GET_Q_CMD:
         _exe_get_settings(command.command);
         break;
+
+    case APP_SET_SOURCE_CMD:
+    case ACCEL_SET_BW_CMD:
+    case ACCEL_SET_RANGE_CMD:
+    case MOTOR_SET_SPEED_CMD:
+    case IIR_SET_FREQ_CMD:
+    case IIR_SET_Q_CMD:
+        _exe_set_settings(command);
+        break;
     default:
         break;
     }
@@ -267,7 +276,7 @@ void DPB::_exe_start(void)
     {
         esp_system_abort("Timer start-command timeout");
     }
-    setStep(START_MOTOR);
+    set_step(START_MOTOR);
 }
 
 void DPB::_exe_reset(void)
@@ -284,12 +293,12 @@ void DPB::_reset(void)
     Motor::set_throttle(0);
     RotSense::stop_rpm_cnt();
     ask_unbalance_step_1();
-    setStep(IDLE);
+    set_step(IDLE);
 }
 
 void DPB::_exe_filter(void)
 {
-    setStep(FILTERING);
+    set_step(FILTERING);
 
     Motor::motor_stop();
     _log_acc_data();
@@ -305,7 +314,7 @@ void DPB::_exe_filter(void)
 
 void DPB::_exe_analyze(void)
 {
-    setStep(ANALYSING);
+    set_step(ANALYSING);
 
     if (_fft_calc(FILTERED_DATA) != ESP_OK)
     {
@@ -317,7 +326,7 @@ void DPB::_exe_analyze(void)
 
     if (_search_type == SEARCH_OPTICAL)
     {
-        setStep(UNBALANCE_OPT_FINDING);
+        set_step(UNBALANCE_OPT_FINDING);
         _signal_peak_finder();
         _unbalance_finder_optical();
         _reset();
@@ -465,25 +474,25 @@ void DPB::_unbalance_finder_steps(void)
     switch (_app_step)
     {
     case ANALYSING:
-        setStep(UNBALANCE_STEP_1);
+        set_step(UNBALANCE_STEP_1);
         _unbalance_step_1();
         ask_unbalance_step_2();
         break;
 
     case UNBALANCE_STEP_1:
-        setStep(UNBALANCE_STEP_2);
+        set_step(UNBALANCE_STEP_2);
         _unbalance_step_2();
         ask_unbalance_step_3();
         break;
 
     case UNBALANCE_STEP_2:
-        setStep(UNBALANCE_STEP_3);
+        set_step(UNBALANCE_STEP_3);
         _unbalance_step_3();
         ask_unbalance_step_4();
         break;
 
     case UNBALANCE_STEP_3:
-        setStep(UNBALANCE_STEP_4);
+        set_step(UNBALANCE_STEP_4);
         _unbalance_step_4();
         ask_unbalance_step_4();
         _reset();
@@ -705,7 +714,7 @@ int16_t DPB::_fft_calc(data_orig_e data_type)
     float_t *pFFTXBuf = _xShared.getFFTXBuffer_us();
     float_t *pFFTYBuf = _xShared.getFFTYBuffer_us();
 
-    setStep(ANALYSING);
+    set_step(ANALYSING);
 
     int32_t N = ACC_DATA_BUFFER_SIZE;
     esp_err_t ret = ESP_OK;
@@ -847,38 +856,46 @@ void DPB::_fft_peak_finder(void)
 
 void DPB::_exe_step_managment(app_steps_e requested_step)
 {
+    // TODO
 }
 
 void DPB::_exe_get_settings(sys_command_e request)
 {
     accel_settings_t acc_settings;
+    int64_t v;
 
     switch (request)
     {
     case APP_GET_SOURCE_CMD:
-        ask_setting_update(request, (int64_t)_xShared.getUnbalanceSource());
+        v = (int64_t)_xShared.getUnbalanceSource();
+        ask_setting_update(request, v);
         break;
 
     case ACCEL_GET_BW_CMD:
         Accel::get_acc_settings(&acc_settings);
-        ask_setting_update(request, (int64_t)acc_settings.band);
+        v = (int64_t)acc_settings.band;
+        ask_setting_update(request, v);
         break;
 
     case ACCEL_GET_RANGE_CMD:
         Accel::get_acc_settings(&acc_settings);
-        ask_setting_update(request, (int64_t)_range_convert((uint8_t)acc_settings.range));
+        v = (int64_t)_range_2_gui_value_convert(acc_settings.range);
+        ask_setting_update(request, v);
         break;
 
     case MOTOR_GET_SPEED_CMD:
-        ask_setting_update(request, (int64_t)_xShared.getMeasureThrottle());
+        v = (int64_t)_xShared.getMeasureThrottle();
+        ask_setting_update(request, v);
         break;
 
     case IIR_GET_FREQ_CMD:
-        ask_setting_update(request, (int64_t)(_xShared.getIIRCenterFreq() * 1000));
+        v = (int64_t)(_xShared.getIIRCenterFreq() * 1000);
+        ask_setting_update(request, v);
         break;
 
     case IIR_GET_Q_CMD:
-        ask_setting_update(request, (int64_t)(_xShared.getIIRQFactor() * 100));
+        v = (int64_t)(_xShared.getIIRQFactor() * 100);
+        ask_setting_update(request, v);
         break;
 
     default:
@@ -886,7 +903,42 @@ void DPB::_exe_get_settings(sys_command_e request)
     }
 }
 
-void DPB::setStep(app_steps_e v)
+void DPB::_exe_set_settings(command_data_t commnad)
+{
+    switch (commnad.command)
+    {
+    case APP_SET_SOURCE_CMD:
+        _xShared.setUnbalanceSource((app_unbalance_source_e)commnad.value.ull);
+        break;
+
+    case ACCEL_SET_BW_CMD:
+        break;
+
+    case ACCEL_SET_RANGE_CMD:
+        if (Accel::set_range((uint8_t)(1U << (commnad.value.ull + 1))) == ESP_OK)
+        {
+            _xShared.setRange((uint16_t)(1U << (commnad.value.ull + 1)));
+        }
+        break;
+
+    case MOTOR_SET_SPEED_CMD:
+        _xShared.setMeasureThrottle((uint16_t)commnad.value.ull);
+        break;
+
+    case IIR_SET_FREQ_CMD:
+        _xShared.setIIRCenterFreq((float_t)commnad.value.ll / 1000.0);
+        break;
+
+    case IIR_SET_Q_CMD:
+        _xShared.setIIRQFactor((float_t)commnad.value.ll / 100.0);
+        break;
+
+    default:
+        break;
+    }
+}
+
+void DPB::set_step(app_steps_e v)
 {
     _app_step = v;
     _xShared.setAppStatus(v);
@@ -1064,25 +1116,26 @@ void DPB::_unbalance_step_4(void)
     _steps_amplitude[3] = _get_vibe_vector_mod();
 }
 
-dpb_range_e DPB::_range_convert(uint8_t range)
+int8_t DPB::_range_2_gui_value_convert(uint8_t range)
 {
-    dpb_range_e value = RANGE_UNKNOW;
+    uint8_t value = dpb_range_e::RANGE_UNKNOW;
+
     switch (range)
     {
     case 2:
-        value = RANGE_2G;
+        value = dpb_range_e::RANGE_2G;
         break;
     case 4:
-        value = RANGE_4G;
+        value = dpb_range_e::RANGE_4G;
         break;
     case 8:
-        value = RANGE_8G;
+        value = dpb_range_e::RANGE_8G;
         break;
     case 16:
-        value = RANGE_16G;
+        value = dpb_range_e::RANGE_16G;
         break;
     default:
-        value = RANGE_UNKNOW;
+        value = dpb_range_e::RANGE_UNKNOW;
         break;
     }
 
