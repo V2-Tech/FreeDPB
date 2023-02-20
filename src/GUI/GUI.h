@@ -137,10 +137,10 @@ enum dpb_page_e
 };
 enum nerd_subpage_e
 {
-  X_RAW,
-  Y_RAW,
-  X_FILTERED,
-  Y_FILTERED,
+  X_RAW = 1,
+  Y_RAW = 2,
+  X_FILTERED = 4,
+  Y_FILTERED = 5,
   X_FFT_RAW,
   Y_FFT_RAW,
   X_FFT_FILTERED,
@@ -148,10 +148,10 @@ enum nerd_subpage_e
 };
 enum settings_subpage_e
 {
-  SYSTEM_SETTINGS,
-  ACCEL_SETTINGS,
-  FILTER_SETTINGS,
-  INFO_SETTINGS,
+  SYSTEM_SETTINGS = 1,
+  ACCEL_SETTINGS = 2,
+  FILTER_SETTINGS = 3,
+  INFO_SETTINGS = 5,
 };
 
 //*********************************/
@@ -177,7 +177,7 @@ void gui_clear_page(dpb_page_e page);
 void gui_delete_page(dpb_page_e page);
 void gui_values_update(void);
 
-void _exe_accel_charts_update(uint8_t data_type);
+void _exe_accel_charts_update(void);
 void _exe_fft_charts_update(void);
 void _exe_unbalance_update(gui_unbalance_command_e step);
 void _exe_init_completed(void);
@@ -214,6 +214,7 @@ void FFTXChart_draw_event_cb(lv_event_t *e);
 void FFTYChart_draw_event_cb(lv_event_t *e);
 void AccelChart_draw_event_cb(lv_event_t *e);
 void chart_switch_btn_event_cb(lv_event_t *e);
+void refilter_btn_event_cb(lv_event_t *e);
 void list_btn_event_cb(lv_event_t *e);
 void btn_show_x_charts_event_cb(lv_event_t *e);
 void btn_show_y_charts_event_cb(lv_event_t *e);

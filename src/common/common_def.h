@@ -86,22 +86,22 @@ enum sys_command_e
     FFT_REQUEST_CMD,
     GUI_FFT_CHART_UPDATE_CMD,
     GUI_UNBALANCE_UPDATE_CMD,
-    LPF_REQUEST_CMD,
+    FILTER_REQUEST_CMD,
     SEARCH_TYPE_CMD,
     APP_STEP_CMD,
     //* Settings
-    APP_SET_SOURCE_CMD,     // ToDo
-    ACCEL_SET_BW_CMD,       // ToDo
-    ACCEL_SET_RANGE_CMD,    // ToDo
-    MOTOR_SET_SPEED_CMD,    // ToDo
-    IIR_SET_FREQ_CMD,       // ToDo
-    IIR_SET_Q_CMD,          // ToDo
-    APP_GET_SOURCE_CMD,     // ToDo
-    ACCEL_GET_BW_CMD,       // ToDo
-    ACCEL_GET_RANGE_CMD,    // ToDo
-    MOTOR_GET_SPEED_CMD,    // ToDo
-    IIR_GET_FREQ_CMD,       // ToDo
-    IIR_GET_Q_CMD,          // ToDo
+    APP_SET_SOURCE_CMD,     
+    ACCEL_SET_BW_CMD,       
+    ACCEL_SET_RANGE_CMD,    
+    MOTOR_SET_SPEED_CMD,    
+    IIR_SET_FREQ_CMD,       
+    IIR_SET_Q_CMD,          
+    APP_GET_SOURCE_CMD,     
+    ACCEL_GET_BW_CMD,       
+    ACCEL_GET_RANGE_CMD,    
+    MOTOR_GET_SPEED_CMD,    
+    IIR_GET_FREQ_CMD,       
+    IIR_GET_Q_CMD,          
     //* Init
     GUI_INIT_COMPLETED_CMD, // ToDo
     GUI_INIT_ACC_CMD,       // ToDo

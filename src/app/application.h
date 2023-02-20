@@ -69,7 +69,7 @@ private:
     void _exe_filter(void);
     void _exe_analyze(void);
     void _exe_fft(uint8_t data_type);
-    void _exe_lpf(void);
+    void _exe_bpf(uint8_t data_type);
     void _exe_step_managment(app_steps_e requested_step);
     void _exe_get_settings(sys_command_e request);
     void _exe_set_settings(command_data_t commnad);

@@ -714,6 +714,18 @@ void chart_switch_btn_event_cb(lv_event_t *e)
     }
 }
 
+void refilter_btn_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED)
+    {
+        command_data_t command;
+        command.command = FILTER_REQUEST_CMD;
+        command.value.ll = RAW_DATA;
+        xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+    }
+}
+
 void list_btn_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -745,20 +757,6 @@ void btn_show_x_charts_event_cb(lv_event_t *e)
         {
             _nerd_show_page(X_FILTERED);
         }
-
-        lv_obj_t *parent = lv_obj_get_parent(obj);
-        for (size_t i = 0; i < lv_obj_get_child_cnt(parent); i++)
-        {
-            lv_obj_t *child = lv_obj_get_child(parent, i);
-            if (child == obj)
-            {
-                lv_obj_add_state(child, LV_STATE_CHECKED);
-            }
-            else
-            {
-                lv_obj_clear_state(child, LV_STATE_CHECKED);
-            }
-        }
     }
 }
 
@@ -775,20 +773,6 @@ void btn_show_y_charts_event_cb(lv_event_t *e)
         else
         {
             _nerd_show_page(Y_FILTERED);
-        }
-
-        lv_obj_t *parent = lv_obj_get_parent(obj);
-        for (size_t i = 0; i < lv_obj_get_child_cnt(parent); i++)
-        {
-            lv_obj_t *child = lv_obj_get_child(parent, i);
-            if (child == obj)
-            {
-                lv_obj_add_state(child, LV_STATE_CHECKED);
-            }
-            else
-            {
-                lv_obj_clear_state(child, LV_STATE_CHECKED);
-            }
         }
     }
 }
@@ -807,20 +791,6 @@ void btn_show_raw_x_charts_event_cb(lv_event_t *e)
         {
             _nerd_show_page(X_RAW);
         }
-
-        lv_obj_t *parent = lv_obj_get_parent(obj);
-        for (size_t i = 0; i < lv_obj_get_child_cnt(parent); i++)
-        {
-            lv_obj_t *child = lv_obj_get_child(parent, i);
-            if (child == obj)
-            {
-                lv_obj_add_state(child, LV_STATE_CHECKED);
-            }
-            else
-            {
-                lv_obj_clear_state(child, LV_STATE_CHECKED);
-            }
-        }
     }
 }
 
@@ -838,20 +808,6 @@ void btn_show_raw_y_charts_event_cb(lv_event_t *e)
         {
             _nerd_show_page(Y_RAW);
         }
-
-        lv_obj_t *parent = lv_obj_get_parent(obj);
-        for (size_t i = 0; i < lv_obj_get_child_cnt(parent); i++)
-        {
-            lv_obj_t *child = lv_obj_get_child(parent, i);
-            if (child == obj)
-            {
-                lv_obj_add_state(child, LV_STATE_CHECKED);
-            }
-            else
-            {
-                lv_obj_clear_state(child, LV_STATE_CHECKED);
-            }
-        }
     }
 }
 
@@ -862,20 +818,6 @@ void btn_show_sys_settings_event_cb(lv_event_t *e)
     if (code == LV_EVENT_CLICKED)
     {
         _settings_show_page(SYSTEM_SETTINGS);
-
-        lv_obj_t *parent = lv_obj_get_parent(obj);
-        for (size_t i = 0; i < lv_obj_get_child_cnt(parent); i++)
-        {
-            lv_obj_t *child = lv_obj_get_child(parent, i);
-            if (child == obj)
-            {
-                lv_obj_add_state(child, LV_STATE_CHECKED);
-            }
-            else
-            {
-                lv_obj_clear_state(child, LV_STATE_CHECKED);
-            }
-        }
     }
 }
 
@@ -886,20 +828,6 @@ void btn_show_accel_settings_event_cb(lv_event_t *e)
     if (code == LV_EVENT_CLICKED)
     {
         _settings_show_page(ACCEL_SETTINGS);
-
-        lv_obj_t *parent = lv_obj_get_parent(obj);
-        for (size_t i = 0; i < lv_obj_get_child_cnt(parent); i++)
-        {
-            lv_obj_t *child = lv_obj_get_child(parent, i);
-            if (child == obj)
-            {
-                lv_obj_add_state(child, LV_STATE_CHECKED);
-            }
-            else
-            {
-                lv_obj_clear_state(child, LV_STATE_CHECKED);
-            }
-        }
     }
 }
 
@@ -910,20 +838,6 @@ void btn_show_filter_settings_event_cb(lv_event_t *e)
     if (code == LV_EVENT_CLICKED)
     {
         _settings_show_page(FILTER_SETTINGS);
-
-        lv_obj_t *parent = lv_obj_get_parent(obj);
-        for (size_t i = 0; i < lv_obj_get_child_cnt(parent); i++)
-        {
-            lv_obj_t *child = lv_obj_get_child(parent, i);
-            if (child == obj)
-            {
-                lv_obj_add_state(child, LV_STATE_CHECKED);
-            }
-            else
-            {
-                lv_obj_clear_state(child, LV_STATE_CHECKED);
-            }
-        }
     }
 }
 
@@ -934,20 +848,6 @@ void btn_show_info_settings_event_cb(lv_event_t *e)
     if (code == LV_EVENT_CLICKED)
     {
         _settings_show_page(INFO_SETTINGS);
-
-        lv_obj_t *parent = lv_obj_get_parent(obj);
-        for (size_t i = 0; i < lv_obj_get_child_cnt(parent); i++)
-        {
-            lv_obj_t *child = lv_obj_get_child(parent, i);
-            if (child == obj)
-            {
-                lv_obj_add_state(child, LV_STATE_CHECKED);
-            }
-            else
-            {
-                lv_obj_clear_state(child, LV_STATE_CHECKED);
-            }
-        }
     }
 }
 
@@ -1083,7 +983,7 @@ void gui_exe(command_data_t command)
     switch (command.command)
     {
     case GUI_ACC_CHART_UPDATE_CMD:
-        _exe_accel_charts_update(command.value.ull);
+        _exe_accel_charts_update();
         break;
     case GUI_FFT_CHART_UPDATE_CMD:
         _exe_fft_charts_update();
@@ -1209,11 +1109,22 @@ void gui_values_update(void)
     _update_rpm();
 }
 
-void _exe_accel_charts_update(uint8_t data_type)
+void _exe_accel_charts_update(void)
 {
     if (_gui_act_page != NERD_PAGE)
     {
         return;
+    }
+
+    uint8_t data_type;
+
+    if ((_nerd_act_page == X_RAW) || (_nerd_act_page == X_FFT_RAW) || (_nerd_act_page == Y_RAW) || (_nerd_act_page == Y_FFT_RAW))
+    {
+        data_type = RAW_DATA;
+    }
+    else
+    {
+        data_type = FILTERED_DATA;
     }
 
     _update_accel_charts(data_type);
@@ -2041,6 +1952,13 @@ void _create_toolbars_nerd(void)
     lv_obj_t *bottom_bar;
     bottom_bar = lv_obj_create(gui_NerdScreen);
     lv_obj_clear_flag(bottom_bar, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_flex_flow(bottom_bar, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(bottom_bar, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_left(bottom_bar, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_right(bottom_bar, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_top(bottom_bar, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_bottom(bottom_bar, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_row(bottom_bar, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Add style
     lv_obj_set_size(bottom_bar, screenWidth - 4 * DEFAULT_TOOLBAR_HEIGHT, DEFAULT_TOOLBAR_HEIGHT - 2);
@@ -2052,7 +1970,6 @@ void _create_toolbars_nerd(void)
     lv_obj_t *chart_switch_btn = lv_btn_create(bottom_bar);
     lv_obj_set_width(chart_switch_btn, 25);
     lv_obj_set_height(chart_switch_btn, 25);
-    lv_obj_align(chart_switch_btn, LV_ALIGN_CENTER, 0, 0);
 
     // Add default styles
     lv_obj_set_style_radius(chart_switch_btn, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -2076,6 +1993,33 @@ void _create_toolbars_nerd(void)
     lv_obj_t *chartSwitchImg = lv_img_create(chart_switch_btn);
     lv_img_set_src(chartSwitchImg, &chart_change_icon);
     lv_obj_center(chartSwitchImg);
+
+    //* Add "re-filter" button
+    lv_obj_t *refilter_btn = lv_btn_create(bottom_bar);
+    lv_obj_set_width(refilter_btn, 25);
+    lv_obj_set_height(refilter_btn, 25);
+
+    // Add default styles
+    lv_obj_set_style_radius(refilter_btn, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(refilter_btn, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(refilter_btn, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(refilter_btn, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_color(refilter_btn, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Add pressed styles
+    lv_obj_set_style_outline_width(refilter_btn, 10, LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_outline_opa(refilter_btn, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_style_transition_dsc_init(&trans, props, lv_anim_path_linear, 300, 0, NULL);
+    lv_obj_set_style_transition(refilter_btn, &trans, LV_PART_MAIN | LV_STATE_PRESSED);
+
+    // Add callback
+    lv_obj_add_event_cb(refilter_btn, refilter_btn_event_cb, LV_EVENT_ALL, NULL);
+
+    // Add icon
+    lv_obj_t *refilter_btn_label = lv_label_create(refilter_btn);
+    lv_label_set_text(refilter_btn_label, LV_SYMBOL_REFRESH);
+    lv_obj_set_style_text_color(refilter_btn_label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_center(refilter_btn_label);
 
     //* Create back button
     lv_obj_t *back_btn = lv_btn_create(gui_NerdScreen);
@@ -2325,6 +2269,19 @@ void _nerd_show_page(nerd_subpage_e page)
 
     default:
         break;
+    }
+
+    for (size_t i = 0; i < lv_obj_get_child_cnt(gui_action_list_nerd); i++)
+    {
+        lv_obj_t *child = lv_obj_get_child(gui_action_list_nerd, i);
+        if (i == page)
+        {
+            lv_obj_add_state(child, LV_STATE_CHECKED);
+        }
+        else
+        {
+            lv_obj_clear_state(child, LV_STATE_CHECKED);
+        }
     }
 }
 
@@ -3016,6 +2973,19 @@ void _settings_show_page(settings_subpage_e page)
         break;
     default:
         break;
+    }
+
+    for (size_t i = 0; i < lv_obj_get_child_cnt(gui_menu_list_settings); i++)
+    {
+        lv_obj_t *child = lv_obj_get_child(gui_menu_list_settings, i);
+        if (i == page)
+        {
+            lv_obj_add_state(child, LV_STATE_CHECKED);
+        }
+        else
+        {
+            lv_obj_clear_state(child, LV_STATE_CHECKED);
+        }
     }
 }
 

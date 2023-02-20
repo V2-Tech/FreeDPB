@@ -241,8 +241,8 @@ void DPB::exe(command_data_t command)
         _exe_step_managment((app_steps_e)command.value.ll);
         break;
 
-    case LPF_REQUEST_CMD:
-        _exe_lpf();
+    case FILTER_REQUEST_CMD:
+        _exe_bpf(command.value.ull);
         _exe_reset();
         break;
 
@@ -513,9 +513,11 @@ void DPB::_exe_fft(uint8_t data_type)
     ask_fft_chart_update();
 }
 
-void DPB::_exe_lpf(void)
+void DPB::_exe_bpf(uint8_t data_type)
 {
-    if (_filter_data_iir_zero(FILTERED_DATA) != ESP_OK)
+    set_step(FILTERING);
+
+    if (_filter_data_iir_zero((data_orig_e)data_type) != ESP_OK)
     {
         return;
     }
