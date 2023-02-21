@@ -486,6 +486,9 @@ void root_back_btn_event_cb(lv_event_t *e)
 void FFTXChart_draw_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *chart = lv_event_get_target(e);
+    void *user_data = lv_event_get_user_data(e);
+
     if (code == LV_EVENT_DRAW_PART_BEGIN)
     {
         lv_obj_draw_part_dsc_t *dsc = lv_event_get_draw_part_dsc(e);
@@ -506,11 +509,69 @@ void FFTXChart_draw_event_cb(lv_event_t *e)
             lv_snprintf(dsc->text, dsc->text_length, "%d", labels[dsc->value]);
         }
     }
+    if (code == LV_EVENT_DRAW_POST_END)
+    {
+        if (_fftX_label_draw_done)
+        {
+            return;
+        }
+        lv_obj_draw_part_dsc_t *dsc = lv_event_get_draw_part_dsc(e);
+
+        lv_chart_series_t *ser = lv_chart_get_series_next(chart, NULL);
+        lv_point_t p = {0, 0};
+
+        lv_chart_get_point_pos_by_id(chart, ser, _xShared.getFFTXMaxIndex(), &p);
+
+        char buf[16];
+        float_t fft_value = _xShared.getFFTX(_xShared.getFFTXMaxIndex());
+        lv_snprintf(buf, sizeof(buf), "%.1f\ndB/Hz", fft_value);
+
+        lv_draw_rect_dsc_t draw_rect_dsc;
+        lv_draw_rect_dsc_init(&draw_rect_dsc);
+        draw_rect_dsc.bg_color = SECONDARY_ELEMENT_ACCENT_COLOR;
+        draw_rect_dsc.bg_opa = LV_OPA_70;
+        draw_rect_dsc.radius = 3;
+
+        lv_area_t a;
+        lv_point_t box_size;
+        lv_coord_t box_pad = 10;
+        lv_coord_t text_pad = 5;
+        lv_txt_get_size(&box_size, buf, LV_FONT_DEFAULT, 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+        if ((chart->coords.x1 + p.x + box_size.x + 10) < chart->coords.x2)
+        {
+            a.x1 = chart->coords.x1 + p.x + box_pad;
+            a.x2 = chart->coords.x1 + p.x + box_size.x + box_pad + text_pad;
+            a.y1 = chart->coords.y1 + p.y;
+            a.y2 = chart->coords.y1 + p.y + box_size.y + text_pad;
+        }
+        else
+        {
+            a.x1 = chart->coords.x1 + p.x - (box_size.x + box_pad + text_pad);
+            a.x2 = chart->coords.x1 + p.x - box_pad;
+            a.y1 = chart->coords.y1 + p.y;
+            a.y2 = chart->coords.y1 + p.y + box_size.y + text_pad;
+        }
+
+        lv_draw_ctx_t *draw_ctx = lv_event_get_draw_ctx(e);
+        lv_draw_rect(draw_ctx, &draw_rect_dsc, &a);
+
+        lv_draw_label_dsc_t draw_label_dsc;
+        lv_draw_label_dsc_init(&draw_label_dsc);
+        draw_label_dsc.color = lv_color_white();
+        a.x1 += text_pad / 2;
+        a.x2 -= text_pad / 2;
+        a.y1 += text_pad / 2;
+        a.y2 -= text_pad / 2;
+        lv_draw_label(draw_ctx, &draw_label_dsc, &a, buf, NULL);
+    }
 }
 
 void FFTYChart_draw_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *chart = lv_event_get_target(e);
+    void *user_data = lv_event_get_user_data(e);
+
     if (code == LV_EVENT_DRAW_PART_BEGIN)
     {
         lv_obj_draw_part_dsc_t *dsc = lv_event_get_draw_part_dsc(e);
@@ -530,6 +591,61 @@ void FFTYChart_draw_event_cb(lv_event_t *e)
             }
             lv_snprintf(dsc->text, dsc->text_length, "%d", labels[dsc->value]);
         }
+    }
+    if (code == LV_EVENT_DRAW_POST_END)
+    {
+        if (_fftX_label_draw_done)
+        {
+            return;
+        }
+        lv_obj_draw_part_dsc_t *dsc = lv_event_get_draw_part_dsc(e);
+
+        lv_chart_series_t *ser = lv_chart_get_series_next(chart, NULL);
+        lv_point_t p = {0, 0};
+
+        lv_chart_get_point_pos_by_id(chart, ser, _xShared.getFFTYMaxIndex(), &p);
+
+        char buf[16];
+        float_t fft_value = _xShared.getFFTY(_xShared.getFFTYMaxIndex());
+        lv_snprintf(buf, sizeof(buf), "%.1f\ndB/Hz", fft_value);
+
+        lv_draw_rect_dsc_t draw_rect_dsc;
+        lv_draw_rect_dsc_init(&draw_rect_dsc);
+        draw_rect_dsc.bg_color = SECONDARY_ELEMENT_ACCENT_COLOR;
+        draw_rect_dsc.bg_opa = LV_OPA_70;
+        draw_rect_dsc.radius = 3;
+
+        lv_area_t a;
+        lv_point_t box_size;
+        lv_coord_t box_pad = 10;
+        lv_coord_t text_pad = 5;
+        lv_txt_get_size(&box_size, buf, LV_FONT_DEFAULT, 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+        if ((chart->coords.x1 + p.x + box_size.x + 10) < chart->coords.x2)
+        {
+            a.x1 = chart->coords.x1 + p.x + box_pad;
+            a.x2 = chart->coords.x1 + p.x + box_size.x + box_pad + text_pad;
+            a.y1 = chart->coords.y1 + p.y;
+            a.y2 = chart->coords.y1 + p.y + box_size.y + text_pad;
+        }
+        else
+        {
+            a.x1 = chart->coords.x1 + p.x - (box_size.x + box_pad + text_pad);
+            a.x2 = chart->coords.x1 + p.x - box_pad;
+            a.y1 = chart->coords.y1 + p.y;
+            a.y2 = chart->coords.y1 + p.y + box_size.y + text_pad;
+        }
+
+        lv_draw_ctx_t *draw_ctx = lv_event_get_draw_ctx(e);
+        lv_draw_rect(draw_ctx, &draw_rect_dsc, &a);
+
+        lv_draw_label_dsc_t draw_label_dsc;
+        lv_draw_label_dsc_init(&draw_label_dsc);
+        draw_label_dsc.color = lv_color_white();
+        a.x1 += text_pad / 2;
+        a.x2 -= text_pad / 2;
+        a.y1 += text_pad / 2;
+        a.y2 -= text_pad / 2;
+        lv_draw_label(draw_ctx, &draw_label_dsc, &a, buf, NULL);
     }
 }
 
@@ -1900,7 +2016,7 @@ void _create_pages_nerd(void)
     lv_obj_set_size(gui_page_fft_x, screenWidth, screenHeight - DEFAULT_TOOLBAR_HEIGHT);
     lv_obj_set_style_bg_opa(gui_page_fft_x, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_opa(gui_page_fft_x, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-    _create_analisys_chart(&gui_FFTXChart, fftX_sample, FFTXChart_draw_event_cb, FFT_DATA_BUFFER_SIZE, gui_page_fft_x, 245, 145, {40, 25});
+    _create_fft_chart(&gui_FFTXChart, fftX_sample, FFTXChart_draw_event_cb, FFT_DATA_BUFFER_SIZE, gui_page_fft_x, 245, 145, {40, 25});
 
     // Hide. Only one page must be active at the same time...
     lv_obj_add_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
@@ -1911,7 +2027,7 @@ void _create_pages_nerd(void)
     lv_obj_set_size(gui_page_fft_y, screenWidth, screenHeight - DEFAULT_TOOLBAR_HEIGHT);
     lv_obj_set_style_bg_opa(gui_page_fft_y, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_opa(gui_page_fft_y, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-    _create_analisys_chart(&gui_FFTYChart, fftY_sample, FFTYChart_draw_event_cb, FFT_DATA_BUFFER_SIZE, gui_page_fft_y, 245, 145, {40, 25});
+    _create_fft_chart(&gui_FFTYChart, fftY_sample, FFTYChart_draw_event_cb, FFT_DATA_BUFFER_SIZE, gui_page_fft_y, 245, 145, {40, 25});
 
     // Hide. Only one page must be active at the same time...
     lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
@@ -2193,7 +2309,7 @@ void _create_signal_chart(lv_obj_t **chart_handler, int16_t *data_array, lv_even
     lv_obj_align_to(*sliderY_handler, *chart_handler, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
 }
 
-void _create_analisys_chart(lv_obj_t **chart_handler, int16_t *data_array, lv_event_cb_t event_cb, size_t point_num, lv_obj_t *parent, lv_coord_t width, lv_coord_t height, lv_point_t position)
+void _create_fft_chart(lv_obj_t **chart_handler, int16_t *data_array, lv_event_cb_t event_cb, size_t point_num, lv_obj_t *parent, lv_coord_t width, lv_coord_t height, lv_point_t position)
 {
     *chart_handler = lv_chart_create(parent);
     lv_obj_set_width(*chart_handler, width);
@@ -2207,7 +2323,7 @@ void _create_analisys_chart(lv_obj_t **chart_handler, int16_t *data_array, lv_ev
     lv_chart_set_update_mode(*chart_handler, LV_CHART_UPDATE_MODE_SHIFT);
     lv_chart_set_range(*chart_handler, LV_CHART_AXIS_PRIMARY_Y, 0, 1);
     lv_chart_set_axis_tick(*chart_handler, LV_CHART_AXIS_PRIMARY_X, 7, 3, FFT_MAJOR_TICK_COUNT, 5, true, 50);
-    lv_obj_add_event_cb(*chart_handler, event_cb, LV_EVENT_ALL, NULL); //? Event to be able to draw the peak points
+    lv_obj_add_event_cb(*chart_handler, event_cb, LV_EVENT_ALL, *chart_handler); //? Event to be able to draw the peak points
 
     lv_chart_series_t *ser = lv_chart_add_series(*chart_handler, SECONDARY_ELEMENT_ACCENT_COLOR, LV_CHART_AXIS_PRIMARY_Y);
 

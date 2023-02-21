@@ -256,7 +256,7 @@ void _create_4stepschart_main(void);
 void _create_pages_nerd(void);
 void _create_toolbars_nerd(void);
 void _create_signal_chart(lv_obj_t **chart_handler, int16_t *data_array, lv_event_cb_t event_cb, size_t point_num, lv_obj_t **sliderX_handler, lv_obj_t **sliderY_handler, lv_obj_t *parent, lv_coord_t width, lv_coord_t height, lv_point_t position);
-void _create_analisys_chart(lv_obj_t **chart_handler, int16_t *data_array, lv_event_cb_t event_cb, size_t point_num, lv_obj_t *parent, lv_coord_t width, lv_coord_t height, lv_point_t position);
+void _create_fft_chart(lv_obj_t **chart_handler, int16_t *data_array, lv_event_cb_t event_cb, size_t point_num, lv_obj_t *parent, lv_coord_t width, lv_coord_t height, lv_point_t position);
 void _chart_Y_autorange(lv_obj_t *chart_obj, lv_chart_series_t *ser);
 void _set_nerd_page(nerd_subpage_e page);
 void _nerd_page_manager(nerd_subpage_e page);

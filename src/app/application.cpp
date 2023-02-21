@@ -829,7 +829,7 @@ void DPB::_signal_peak_finder(void)
 void DPB::_fft_peak_finder(void)
 {
     float_t *pFFTXBuf = _xShared.getFFTXBuffer_us();
-    float_t *pFFTYBuf = _xShared.getFFTXBuffer_us();
+    float_t *pFFTYBuf = _xShared.getFFTYBuffer_us();
 
     float_t fft_x = 0, fft_y = 0;
     float_t peak_x = 0, peak_y = 0;
