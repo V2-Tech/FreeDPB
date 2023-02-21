@@ -25,6 +25,7 @@ static dpb_page_e _gui_act_page = LOADING_PAGE;
 static uint8_t _peak_draw_done = 0;
 static nerd_subpage_e _nerd_act_page = X_RAW;
 static settings_subpage_e _settings_act_page = SYSTEM_SETTINGS;
+static gui_sys_step_e _gui_act_step = GUI_SYS_STEP_NONE;
 
 //* Page handlers
 lv_obj_t *gui_LoadingScreen = NULL;

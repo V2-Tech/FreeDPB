@@ -383,7 +383,7 @@ void settings_btn_event_cb(lv_event_t *e)
     {
         _ask_settings_values();
         gui_show_page(SETTINGS_PAGE);
-        _settings_show_page(_settings_act_page);
+        _settings_page_manager(_settings_act_page);
     }
 }
 
@@ -469,7 +469,7 @@ void nerd_btn_event_cb(lv_event_t *e)
     if (code == LV_EVENT_CLICKED)
     {
         gui_show_page(NERD_PAGE);
-        _nerd_show_page(_nerd_act_page);
+        _nerd_page_manager(_nerd_act_page);
     }
 }
 
@@ -479,6 +479,7 @@ void root_back_btn_event_cb(lv_event_t *e)
     if (code == LV_EVENT_CLICKED)
     {
         gui_show_page(MAIN_PAGE);
+        _main_page_manager();
     }
 }
 
@@ -684,28 +685,28 @@ void chart_switch_btn_event_cb(lv_event_t *e)
         switch (_nerd_act_page)
         {
         case X_RAW:
-            _nerd_show_page(X_FFT_RAW);
+            _nerd_page_manager(X_FFT_RAW);
             break;
         case Y_RAW:
-            _nerd_show_page(Y_FFT_RAW);
+            _nerd_page_manager(Y_FFT_RAW);
             break;
         case X_FILTERED:
-            _nerd_show_page(X_FFT_FILTERED);
+            _nerd_page_manager(X_FFT_FILTERED);
             break;
         case Y_FILTERED:
-            _nerd_show_page(Y_FFT_FILTERED);
+            _nerd_page_manager(Y_FFT_FILTERED);
             break;
         case X_FFT_RAW:
-            _nerd_show_page(X_RAW);
+            _nerd_page_manager(X_RAW);
             break;
         case Y_FFT_RAW:
-            _nerd_show_page(Y_RAW);
+            _nerd_page_manager(Y_RAW);
             break;
         case X_FFT_FILTERED:
-            _nerd_show_page(X_FILTERED);
+            _nerd_page_manager(X_FILTERED);
             break;
         case Y_FFT_FILTERED:
-            _nerd_show_page(Y_FILTERED);
+            _nerd_page_manager(Y_FILTERED);
             break;
 
         default:
@@ -720,8 +721,8 @@ void refilter_btn_event_cb(lv_event_t *e)
     if (code == LV_EVENT_CLICKED)
     {
         command_data_t command;
-        command.command = FILTER_REQUEST_CMD;
-        command.value.ll = RAW_DATA;
+        command.command = APP_CMD;
+        command.value.ll = SYS_ANALYZE_DATA;
         xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
     }
 }
@@ -751,11 +752,11 @@ void btn_show_x_charts_event_cb(lv_event_t *e)
     {
         if (!lv_obj_has_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN) || !lv_obj_has_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN))
         {
-            _nerd_show_page(X_FFT_FILTERED);
+            _nerd_page_manager(X_FFT_FILTERED);
         }
         else
         {
-            _nerd_show_page(X_FILTERED);
+            _nerd_page_manager(X_FILTERED);
         }
     }
 }
@@ -768,11 +769,11 @@ void btn_show_y_charts_event_cb(lv_event_t *e)
     {
         if (!lv_obj_has_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN) || !lv_obj_has_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN))
         {
-            _nerd_show_page(Y_FFT_FILTERED);
+            _nerd_page_manager(Y_FFT_FILTERED);
         }
         else
         {
-            _nerd_show_page(Y_FILTERED);
+            _nerd_page_manager(Y_FILTERED);
         }
     }
 }
@@ -785,11 +786,11 @@ void btn_show_raw_x_charts_event_cb(lv_event_t *e)
     {
         if (!lv_obj_has_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN) || !lv_obj_has_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN))
         {
-            _nerd_show_page(X_FFT_RAW);
+            _nerd_page_manager(X_FFT_RAW);
         }
         else
         {
-            _nerd_show_page(X_RAW);
+            _nerd_page_manager(X_RAW);
         }
     }
 }
@@ -802,11 +803,11 @@ void btn_show_raw_y_charts_event_cb(lv_event_t *e)
     {
         if (!lv_obj_has_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN) || !lv_obj_has_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN))
         {
-            _nerd_show_page(Y_FFT_RAW);
+            _nerd_page_manager(Y_FFT_RAW);
         }
         else
         {
-            _nerd_show_page(Y_RAW);
+            _nerd_page_manager(Y_RAW);
         }
     }
 }
@@ -817,7 +818,7 @@ void btn_show_sys_settings_event_cb(lv_event_t *e)
     lv_obj_t *obj = lv_event_get_target(e);
     if (code == LV_EVENT_CLICKED)
     {
-        _settings_show_page(SYSTEM_SETTINGS);
+        _settings_page_manager(SYSTEM_SETTINGS);
     }
 }
 
@@ -827,7 +828,7 @@ void btn_show_accel_settings_event_cb(lv_event_t *e)
     lv_obj_t *obj = lv_event_get_target(e);
     if (code == LV_EVENT_CLICKED)
     {
-        _settings_show_page(ACCEL_SETTINGS);
+        _settings_page_manager(ACCEL_SETTINGS);
     }
 }
 
@@ -837,7 +838,7 @@ void btn_show_filter_settings_event_cb(lv_event_t *e)
     lv_obj_t *obj = lv_event_get_target(e);
     if (code == LV_EVENT_CLICKED)
     {
-        _settings_show_page(FILTER_SETTINGS);
+        _settings_page_manager(FILTER_SETTINGS);
     }
 }
 
@@ -847,7 +848,7 @@ void btn_show_info_settings_event_cb(lv_event_t *e)
     lv_obj_t *obj = lv_event_get_target(e);
     if (code == LV_EVENT_CLICKED)
     {
-        _settings_show_page(INFO_SETTINGS);
+        _settings_page_manager(INFO_SETTINGS);
     }
 }
 
@@ -1142,22 +1143,12 @@ void _exe_fft_charts_update(void)
 
 void _exe_unbalance_update(gui_unbalance_command_e step)
 {
-    switch (step)
+    if (_gui_act_page != MAIN_PAGE)
     {
-    case GUI_UNBALANCE_OPT:
-        _update_unbalance_arrow();
-        break;
-    case GUI_UNBALANCE_STEP_1:
-        break;
-    case GUI_UNBALANCE_STEP_2:
-        break;
-    case GUI_UNBALANCE_STEP_3:
-        break;
-    case GUI_UNBALANCE_STEP_4:
-        break;
-    default:
-        break;
+        return;
     }
+    _gui_act_step = (gui_sys_step_e)step;
+    _main_page_manager();
 }
 
 void _exe_init_completed(void)
@@ -1494,6 +1485,26 @@ void _all_styles_remove(lv_obj_t *obj)
     {
         lv_obj_remove_style_all(lv_obj_get_child(obj, i));
         _all_styles_remove(lv_obj_get_child(obj, i));
+    }
+}
+
+void _main_page_manager(void)
+{
+    switch (_gui_act_step)
+    {
+    case gui_sys_step_e::GUI_SYS_STEP_NONE:
+        _update_unbalance_arrow();
+        break;
+    case gui_sys_step_e::GUI_SYS_STEP_1:
+        break;
+    case gui_sys_step_e::GUI_SYS_STEP_2:
+        break;
+    case gui_sys_step_e::GUI_SYS_STEP_3:
+        break;
+    case gui_sys_step_e::GUI_SYS_STEP_4:
+        break;
+    default:
+        break;
     }
 }
 
@@ -2238,7 +2249,7 @@ void _set_nerd_page(nerd_subpage_e page)
     _nerd_act_page = page;
 }
 
-void _nerd_show_page(nerd_subpage_e page)
+void _nerd_page_manager(nerd_subpage_e page)
 {
     switch (page)
     {
@@ -2955,7 +2966,7 @@ void _set_settings_page(settings_subpage_e page)
     _settings_act_page = page;
 }
 
-void _settings_show_page(settings_subpage_e page)
+void _settings_page_manager(settings_subpage_e page)
 {
     switch (page)
     {

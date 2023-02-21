@@ -75,6 +75,7 @@ private:
     void _exe_set_settings(command_data_t commnad);
 
     void _reset(void);
+    void _unbalance_magnitude_calc(void);
     int16_t _filter_data_iir_zero(data_orig_e data_type);
     int16_t _fft_calc(data_orig_e data_type);
     void _signal_peak_finder(void);

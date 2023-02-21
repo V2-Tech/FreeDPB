@@ -153,6 +153,14 @@ enum settings_subpage_e
   FILTER_SETTINGS = 3,
   INFO_SETTINGS = 5,
 };
+enum gui_sys_step_e
+{
+  GUI_SYS_STEP_NONE,
+  GUI_SYS_STEP_1,
+  GUI_SYS_STEP_2,
+  GUI_SYS_STEP_3,
+  GUI_SYS_STEP_4,
+};
 
 //*********************************/
 //*     FUNCTIONS DECLARATION     */
@@ -236,11 +244,11 @@ void QFactor_spinbox_event_cb(lv_event_t *e);
 void QFactor_increment_btn_event_cb(lv_event_t *e);
 void QFactor_decrement_btn_event_cb(lv_event_t *e);
 
-
 //* Utilities
 void _display_init(void);
 void _page_clear(lv_obj_t *page);
 void _all_styles_remove(lv_obj_t *obj);
+void _main_page_manager(void);
 void _create_toolbars_main(void);
 void _create_anglechart_main(void);
 void _create_unbalance_arrow(float_t angle_value, float_t magnitude_value, uint8_t lenght, uint8_t mirrored);
@@ -251,7 +259,7 @@ void _create_signal_chart(lv_obj_t **chart_handler, int16_t *data_array, lv_even
 void _create_analisys_chart(lv_obj_t **chart_handler, int16_t *data_array, lv_event_cb_t event_cb, size_t point_num, lv_obj_t *parent, lv_coord_t width, lv_coord_t height, lv_point_t position);
 void _chart_Y_autorange(lv_obj_t *chart_obj, lv_chart_series_t *ser);
 void _set_nerd_page(nerd_subpage_e page);
-void _nerd_show_page(nerd_subpage_e page);
+void _nerd_page_manager(nerd_subpage_e page);
 void _nerd_show_x_raw(void);
 void _nerd_show_y_raw(void);
 void _nerd_show_x_filtered(void);
@@ -263,7 +271,7 @@ void _nerd_show_y_fft_filtered(void);
 void _create_toolbars_settings(void);
 void _create_pages_settings(void);
 void _set_settings_page(settings_subpage_e page);
-void _settings_show_page(settings_subpage_e page);
+void _settings_page_manager(settings_subpage_e page);
 void _settings_show_system(void);
 void _settings_show_accel(void);
 void _settings_show_filter(void);

@@ -313,7 +313,7 @@ public:
     template <typename T>
     int16_t array_max_min_finder(T *array, size_t arraySize, T *max_value, T *min_value)
     {
-        if (array == 0)
+        if ((array == 0) || (max_value == 0) || (min_value == 0))
         {
             return -1;
         }

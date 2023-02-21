@@ -292,7 +292,10 @@ void DPB::_reset(void)
     }
     Motor::set_throttle(0);
     RotSense::stop_rpm_cnt();
-    ask_unbalance_step_1();
+    if (_xShared.getSearchType() == SEARCH_4_STEPS)
+    {
+        ask_unbalance_step_1();
+    }
     set_step(IDLE);
 }
 
@@ -302,6 +305,7 @@ void DPB::_exe_filter(void)
 
     Motor::motor_stop();
     _log_acc_data();
+    _unbalance_magnitude_calc();
     if (_filter_data_iir_zero(RAW_DATA) != ESP_OK)
     {
         // TODO Error message
@@ -847,9 +851,6 @@ void DPB::_fft_peak_finder(void)
             peak_y_index = i;
         }
     }
-
-    _xShared.setUnbalanceMag(pFFTXBuf[peak_x_index] + pFFTYBuf[peak_y_index]);
-
     _xShared.unlockFFT();
 
     _xShared.setFFTXMaxIndex(peak_x_index);
@@ -998,6 +999,20 @@ void DPB::_dummy_data_remove(void)
 
     _xShared.unlockDPBDataFltAcc();
     _xShared.unlockDPBDataAcc();
+}
+
+void DPB::_unbalance_magnitude_calc(void)
+{
+    int16_t maxX = 0, maxY = 0, minX = 0, minY = 0;
+
+    _xShared.lockDPBDataAcc();
+
+    _analyzer.array_max_min_finder<int16_t>(_xShared.getDPBDataAccXBuffer_us(), ACC_DATA_BUFFER_SIZE, &maxX, &minX);
+    _analyzer.array_max_min_finder<int16_t>(_xShared.getDPBDataAccYBuffer_us(), ACC_DATA_BUFFER_SIZE, &maxY, &minY);
+
+    _xShared.unlockDPBDataAcc();
+
+    _xShared.setUnbalanceMag((maxX - minX) + (maxY - minY));
 }
 
 void DPB::_standard_peaks_analisys(void)
