@@ -2398,10 +2398,12 @@ void _nerd_page_manager(nerd_subpage_e page)
         break;
     }
 
+    _set_nerd_page(page);
+
     for (size_t i = 0; i < lv_obj_get_child_cnt(gui_action_list_nerd); i++)
     {
         lv_obj_t *child = lv_obj_get_child(gui_action_list_nerd, i);
-        if (i == page)
+        if ((i == page) || (i == page >> 4))
         {
             lv_obj_add_state(child, LV_STATE_CHECKED);
         }
@@ -2422,8 +2424,6 @@ void _nerd_show_x_raw(void)
     lv_obj_add_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
 
     lv_obj_clear_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
-
-    _set_nerd_page(X_RAW);
 }
 
 void _nerd_show_y_raw(void)
@@ -2436,8 +2436,6 @@ void _nerd_show_y_raw(void)
     lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
 
     lv_obj_clear_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
-
-    _set_nerd_page(Y_RAW);
 }
 
 void _nerd_show_x_filtered(void)
@@ -2450,8 +2448,6 @@ void _nerd_show_x_filtered(void)
     lv_obj_add_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
 
     lv_obj_clear_flag(gui_page_signal_x, LV_OBJ_FLAG_HIDDEN);
-
-    _set_nerd_page(X_FILTERED);
 }
 
 void _nerd_show_y_filtered(void)
@@ -2465,8 +2461,6 @@ void _nerd_show_y_filtered(void)
     lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
 
     lv_obj_clear_flag(gui_page_signal_y, LV_OBJ_FLAG_HIDDEN);
-
-    _set_nerd_page(Y_FILTERED);
 }
 
 void _nerd_show_x_fft_raw(void)
@@ -2484,8 +2478,6 @@ void _nerd_show_x_fft_raw(void)
     lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
 
     lv_obj_clear_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
-
-    _set_nerd_page(X_FFT_RAW);
 }
 
 void _nerd_show_y_fft_raw(void)
@@ -2503,8 +2495,6 @@ void _nerd_show_y_fft_raw(void)
     lv_obj_add_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
 
     lv_obj_clear_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
-
-    _set_nerd_page(Y_FFT_RAW);
 }
 
 void _nerd_show_x_fft_filtered(void)
@@ -2522,8 +2512,6 @@ void _nerd_show_x_fft_filtered(void)
     lv_obj_add_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
 
     lv_obj_clear_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
-
-    _set_nerd_page(X_FFT_FILTERED);
 }
 
 void _nerd_show_y_fft_filtered(void)
@@ -2541,8 +2529,6 @@ void _nerd_show_y_fft_filtered(void)
     lv_obj_add_flag(gui_page_fft_x, LV_OBJ_FLAG_HIDDEN);
 
     lv_obj_clear_flag(gui_page_fft_y, LV_OBJ_FLAG_HIDDEN);
-
-    _set_nerd_page(Y_FFT_FILTERED);
 }
 
 void _create_toolbars_settings(void)

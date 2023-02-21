@@ -137,14 +137,17 @@ enum dpb_page_e
 };
 enum nerd_subpage_e
 {
+  //Page
   X_RAW = 1,
   Y_RAW = 2,
   X_FILTERED = 4,
   Y_FILTERED = 5,
-  X_FFT_RAW,
-  Y_FFT_RAW,
-  X_FFT_FILTERED,
-  Y_FFT_FILTERED,
+  
+  //Sub-page
+  X_FFT_RAW = X_RAW << 4,
+  Y_FFT_RAW = Y_RAW << 4,
+  X_FFT_FILTERED = X_FILTERED << 4,
+  Y_FFT_FILTERED = Y_FILTERED << 4,
 };
 enum settings_subpage_e
 {
