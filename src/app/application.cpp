@@ -1041,7 +1041,7 @@ void DPB::_standard_peaks_analisys(void)
 
     //* Calc min distance between two real local peak
     float_t fund = _get_fundamental_freq(_xShared.getBandWidth(), FFT_DATA_BUFFER_SIZE);
-    float_t peak_min_dist = ((0.8 * 1000000.0) / fund); //! _rpmTimer has 1us resolution
+    float_t peak_min_dist = ((0.7 * 1000000.0) / fund); //! _rpmTimer has 1us resolution
     _xShared.setUnbalanceFreq(fund);
 
     //* Remove peak indexs that dont meet the min required distance

@@ -1610,6 +1610,7 @@ void _main_page_manager(void)
     {
     case gui_sys_step_e::GUI_SYS_STEP_NONE:
         _update_unbalance_arrow();
+        lv_spinbox_set_value(gui_OffsetSpinbox, (int32_t)(_xShared.getAngleOffset() * 10.0));
         break;
     case gui_sys_step_e::GUI_SYS_STEP_1:
         break;

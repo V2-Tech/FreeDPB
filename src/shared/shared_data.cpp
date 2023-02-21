@@ -10,6 +10,7 @@ DPBShared::DPBShared() : _data(new Data)
     _data->_unbalanceXAngle = 0;
     _data->_unbalanceYAngle = 0;
     _data->_unbalanceFreq = 0;
+    _data->_unbalanceMag = 0;
     _data->_x_peak_count = 0;
     _data->_y_peak_count = 0;
     _data->_acc_x_max_index = 0;
