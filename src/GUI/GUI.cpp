@@ -511,20 +511,22 @@ void FFTXChart_draw_event_cb(lv_event_t *e)
     }
     if (code == LV_EVENT_DRAW_POST_END)
     {
-        if (_fftX_label_draw_done)
-        {
-            return;
-        }
-        lv_obj_draw_part_dsc_t *dsc = lv_event_get_draw_part_dsc(e);
-
         lv_chart_series_t *ser = lv_chart_get_series_next(chart, NULL);
         lv_point_t p = {0, 0};
 
         lv_chart_get_point_pos_by_id(chart, ser, _xShared.getFFTXMaxIndex(), &p);
 
-        char buf[16];
+        char buf[32];
         float_t fft_value = _xShared.getFFTX(_xShared.getFFTXMaxIndex());
-        lv_snprintf(buf, sizeof(buf), "%.1f\ndB/Hz", fft_value);
+        uint16_t sample_freq = _xShared.getBandWidth();
+        size_t fft_length = FFT_DATA_BUFFER_SIZE;
+        static float_t fft_res = 0.0;
+        static float_t signal_fundamental = 0.0;
+
+        fft_res = (float_t)sample_freq / (float_t)fft_length;
+        signal_fundamental = (float_t)_xShared.getFFTXMaxIndex();
+        signal_fundamental *= fft_res;
+        lv_snprintf(buf, sizeof(buf), "%.1f dB/Hz\n%.1f Hz\n", fft_value, signal_fundamental);
 
         lv_draw_rect_dsc_t draw_rect_dsc;
         lv_draw_rect_dsc_init(&draw_rect_dsc);
@@ -594,20 +596,22 @@ void FFTYChart_draw_event_cb(lv_event_t *e)
     }
     if (code == LV_EVENT_DRAW_POST_END)
     {
-        if (_fftX_label_draw_done)
-        {
-            return;
-        }
-        lv_obj_draw_part_dsc_t *dsc = lv_event_get_draw_part_dsc(e);
-
         lv_chart_series_t *ser = lv_chart_get_series_next(chart, NULL);
         lv_point_t p = {0, 0};
 
         lv_chart_get_point_pos_by_id(chart, ser, _xShared.getFFTYMaxIndex(), &p);
 
-        char buf[16];
+        char buf[32];
         float_t fft_value = _xShared.getFFTY(_xShared.getFFTYMaxIndex());
-        lv_snprintf(buf, sizeof(buf), "%.1f\ndB/Hz", fft_value);
+        uint16_t sample_freq = _xShared.getBandWidth();
+        size_t fft_length = FFT_DATA_BUFFER_SIZE;
+        static float_t fft_res = 0.0;
+        static float_t signal_fundamental = 0.0;
+
+        fft_res = (float_t)sample_freq / (float_t)fft_length;
+        signal_fundamental = (float_t)_xShared.getFFTYMaxIndex();
+        signal_fundamental *= fft_res;
+        lv_snprintf(buf, sizeof(buf), "%.1f dB/Hz\n%.1f Hz\n", fft_value, signal_fundamental);
 
         lv_draw_rect_dsc_t draw_rect_dsc;
         lv_draw_rect_dsc_init(&draw_rect_dsc);
@@ -977,6 +981,15 @@ void btn_save_settings_event_cb(lv_event_t *e)
     }
 }
 
+void btn_store_settings_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED)
+    {
+        _ask_settings_store();
+    }
+}
+
 void unbalance_source_settings_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -988,7 +1001,7 @@ void unbalance_source_settings_event_cb(lv_event_t *e)
     }
 }
 
-void slider_motor_speed_settings_event_cb(lv_event_t *e)
+void motor_speed_slider_settings_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
     lv_obj_t *obj = lv_event_get_target(e);
@@ -1019,31 +1032,18 @@ void bandwidth_settings_event_cb(lv_event_t *e)
     // TODO
 }
 
-void freq_spinbox_event_cb(lv_event_t *e)
+void freq_slider_settings_event_cb(lv_event_t *e)
 {
     lv_obj_t *obj = lv_event_get_target(e);
     lv_event_code_t code = lv_event_get_code(e);
+    char buf[8];
+
     if (code == LV_EVENT_VALUE_CHANGED)
     {
-        gui_iirCenterFreq = lv_spinbox_get_value(obj);
-    }
-}
+        lv_snprintf(buf, sizeof(buf), "%dHz", (uint16_t)lv_slider_get_value(obj));
+        lv_label_set_text(lv_obj_get_child(lv_obj_get_parent(obj), 1), buf);
 
-void freq_increment_btn_event_cb(lv_event_t *e)
-{
-    lv_event_code_t code = lv_event_get_code(e);
-    if (code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT)
-    {
-        lv_spinbox_increment(gui_FreqSpinbox);
-    }
-}
-
-void freq_decrement_btn_event_cb(lv_event_t *e)
-{
-    lv_event_code_t code = lv_event_get_code(e);
-    if (code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT)
-    {
-        lv_spinbox_decrement(gui_FreqSpinbox);
+        gui_iirCenterFreq = lv_slider_get_value(obj);
     }
 }
 
@@ -1062,7 +1062,7 @@ void QFactor_increment_btn_event_cb(lv_event_t *e)
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT)
     {
-        lv_spinbox_increment(gui_QFactorSpinbox);
+        lv_spinbox_increment(gui_QFactor_spinbox);
     }
 }
 
@@ -1071,7 +1071,7 @@ void QFactor_decrement_btn_event_cb(lv_event_t *e)
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT)
     {
-        lv_spinbox_decrement(gui_QFactorSpinbox);
+        lv_spinbox_decrement(gui_QFactor_spinbox);
     }
 }
 
@@ -1297,12 +1297,13 @@ void _exe_settings_update(command_data_t command)
         break;
 
     case IIR_GET_FREQ_CMD:
-        lv_spinbox_set_value(gui_FreqSpinbox, (int32_t)command.value.ll);
+        lv_slider_set_value(gui_freq_slider, (int32_t)command.value.ll, LV_ANIM_ON);
+        lv_label_set_text_fmt(gui_freq_slider_value_label, "%dHz", (uint16_t)command.value.ll);
         gui_iirCenterFreq = (int32_t)command.value.ll;
         break;
 
     case IIR_GET_Q_CMD:
-        lv_spinbox_set_value(gui_QFactorSpinbox, (int32_t)command.value.ll);
+        lv_spinbox_set_value(gui_QFactor_spinbox, (int32_t)command.value.ll);
         gui_iirQFactor = (int32_t)command.value.ll;
         break;
 
@@ -1526,6 +1527,15 @@ void _ask_settings_save(void)
     //* Filter Q factor
     command.command = IIR_SET_Q_CMD;
     command.value.ll = (int64_t)gui_iirQFactor;
+    xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
+}
+
+void _ask_settings_store(void) 
+{
+    command_data_t command;
+
+    command.command = STORE_SETTINGS_CMD;
+    command.value.ll = 1;
     xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
 }
 
@@ -2281,7 +2291,7 @@ void _create_signal_chart(lv_obj_t **chart_handler, int16_t *data_array, lv_even
     lv_obj_set_y(*chart_handler, position.y);
     lv_obj_set_style_bg_color(*chart_handler, DEFAULT_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(*chart_handler, LV_OPA_100, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_size(*chart_handler, 0, LV_PART_INDICATOR); // Do not display points on the data
+    lv_obj_set_style_size(*chart_handler, 3, LV_PART_INDICATOR); // 0 = Do not display points on the data
     lv_obj_set_style_size(*chart_handler, 1, LV_PART_ITEMS);
     lv_chart_set_update_mode(*chart_handler, LV_CHART_UPDATE_MODE_SHIFT);
     lv_chart_set_range(*chart_handler, LV_CHART_AXIS_PRIMARY_Y, 0, 1);
@@ -2596,8 +2606,10 @@ void _create_toolbars_settings(void)
     btn = lv_list_add_btn(gui_menu_list_settings, LV_SYMBOL_EYE_OPEN, "Info");
     lv_obj_add_event_cb(btn, btn_show_info_settings_event_cb, LV_EVENT_CLICKED, NULL);
     lv_list_add_text(gui_menu_list_settings, "Actions");
-    btn = lv_list_add_btn(gui_menu_list_settings, LV_SYMBOL_SAVE, "Apply");
+    btn = lv_list_add_btn(gui_menu_list_settings, LV_SYMBOL_OK, "Apply");
     lv_obj_add_event_cb(btn, btn_save_settings_event_cb, LV_EVENT_CLICKED, NULL);
+    btn = lv_list_add_btn(gui_menu_list_settings, LV_SYMBOL_DOWNLOAD, "Store");
+    lv_obj_add_event_cb(btn, btn_store_settings_event_cb, LV_EVENT_CLICKED, NULL);
 
     // Add style to the text
     lv_obj_t *currentButton = lv_obj_get_child(gui_menu_list_settings, 0);
@@ -2671,6 +2683,17 @@ void _create_toolbars_settings(void)
 
     // Add style to the Save button
     currentButton = lv_obj_get_child(gui_menu_list_settings, 7);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_all(currentButton, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(currentButton, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+
+    lv_obj_set_style_bg_color(currentButton, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(currentButton, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_PRESSED);
+
+    // Add style to the Store button
+    currentButton = lv_obj_get_child(gui_menu_list_settings, 8);
     lv_obj_set_style_bg_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_outline_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_opa(currentButton, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -2784,7 +2807,7 @@ void _create_pages_settings(void)
     lv_obj_set_width(gui_speed_slider, 130);
 
     // Add callback
-    lv_obj_add_event_cb(gui_speed_slider, slider_motor_speed_settings_event_cb, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(gui_speed_slider, motor_speed_slider_settings_event_cb, LV_EVENT_ALL, NULL);
 
     // Value
     gui_speed_slider_value_label = lv_label_create(_tab_sub);
@@ -2872,7 +2895,7 @@ void _create_pages_settings(void)
     lv_obj_align(gui_page_filter_settings, LV_ALIGN_TOP_LEFT, (5 * DEFAULT_TOOLBAR_HEIGHT) / 2, 0);
     lv_obj_add_flag(gui_page_filter_settings, LV_OBJ_FLAG_HIDDEN);
 
-    //* Center frequency
+    //* Q-factor
     _tab = lv_obj_create(gui_page_filter_settings);
     lv_obj_clear_flag(_tab, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_width(_tab, screenWidth - ((9 * DEFAULT_TOOLBAR_HEIGHT) / 2));
@@ -2889,7 +2912,7 @@ void _create_pages_settings(void)
 
     // Text
     _label = lv_label_create(_tab);
-    lv_label_set_text(_label, "Center\nfreq.");
+    lv_label_set_text(_label, "Q-Factor");
     lv_obj_set_style_text_color(_label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
     lv_obj_set_width(_label, LV_SIZE_CONTENT);
     lv_obj_set_height(_label, LV_SIZE_CONTENT);
@@ -2919,33 +2942,33 @@ void _create_pages_settings(void)
     lv_obj_set_style_border_opa(btn, LV_OPA_COVER, LV_PART_MAIN);
 
     // Add icon
-    lv_obj_t *label = lv_label_create(btn);
-    lv_label_set_text(label, LV_SYMBOL_PLUS);
-    lv_obj_set_style_text_color(label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
-    lv_obj_center(label);
+    _label = lv_label_create(btn);
+    lv_label_set_text(_label, LV_SYMBOL_PLUS);
+    lv_obj_set_style_text_color(_label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+    lv_obj_center(_label);
 
     // Add callback
-    lv_obj_add_event_cb(btn, freq_increment_btn_event_cb, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(btn, QFactor_increment_btn_event_cb, LV_EVENT_ALL, NULL);
 
     // Create spinbox
-    gui_FreqSpinbox = lv_spinbox_create(_sub_tab);
-    lv_spinbox_set_range(gui_FreqSpinbox, 5, 500);
-    lv_spinbox_set_digit_format(gui_FreqSpinbox, 4, 1);
-    lv_spinbox_step_prev(gui_FreqSpinbox);
-    lv_spinbox_set_rollover(gui_FreqSpinbox, false);
-    lv_obj_set_width(gui_FreqSpinbox, 50);
-    lv_obj_set_height(gui_FreqSpinbox, 30);
-    lv_obj_set_style_pad_hor(gui_FreqSpinbox, 2, LV_PART_MAIN);
-    lv_obj_set_style_pad_ver(gui_FreqSpinbox, 4, LV_PART_MAIN);
+    gui_QFactor_spinbox = lv_spinbox_create(_sub_tab);
+    lv_spinbox_set_range(gui_QFactor_spinbox, 1, 2000);
+    lv_spinbox_set_digit_format(gui_QFactor_spinbox, 4, 2);
+    lv_spinbox_step_prev(gui_QFactor_spinbox);
+    lv_spinbox_set_rollover(gui_QFactor_spinbox, false);
+    lv_obj_set_width(gui_QFactor_spinbox, 50);
+    lv_obj_set_height(gui_QFactor_spinbox, 30);
+    lv_obj_set_style_pad_hor(gui_QFactor_spinbox, 2, LV_PART_MAIN);
+    lv_obj_set_style_pad_ver(gui_QFactor_spinbox, 4, LV_PART_MAIN);
 
     // Add style
-    lv_obj_set_style_bg_color(gui_FreqSpinbox, DEFAULT_BACKGROUND_COLOR, LV_PART_MAIN);
-    lv_obj_set_style_border_color(gui_FreqSpinbox, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
-    lv_obj_set_style_border_opa(gui_FreqSpinbox, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_style_radius(gui_FreqSpinbox, 3, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(gui_QFactor_spinbox, DEFAULT_BACKGROUND_COLOR, LV_PART_MAIN);
+    lv_obj_set_style_border_color(gui_QFactor_spinbox, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
+    lv_obj_set_style_border_opa(gui_QFactor_spinbox, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_radius(gui_QFactor_spinbox, 3, LV_PART_MAIN);
 
     // Add callback
-    lv_obj_add_event_cb(gui_FreqSpinbox, freq_spinbox_event_cb, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(gui_QFactor_spinbox, QFactor_spinbox_event_cb, LV_EVENT_ALL, NULL);
 
     // Create decrement button
     btn = lv_btn_create(_sub_tab);
@@ -2958,23 +2981,23 @@ void _create_pages_settings(void)
     lv_obj_set_style_border_opa(btn, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Add icon
-    label = lv_label_create(btn);
-    lv_label_set_text(label, LV_SYMBOL_MINUS);
-    lv_obj_set_style_text_color(label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_center(label);
+    _label = lv_label_create(btn);
+    lv_label_set_text(_label, LV_SYMBOL_MINUS);
+    lv_obj_set_style_text_color(_label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_center(_label);
 
     // Add callback
-    lv_obj_add_event_cb(btn, freq_decrement_btn_event_cb, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(btn, QFactor_decrement_btn_event_cb, LV_EVENT_ALL, NULL);
 
-    //* Q-factor
+    //* Center frequency
     _tab = lv_obj_create(gui_page_filter_settings);
     lv_obj_clear_flag(_tab, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_width(_tab, screenWidth - ((9 * DEFAULT_TOOLBAR_HEIGHT) / 2));
+    lv_obj_set_width(_tab, screenWidth - ((6 * DEFAULT_TOOLBAR_HEIGHT) / 2));
     lv_obj_set_height(_tab, LV_SIZE_CONTENT);
     lv_obj_set_style_bg_opa(_tab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_opa(_tab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_flex_flow(_tab, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(_tab, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_flow(_tab, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(_tab, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
     lv_obj_set_style_pad_left(_tab, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_pad_right(_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_pad_top(_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -2983,82 +3006,35 @@ void _create_pages_settings(void)
 
     // Text
     _label = lv_label_create(_tab);
-    lv_label_set_text(_label, "Q-Factor");
+    lv_label_set_text(_label, "Center\nfreq.");
     lv_obj_set_style_text_color(_label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
     lv_obj_set_width(_label, LV_SIZE_CONTENT);
     lv_obj_set_height(_label, LV_SIZE_CONTENT);
 
-    // Create spinbox tab
-    _sub_tab = lv_obj_create(_tab);
-    lv_obj_clear_flag(_sub_tab, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_width(_sub_tab, LV_SIZE_CONTENT);
-    lv_obj_set_height(_sub_tab, LV_SIZE_CONTENT);
-    lv_obj_set_style_bg_opa(_sub_tab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_border_opa(_sub_tab, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_flex_flow(_sub_tab, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(_sub_tab, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START);
-    lv_obj_set_style_pad_left(_sub_tab, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_pad_right(_sub_tab, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_pad_top(_sub_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_pad_bottom(_sub_tab, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // Slider tab
+    _tab_sub = lv_obj_create(_tab);
+    lv_obj_clear_flag(_tab_sub, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_width(_tab_sub, screenWidth - ((6 * DEFAULT_TOOLBAR_HEIGHT) / 2));
+    lv_obj_set_height(_tab_sub, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_opa(_tab_sub, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(_tab_sub, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_flex_flow(_tab_sub, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(_tab_sub, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START);
+    lv_obj_set_style_pad_left(_tab_sub, 15, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_column(_tab_sub, 15, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    // Create increment button
-    btn = lv_btn_create(_sub_tab);
-    lv_obj_set_size(btn, 15, 30);
-
-    // Add style
-    lv_obj_set_style_bg_img_src(btn, LV_SYMBOL_PLUS, 0);
-    lv_obj_set_style_bg_color(btn, DEFAULT_BACKGROUND_COLOR, LV_PART_MAIN);
-    lv_obj_set_style_border_color(btn, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
-    lv_obj_set_style_border_opa(btn, LV_OPA_COVER, LV_PART_MAIN);
-
-    // Add icon
-    label = lv_label_create(btn);
-    lv_label_set_text(label, LV_SYMBOL_PLUS);
-    lv_obj_set_style_text_color(label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
-    lv_obj_center(label);
+    // Slider
+    gui_freq_slider = lv_slider_create(_tab_sub);
+    lv_slider_set_range(gui_freq_slider, 1, _xShared.getBandWidth());
+    lv_obj_set_width(gui_freq_slider, screenWidth - ((9 * DEFAULT_TOOLBAR_HEIGHT) / 2));
 
     // Add callback
-    lv_obj_add_event_cb(btn, QFactor_increment_btn_event_cb, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(gui_freq_slider, freq_slider_settings_event_cb, LV_EVENT_ALL, NULL);
 
-    // Create spinbox
-    gui_QFactorSpinbox = lv_spinbox_create(_sub_tab);
-    lv_spinbox_set_range(gui_QFactorSpinbox, 1, 2000);
-    lv_spinbox_set_digit_format(gui_QFactorSpinbox, 4, 2);
-    lv_spinbox_step_prev(gui_QFactorSpinbox);
-    lv_spinbox_set_rollover(gui_QFactorSpinbox, false);
-    lv_obj_set_width(gui_QFactorSpinbox, 50);
-    lv_obj_set_height(gui_QFactorSpinbox, 30);
-    lv_obj_set_style_pad_hor(gui_QFactorSpinbox, 2, LV_PART_MAIN);
-    lv_obj_set_style_pad_ver(gui_QFactorSpinbox, 4, LV_PART_MAIN);
-
-    // Add style
-    lv_obj_set_style_bg_color(gui_QFactorSpinbox, DEFAULT_BACKGROUND_COLOR, LV_PART_MAIN);
-    lv_obj_set_style_border_color(gui_QFactorSpinbox, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN);
-    lv_obj_set_style_border_opa(gui_QFactorSpinbox, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_style_radius(gui_QFactorSpinbox, 3, LV_PART_MAIN);
-
-    // Add callback
-    lv_obj_add_event_cb(gui_QFactorSpinbox, QFactor_spinbox_event_cb, LV_EVENT_ALL, NULL);
-
-    // Create decrement button
-    btn = lv_btn_create(_sub_tab);
-    lv_obj_set_size(btn, 15, 30);
-
-    // Add style
-    lv_obj_set_style_bg_img_src(btn, LV_SYMBOL_MINUS, 0);
-    lv_obj_set_style_bg_color(btn, DEFAULT_BACKGROUND_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_border_color(btn, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_border_opa(btn, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
-
-    // Add icon
-    label = lv_label_create(btn);
-    lv_label_set_text(label, LV_SYMBOL_MINUS);
-    lv_obj_set_style_text_color(label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_center(label);
-
-    // Add callback
-    lv_obj_add_event_cb(btn, QFactor_decrement_btn_event_cb, LV_EVENT_ALL, NULL);
+    // Value
+    gui_freq_slider_value_label = lv_label_create(_tab_sub);
+    lv_label_set_text_fmt(gui_freq_slider_value_label, "%dHz", (int16_t)(_xShared.getIIRCenterFreq() * 1000 * 2));
+    lv_obj_set_style_text_color(gui_freq_slider_value_label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     //* PAGE - Info
     // TODO

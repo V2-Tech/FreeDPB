@@ -31,4 +31,4 @@ file(GLOB INCL
 
 idf_component_register(SRCS ${SRCS}
                        INCLUDE_DIRS ${INCL}
-                       REQUIRES driver freertos esp-dsp)
+                       REQUIRES driver freertos esp-dsp nvs_flash)

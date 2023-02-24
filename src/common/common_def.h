@@ -23,6 +23,8 @@
 #include "esp_heap_caps.h"
 
 #include "esp_dsp.h"
+#include "nvs_flash.h"
+#include "nvs.h"
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!/
 //!         PROJECT DEFINES         /
@@ -62,10 +64,11 @@
 #define ACC_DATA_BUFFER_SIZE 1024
 #define FFT_DATA_BUFFER_SIZE ACC_DATA_BUFFER_SIZE / 2
 #define DEFAULT_MEASURE_THROTTLE 225 /* 225~3600rpm, 175~2700rpm for a 1700kV motor */
-#define DEFAULT_FILTER_C_FREQ 0.02F
+#define DEFAULT_FILTER_C_FREQ 0.025F
 #define DEFAULT_FILTER_Q_FACTOR 0.7071F
 #define SECOND_FILTER_Q_FACTOR DEFAULT_FILTER_Q_FACTOR
 #define DUMMY_DATA_QUANTITY 128
+#define USER_SETTINGS_NAMESPACE "user_set"
 
 //*******************************/
 //*         GLOBAL DEFINES      */
@@ -89,19 +92,20 @@ enum sys_command_e
     FILTER_REQUEST_CMD,
     SEARCH_TYPE_CMD,
     APP_STEP_CMD,
+    STORE_SETTINGS_CMD,
     //* Settings
-    APP_SET_SOURCE_CMD,     
-    ACCEL_SET_BW_CMD,       
-    ACCEL_SET_RANGE_CMD,    
-    MOTOR_SET_SPEED_CMD,    
-    IIR_SET_FREQ_CMD,       
-    IIR_SET_Q_CMD,          
-    APP_GET_SOURCE_CMD,     
-    ACCEL_GET_BW_CMD,       
-    ACCEL_GET_RANGE_CMD,    
-    MOTOR_GET_SPEED_CMD,    
-    IIR_GET_FREQ_CMD,       
-    IIR_GET_Q_CMD,          
+    APP_SET_SOURCE_CMD,
+    ACCEL_SET_BW_CMD,
+    ACCEL_SET_RANGE_CMD,
+    MOTOR_SET_SPEED_CMD,
+    IIR_SET_FREQ_CMD,
+    IIR_SET_Q_CMD,
+    APP_GET_SOURCE_CMD,
+    ACCEL_GET_BW_CMD,
+    ACCEL_GET_RANGE_CMD,
+    MOTOR_GET_SPEED_CMD,
+    IIR_GET_FREQ_CMD,
+    IIR_GET_Q_CMD,
     //* Init
     GUI_INIT_COMPLETED_CMD, // ToDo
     GUI_INIT_ACC_CMD,       // ToDo
@@ -216,6 +220,16 @@ union gui_status_u
         unsigned nd6 : 1;
         unsigned nd7 : 1;
     };
+};
+
+struct app_settings_t
+{
+    uint16_t range;
+    uint16_t bandWidth;
+    app_unbalance_source_e unbalanceSource;
+    uint16_t measureThrottle;
+    float_t iirCenterFreq;
+    float_t iirQFactor;
 };
 
 //*******************************/

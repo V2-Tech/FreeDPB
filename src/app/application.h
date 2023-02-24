@@ -16,6 +16,7 @@
 #define INIT_ESC_DONE 1U << 2
 #define INIT_ACCEL_DONE 1U << 3
 #define INIT_RPM_S_DONE 1U << 4
+#define READ_SETTINGS_DONE 1U << 5
 
 //*******************************/
 //*      CLASS DECLARATION      */
@@ -73,6 +74,7 @@ private:
     void _exe_step_managment(app_steps_e requested_step);
     void _exe_get_settings(sys_command_e request);
     void _exe_set_settings(command_data_t commnad);
+    void _exe_store_settings(void);
 
     void _reset(void);
     void _unbalance_magnitude_calc(void);
@@ -81,7 +83,7 @@ private:
     void _signal_peak_finder(void);
     void _fft_peak_finder(void);
     void _dummy_data_remove(void);
-    
+
     void _set_searchType(app_search_type_e type);
 
     void _log_acc_data(void);
@@ -96,12 +98,18 @@ private:
     void _unbalance_step_3(void);
     void _unbalance_step_4(void);
 
-    float_t _get_fundamental_freq(uint16_t sample_freq, size_t fft_lenght);
+    void _settings_read(void);
+    int16_t _settings_load(app_settings_t *settings);
+    void _settings_write(void);
+    int16_t _settings_save(app_settings_t *settings);
+
+    float_t _get_fundamental_freq(uint16_t sample_freq, size_t fft_length, app_unbalance_source_e axis);
     float_t _get_vibe_vector_mod(void);
     int8_t _range_2_gui_value_convert(uint8_t range);
 
     static void __motorStartupTimerCallback_static(TimerHandle_t pxTimer);
     void __motorStartupTimerCallback(TimerHandle_t pxTimer);
+    void __initNVS(void);
 };
 
 #endif

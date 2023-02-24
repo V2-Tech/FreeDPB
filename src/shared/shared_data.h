@@ -1,7 +1,7 @@
 #ifndef INC_SHARED_H
 #define INC_SHARED_H
 
-#include "common_def.h"
+#include "../common/common_def.h"
 
 class DPBShared
 {
@@ -138,14 +138,9 @@ private:
         size_t _fft_y_max_index;
 
         // User
-        uint16_t _range;
-        uint16_t _bandWidth;
-        float_t _angleOffset;
         app_search_type_e _searchType;
-        app_unbalance_source_e _unbalanceSource;
-        uint16_t _measureThrottle;
-        float_t _iirCenterFreq;
-        float_t _iirQFactor;
+        float_t _angleOffset;
+        app_settings_t _settings;
     };
     Data *_data;
 

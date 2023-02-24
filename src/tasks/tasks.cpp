@@ -125,3 +125,5 @@ void application(void *pvParameter)
 
     vTaskDelete(NULL);
 }
+
+//TODO ragiona sull utilizzo dello stack in relazione alla dimensione ACC_DATA_BUFFER_SIZE

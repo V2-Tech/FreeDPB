@@ -102,8 +102,9 @@ lv_obj_t *gui_range_dropdown = NULL;
 lv_obj_t *gui_bandwidth_dropdown = NULL;
 
 // Filter
-lv_obj_t *gui_FreqSpinbox = NULL;
-lv_obj_t *gui_QFactorSpinbox = NULL;
+lv_obj_t *gui_freq_slider = NULL;
+lv_obj_t *gui_freq_slider_value_label = NULL;
+lv_obj_t *gui_QFactor_spinbox = NULL;
 
 //* Settings temporary variables
 int32_t gui_unbalanceSource = 0;

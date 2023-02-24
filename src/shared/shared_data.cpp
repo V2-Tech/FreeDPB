@@ -5,8 +5,6 @@ DPBShared::DPBShared() : _data(new Data)
     _data->_rotCount = 0;
     _data->_rpm = 0;
     _data->_step = IDLE;
-    _data->_bandWidth = 0;
-    _data->_range = 0;
     _data->_unbalanceXAngle = 0;
     _data->_unbalanceYAngle = 0;
     _data->_unbalanceFreq = 0;
@@ -19,10 +17,12 @@ DPBShared::DPBShared() : _data(new Data)
     _data->_fft_y_max_index = 0;
     _data->_angleOffset = 0;
     _data->_searchType = SEARCH_OPTICAL;
-    _data->_unbalanceSource = X_AXIS_SOURCE;
-    _data->_measureThrottle = DEFAULT_MEASURE_THROTTLE;
-    _data->_iirCenterFreq = DEFAULT_FILTER_C_FREQ;
-    _data->_iirQFactor = DEFAULT_FILTER_Q_FACTOR;
+    _data->_settings.bandWidth = 0;
+    _data->_settings.range = 0;
+    _data->_settings.unbalanceSource = X_AXIS_SOURCE;
+    _data->_settings.measureThrottle = DEFAULT_MEASURE_THROTTLE;
+    _data->_settings.iirCenterFreq = DEFAULT_FILTER_C_FREQ;
+    _data->_settings.iirQFactor = DEFAULT_FILTER_Q_FACTOR;
 
     _xSemComm = xSemaphoreCreateMutex();
     _xSemDpbData = xSemaphoreCreateMutex();
@@ -259,14 +259,14 @@ float_t *DPBShared::getFFTYBuffer_us(void)
 void DPBShared::setBandWidth(uint16_t v)
 {
     _lockComm();
-    _data->_bandWidth = v;
+    _data->_settings.bandWidth = v;
     _unlockComm();
 }
 
 uint16_t DPBShared::getBandWidth()
 {
     _lockComm();
-    uint16_t v = _data->_bandWidth;
+    uint16_t v = _data->_settings.bandWidth;
     _unlockComm();
     return v;
 }
@@ -274,14 +274,14 @@ uint16_t DPBShared::getBandWidth()
 void DPBShared::setRange(uint16_t v)
 {
     _lockComm();
-    _data->_range = v;
+    _data->_settings.range = v;
     _unlockComm();
 }
 
 uint16_t DPBShared::getRange()
 {
     _lockComm();
-    uint16_t v = _data->_range;
+    uint16_t v = _data->_settings.range;
     _unlockComm();
     return v;
 }
@@ -519,14 +519,14 @@ app_search_type_e DPBShared::getSearchType()
 void DPBShared::setUnbalanceSource(app_unbalance_source_e v)
 {
     _lockComm();
-    _data->_unbalanceSource = v;
+    _data->_settings.unbalanceSource = v;
     _unlockComm();
 }
 
 app_unbalance_source_e DPBShared::getUnbalanceSource(void)
 {
     _lockComm();
-    app_unbalance_source_e v = _data->_unbalanceSource;
+    app_unbalance_source_e v = _data->_settings.unbalanceSource;
     _unlockComm();
     return v;
 }
@@ -534,14 +534,14 @@ app_unbalance_source_e DPBShared::getUnbalanceSource(void)
 void DPBShared::setMeasureThrottle(uint16_t v)
 {
     _lockComm();
-    _data->_measureThrottle = v;
+    _data->_settings.measureThrottle = v;
     _unlockComm();
 }
 
 uint16_t DPBShared::getMeasureThrottle(void)
 {
     _lockComm();
-    uint16_t v = _data->_measureThrottle;
+    uint16_t v = _data->_settings.measureThrottle;
     _unlockComm();
     return v;
 }
@@ -549,14 +549,14 @@ uint16_t DPBShared::getMeasureThrottle(void)
 void DPBShared::setIIRCenterFreq(float_t v)
 {
     _lockComm();
-    _data->_iirCenterFreq = v;
+    _data->_settings.iirCenterFreq = v;
     _unlockComm();
 }
 
 float_t DPBShared::getIIRCenterFreq(void)
 {
     _lockComm();
-    float_t v = _data->_iirCenterFreq;
+    float_t v = _data->_settings.iirCenterFreq;
     _unlockComm();
     return v;
 }
@@ -564,14 +564,14 @@ float_t DPBShared::getIIRCenterFreq(void)
 void DPBShared::setIIRQFactor(float_t v)
 {
     _lockComm();
-    _data->_iirQFactor = v;
+    _data->_settings.iirQFactor = v;
     _unlockComm();
 }
 
 float_t DPBShared::getIIRQFactor(void)
 {
     _lockComm();
-    float_t v = _data->_iirQFactor;
+    float_t v = _data->_settings.iirQFactor;
     _unlockComm();
     return v;
 }
