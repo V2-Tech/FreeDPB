@@ -65,6 +65,8 @@ public:
     float_t getUnbalanceFreq(void);
     void setUnbalanceMag(float_t v);
     float_t getUnbalanceMag(void);
+    void setUnbalanceErr(float_t v);
+    float_t getUnbalanceErr(void);
 
     void setXPeaksIndex(int16_t v, uint32_t index);
     int16_t getXPeakIndex(uint32_t index);
@@ -128,6 +130,7 @@ private:
         float_t _unbalanceYAngle;
         float_t _unbalanceFreq;
         float_t _unbalanceMag;
+        float_t _unbalanceError;
         int16_t _x_peak_index[ACC_DATA_BUFFER_SIZE] = {0};
         int16_t _y_peak_index[ACC_DATA_BUFFER_SIZE] = {0};
         size_t _x_peak_count;

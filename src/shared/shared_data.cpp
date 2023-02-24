@@ -9,6 +9,7 @@ DPBShared::DPBShared() : _data(new Data)
     _data->_unbalanceYAngle = 0;
     _data->_unbalanceFreq = 0;
     _data->_unbalanceMag = 0;
+    _data->_unbalanceError = 0;
     _data->_x_peak_count = 0;
     _data->_y_peak_count = 0;
     _data->_acc_x_max_index = 0;
@@ -342,6 +343,21 @@ float_t DPBShared::getUnbalanceMag()
 {
     _lockComm();
     float_t v = _data->_unbalanceMag;
+    _unlockComm();
+    return v;
+}
+
+void DPBShared::setUnbalanceErr(float_t v)
+{
+    _lockComm();
+    _data->_unbalanceError = v;
+    _unlockComm();
+}
+
+float_t DPBShared::getUnbalanceErr(void)
+{
+    _lockComm();
+    float_t v = _data->_unbalanceError;
     _unlockComm();
     return v;
 }
