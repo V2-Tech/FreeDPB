@@ -38,7 +38,6 @@ public:
     void exe(command_data_t command);
     void ask_acc_charts_update(void);
     void ask_fft_chart_update(void);
-    void ask_nerd_stats_update(void);
     void ask_unbalance_arrow_update(void);
     void ask_unbalance_step_1(void);
     void ask_unbalance_step_2(void);

@@ -1111,9 +1111,6 @@ void gui_exe(command_data_t command)
     case GUI_INIT_COMPLETED_CMD:
         _exe_init_completed();
         break;
-    case GUI_NERD_STATS_UPDATE_CMD:
-        _update_nerd_stats();
-        break;
 
     case APP_GET_SOURCE_CMD:
     case ACCEL_GET_BW_CMD:
@@ -1222,12 +1219,15 @@ void gui_delete_page(dpb_page_e page)
 
 void gui_values_update(void)
 {
-    if (_gui_act_page != MAIN_PAGE)
+    if (_gui_act_page == MAIN_PAGE)
     {
-        return;
+        _update_but_labels();
+        _update_rpm();
     }
-    _update_but_labels();
-    _update_rpm();
+    if (_gui_act_page == NERD_PAGE)
+    {
+        _update_nerd_stats();
+    }
 }
 
 void _exe_accel_charts_update(void)
@@ -2215,7 +2215,7 @@ void _create_toolbars_nerd(void)
     lv_obj_set_height(rot_cnt_label, 25);
     lv_label_set_text(rot_cnt_label, LV_SYMBOL_REFRESH " n°: 0");
     lv_obj_set_style_text_color(rot_cnt_label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_align(rot_cnt_label, LV_ALIGN_TOP_LEFT, (2 * DEFAULT_TOOLBAR_HEIGHT) + 5, 5);
+    lv_obj_align(rot_cnt_label, LV_ALIGN_TOP_LEFT, (2 * DEFAULT_TOOLBAR_HEIGHT) + 5, DEFAULT_TOOLBAR_HEIGHT / 4);
 
     //* Create error label
     error_label = lv_label_create(gui_NerdScreen);
@@ -2223,7 +2223,7 @@ void _create_toolbars_nerd(void)
     lv_obj_set_height(error_label, 25);
     lv_label_set_text(error_label, LV_SYMBOL_WARNING "+-0°");
     lv_obj_set_style_text_color(error_label, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_align_to(error_label, rot_cnt_label, LV_ALIGN_OUT_RIGHT_TOP, 5, 5);
+    lv_obj_align_to(error_label, rot_cnt_label, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
 
     //* Create action list
     gui_action_list_nerd = lv_list_create(gui_NerdScreen);

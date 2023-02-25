@@ -356,7 +356,6 @@ void DPB::_exe_analyze(void)
 
     if (_search_type == SEARCH_OPTICAL)
     {
-        ask_nerd_stats_update();
         set_step(UNBALANCE_OPT_FINDING);
         _signal_peak_finder();
         _unbalance_finder_optical();
@@ -493,15 +492,6 @@ void DPB::ask_fft_chart_update(void)
     command_data_t command;
 
     command.command = GUI_FFT_CHART_UPDATE_CMD;
-    command.value.ull = 1;
-    xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
-}
-
-void DPB::ask_nerd_stats_update(void) 
-{
-    command_data_t command;
-
-    command.command = GUI_NERD_STATS_UPDATE_CMD;
     command.value.ull = 1;
     xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
 }
