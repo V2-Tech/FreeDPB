@@ -38,6 +38,7 @@ public:
     void exe(command_data_t command);
     void ask_acc_charts_update(void);
     void ask_fft_chart_update(void);
+    void ask_nerd_stats_update(void);
     void ask_unbalance_arrow_update(void);
     void ask_unbalance_step_1(void);
     void ask_unbalance_step_2(void);
@@ -64,6 +65,7 @@ private:
     size_t _YpeakCount;
     app_search_type_e _search_type;
     float_t _steps_amplitude[4] = {0};
+    uint16_t _sample_cnt_360;
 
     void _exe_start(void);
     void _exe_reset(void);

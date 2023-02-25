@@ -93,6 +93,7 @@ enum sys_command_e
     SEARCH_TYPE_CMD,
     APP_STEP_CMD,
     STORE_SETTINGS_CMD,
+    GUI_NERD_STATS_UPDATE_CMD,
     //* Settings
     APP_SET_SOURCE_CMD,
     ACCEL_SET_BW_CMD,

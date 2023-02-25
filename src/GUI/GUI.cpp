@@ -1111,6 +1111,10 @@ void gui_exe(command_data_t command)
     case GUI_INIT_COMPLETED_CMD:
         _exe_init_completed();
         break;
+    case GUI_NERD_STATS_UPDATE_CMD:
+        _update_nerd_stats();
+        break;
+
     case APP_GET_SOURCE_CMD:
     case ACCEL_GET_BW_CMD:
     case ACCEL_GET_RANGE_CMD:
@@ -1460,6 +1464,15 @@ void _update_fft_charts(void)
     lv_chart_refresh(gui_FFTYChart);
 }
 
+void _update_nerd_stats(void)
+{
+    //* Rotation counter
+    lv_label_set_text_fmt(rot_cnt_label, LV_SYMBOL_REFRESH "n°: %llu", _xShared.getRotCount());
+
+    //* Unbalance error
+    lv_label_set_text_fmt(error_label, LV_SYMBOL_WARNING "+-%.1f°", _xShared.getUnbalanceErr());
+}
+
 void _ask_settings_values(void)
 {
     command_data_t command;
@@ -1530,7 +1543,7 @@ void _ask_settings_save(void)
     xQueueSend(_xQueueCom2Sys, &command, portMAX_DELAY);
 }
 
-void _ask_settings_store(void) 
+void _ask_settings_store(void)
 {
     command_data_t command;
 
@@ -2195,6 +2208,22 @@ void _create_toolbars_nerd(void)
     lv_label_set_text(list_btn_label, LV_SYMBOL_LIST);
     lv_obj_set_style_text_color(list_btn_label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_center(list_btn_label);
+
+    //* Create rotation count label
+    rot_cnt_label = lv_label_create(gui_NerdScreen);
+    lv_obj_set_width(rot_cnt_label, 60);
+    lv_obj_set_height(rot_cnt_label, 25);
+    lv_label_set_text(rot_cnt_label, LV_SYMBOL_REFRESH " n°: 0");
+    lv_obj_set_style_text_color(rot_cnt_label, DEFAULT_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_align(rot_cnt_label, LV_ALIGN_TOP_LEFT, (2 * DEFAULT_TOOLBAR_HEIGHT) + 5, 5);
+
+    //* Create error label
+    error_label = lv_label_create(gui_NerdScreen);
+    lv_obj_set_width(error_label, 60);
+    lv_obj_set_height(error_label, 25);
+    lv_label_set_text(error_label, LV_SYMBOL_WARNING "+-0°");
+    lv_obj_set_style_text_color(error_label, SECONDARY_ELEMENT_ACCENT_COLOR, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_align_to(error_label, rot_cnt_label, LV_ALIGN_OUT_RIGHT_TOP, 5, 5);
 
     //* Create action list
     gui_action_list_nerd = lv_list_create(gui_NerdScreen);

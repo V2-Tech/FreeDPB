@@ -160,7 +160,7 @@ void DPB::loop_accel(void)
     int16_t *pAccYBuf = _xShared.getDPBDataAccYBuffer_us();
     uint8_t *pRotBuf = _xShared.getDPBRotDoneBuffer_us();
     uint64_t *pTimeBuf = _xShared.getDPBTimeBuffer_us();
-    uint16_t rotCount = 0;
+    uint16_t rotCount = 0, lastRotCount = 0, _sample_cnt_360 = 0, _sample_cnt = 0;
 
     if (!_init_done)
     {
@@ -170,7 +170,7 @@ void DPB::loop_accel(void)
     ulTaskNotifyTakeIndexed(0, pdTRUE, portMAX_DELAY);
     _app_step = VIBES_REC;
     i = 0;
-    rotCount = 0;
+    rotCount = lastRotCount = _sample_cnt = _sample_cnt_360 = 0;
 
     _xShared.lockDPBDataAcc();
 
@@ -195,12 +195,24 @@ void DPB::loop_accel(void)
                 rotCount++;
             }
 
+            if (rotCount > 0)
+            {
+                _sample_cnt++;
+            }
+            if (rotCount != lastRotCount)
+            {
+                lastRotCount = rotCount;
+                _sample_cnt_360 += _sample_cnt;
+                _sample_cnt_360 /= rotCount;
+            }
+
             i++;
         }
     }
     _xShared.unlockDPBDataAcc();
 
     _xShared.setRotCount(rotCount);
+    _xShared.setUnbalanceErr(360.0 / (float_t)_sample_cnt_360);
 
     command_data_t command;
 
@@ -344,6 +356,7 @@ void DPB::_exe_analyze(void)
 
     if (_search_type == SEARCH_OPTICAL)
     {
+        ask_nerd_stats_update();
         set_step(UNBALANCE_OPT_FINDING);
         _signal_peak_finder();
         _unbalance_finder_optical();
@@ -480,6 +493,15 @@ void DPB::ask_fft_chart_update(void)
     command_data_t command;
 
     command.command = GUI_FFT_CHART_UPDATE_CMD;
+    command.value.ull = 1;
+    xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
+}
+
+void DPB::ask_nerd_stats_update(void) 
+{
+    command_data_t command;
+
+    command.command = GUI_NERD_STATS_UPDATE_CMD;
     command.value.ull = 1;
     xQueueSend(_xQueueSysOutput, &command, portMAX_DELAY);
 }

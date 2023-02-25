@@ -200,6 +200,7 @@ void _update_but_labels(void);
 void _update_unbalance_arrow(void);
 void _update_accel_charts(uint8_t data_type);
 void _update_fft_charts(void);
+void _update_nerd_stats(void);
 void _ask_settings_values(void);
 void _ask_settings_save(void);
 void _ask_settings_store(void);

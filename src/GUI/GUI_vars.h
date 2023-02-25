@@ -80,10 +80,11 @@ lv_chart_series_t *serFFTX = NULL;
 lv_chart_series_t *serFFTY = NULL;
 int16_t fftX_sample[FFT_DATA_BUFFER_SIZE] = {0};
 int16_t fftY_sample[FFT_DATA_BUFFER_SIZE] = {0};
-// Buttons
 
 // Labels
 lv_obj_t *gui_FundLabel = NULL;
+lv_obj_t *rot_cnt_label = NULL;
+lv_obj_t *error_label = NULL;
 
 //* Settings screen objects
 lv_obj_t *gui_menu_list_settings = NULL;
