@@ -2,7 +2,7 @@
 
 <div align="center">
 
-## Open source Dynamic Propeller Balancer
+### **Open source Dynamic Propeller Balancer**
 
 </div>
 
