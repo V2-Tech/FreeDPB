@@ -1581,7 +1581,7 @@ void _display_init(void)
     /* TFT init */
     tft.begin();
     /* Landscape orientation, flipped */
-    tft.setRotation(1);
+    tft.setRotation(3);
     tft.setBrightness(255);
     /* Calibrate touchscreen */
     uint16_t calData[] = {3754, 454, 3694, 3862, 352, 453, 314, 3883};
