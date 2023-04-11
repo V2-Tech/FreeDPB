@@ -59,6 +59,10 @@ C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Bala
 C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/ulp/libulp.a
 C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/wifi_provisioning/libwifi_provisioning.a
 C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/esp-dsp/libesp-dsp.a
-C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/src/libsrc.a
+C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/accelerometer/libaccelerometer.a
+C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/rpm-tracker/librpm-tracker.a
+C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/dpb-dsp/libdpb-dsp.a
+C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/motor-dshot/libmotor-dshot.a
+C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/main/libmain.a
 C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/LovyanGFX/libLovyanGFX.a
 C:/Users/ValerioMazzoni/Documents/Laboratory/Progetti/DPB-Dynamic_Propeller_Balancer/Firmware/DPB/build/esp-idf/lvgl/liblvgl.a
