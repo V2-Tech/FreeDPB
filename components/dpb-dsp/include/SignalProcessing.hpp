@@ -31,7 +31,7 @@ public:
             return -1;
         }
 
-        for (size_t i = 0; i < *arraySize; i++)
+        for (size_t i = 0; i < new_size; i++)
         {
             if (array[i] == target)
             {
