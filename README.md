@@ -21,7 +21,7 @@
 
 ## 4. Supported Hardware
 
-|   MCU    |   IMU   |   ESC  |  
-|   :---   |  :---:  |  ---:  |
+|   :MCU:  |  :IMU:  |  :ESC: |  
+|   ---    |    ---  |   ---  |
 |  ESP32   | ADXL345 |  DSHOT |
 | ESP32-S3 |  BMX055 |        |
