@@ -23,5 +23,5 @@
 
 | MCU  | IMU | ESC |  
 | - | - | - | DSHOT |
-| ESP32 | ADXL345 | |
-| ESP32-S3 | BMX055 | |
+| ESP32 | ADXL345 |  |
+| ESP32-S3 | BMX055 |  |
