@@ -15,5 +15,3 @@
 ## :ledger: Overview
 
 Under development...
-
-# Chapter 1
