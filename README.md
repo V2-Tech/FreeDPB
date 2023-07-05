@@ -17,7 +17,7 @@
 
 ## :ledger: Overview
 (breve guida d'utilizzo del dispositivo)
-
+(Link alla pagina thingverse contenente i file STL)
 ## Working Principle
 (raccolta dati dall'accelerometro e calcolo dell'angolo di sbilanciamento utilizzando l'offset di tempo tra passaggio dell'elica e picco della sinusoide di vibrazione)
 
