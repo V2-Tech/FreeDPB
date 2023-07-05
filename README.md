@@ -13,6 +13,15 @@
 ---
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-## :ledger: Overview
+## 1. :ledger: Overview
 
-Under development...
+## 2. Working Principle
+
+## 3. Firmware Details
+
+## 4. Supported Hardware
+
+| MCU  | IMU | ESC |  
+| - | - | - | DSHOT |
+| ESP32 | ADXL345 | |
+| ESP32-S3 | BMX055 | |
