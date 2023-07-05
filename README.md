@@ -13,13 +13,18 @@
 ---
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-## 1. :ledger: Overview
+### **Under construction**
 
-## 2. Working Principle
+## :ledger: Overview
+(breve guida d'utilizzo del dispositivo)
 
-## 3. Firmware Details
+## Working Principle
+(raccolta dati dall'accelerometro e calcolo dell'angolo di sbilanciamento utilizzando l'offset di tempo tra passaggio dell'elica e picco della sinusoide di vibrazione)
 
-## 4. Supported Hardware
+## Firmware Details
+(Struttura RTOS, comunicazione tra task ed implementazione driver per nuovi accelerometri ed ESC)
+
+## Supported Hardware
 
 |   MCU  |  IMU  |  ESC |  
 |   :---   |   :---  |  :---  |
